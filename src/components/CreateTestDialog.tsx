@@ -21,19 +21,27 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, TestTube2 } from "lucide-react";
-import { WeeklyTest } from "@/types";
+import { WeeklyTest, ClassName } from "@/types";
 
 const formSchema = z.object({
   name: z.string().min(2, "Test name must be at least 2 characters."),
   subject: z.string().min(2, "Subject must be at least 2 characters."),
   maxMarks: z.coerce.number().int().positive("Max marks must be a positive number."),
   date: z.date(),
+  class: z.enum(["8th", "9th", "10th", "11th", "All"]),
 });
 
 interface CreateTestDialogProps {
@@ -49,6 +57,7 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
       subject: "",
       maxMarks: 100,
       date: new Date(),
+      class: "All",
     },
   });
 
@@ -57,7 +66,8 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
       name: values.name,
       subject: values.subject,
       maxMarks: values.maxMarks,
-      date: values.date.toISOString()
+      date: values.date.toISOString(),
+      class: values.class
     });
     form.reset();
     setIsOpen(false);
@@ -101,6 +111,30 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
                   <FormControl>
                     <Input placeholder="e.g., Science" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="class"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Class</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a class" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="All">All Classes</SelectItem>
+                      <SelectItem value="8th">8th Grade</SelectItem>
+                      <SelectItem value="9th">9th Grade</SelectItem>
+                      <SelectItem value="10th">10th Grade</SelectItem>
+                      <SelectItem value="11th">11th Grade</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
