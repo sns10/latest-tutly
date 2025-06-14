@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Student, ClassName, XPCategory, Reward, PurchasedReward, Badge, TeamName, WeeklyTest, StudentTestResult } from '@/types';
@@ -6,9 +7,11 @@ import { Leaderboard } from '@/components/Leaderboard';
 import { WeeklyMVP } from '@/components/WeeklyMVP';
 import { Button } from '@/components/ui/button';
 import { TeamLeaderboard } from '@/components/TeamLeaderboard';
+import { WeeklyTestManager } from '@/components/WeeklyTestManager';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 import { toast } from "sonner";
-import { CreateTestDialog } from '@/components/CreateTestDialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Users, TestTube2 } from "lucide-react";
 
 const initialStudents: Student[] = [
   { id: '1', name: 'Curious Cat', class: '8th', avatar: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=500&h=500&fit=crop', xp: { blackout: 10, futureMe: 40, recallWar: 100 }, totalXp: 150, purchasedRewards: [], team: 'Alpha', badges: [{ id: 'first-100-xp', name: 'Century Club', description: 'Earned over 100 XP', emoji: '💯', dateEarned: new Date('2025-06-10').toISOString() }] },
@@ -27,7 +30,6 @@ const Index = () => {
 
   const students = useMemo(() => {
     if (!rawStudents) return [];
-    // Data migration for existing students in localStorage
     return rawStudents.map(s => ({
       ...s,
       purchasedRewards: s.purchasedRewards || [],
@@ -56,6 +58,18 @@ const Index = () => {
     };
     setWeeklyTests(prev => [...prev, test]);
     toast.success(`Test "${test.name}" created successfully!`);
+  };
+
+  const addTestResult = (result: StudentTestResult) => {
+    setTestResults(prev => {
+      const existingIndex = prev.findIndex(r => r.testId === result.testId && r.studentId === result.studentId);
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = result;
+        return updated;
+      }
+      return [...prev, result];
+    });
   };
 
   const removeStudent = (studentId: string) => {
@@ -98,6 +112,46 @@ const Index = () => {
       return s;
     }));
 
+    if (awardedBadges.length > 0) {
+      awardedBadges.forEach(b => {
+        toast.success(`${student.name} earned the "${b.name}" badge! ${b.emoji}`);
+      });
+    }
+  };
+
+  const awardXP = (studentId: string, amount: number, reason: string) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    const newTotalXp = student.totalXp + amount;
+    const studentWithNewXp: Student = { ...student, totalXp: newTotalXp };
+    
+    const awardedBadges: Badge[] = [];
+    BADGE_DEFINITIONS.forEach(badgeDef => {
+      const hasBadge = student.badges.some(b => b.id === badgeDef.id);
+      if (!hasBadge && badgeDef.criteria(studentWithNewXp)) {
+        const newBadge: Badge = {
+          ...badgeDef,
+          id: badgeDef.id as Badge['id'],
+          dateEarned: new Date().toISOString(),
+        };
+        awardedBadges.push(newBadge);
+      }
+    });
+
+    setStudents(prev => prev.map(s => {
+      if (s.id === studentId) {
+        return {
+          ...s,
+          totalXp: newTotalXp,
+          badges: [...s.badges, ...awardedBadges]
+        };
+      }
+      return s;
+    }));
+
+    toast.success(`${student.name} earned +${amount} XP! (${reason})`);
+    
     if (awardedBadges.length > 0) {
       awardedBadges.forEach(b => {
         toast.success(`${student.name} earned the "${b.name}" badge! ${b.emoji}`);
@@ -169,52 +223,77 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <header className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-8">
           <div>
-            <h1 className="text-4xl font-display font-black text-primary">LEADERBOARD</h1>
-            <p className="text-muted-foreground">Class of 2025</p>
+            <h1 className="text-4xl font-display font-black text-primary">CLASSROOM COMMANDER</h1>
+            <p className="text-muted-foreground">Gamified Learning & Assessment Platform</p>
           </div>
           <div className="flex items-center gap-2">
-            <CreateTestDialog onAddTest={addWeeklyTest} />
             <AddStudentDialog onAddStudent={addStudent} />
           </div>
         </header>
 
-        <main className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          <div className="md:col-span-2 space-y-6">
-            <div className="flex gap-2 flex-wrap">
-              {classFilters.map(filter => (
-                <Button 
-                  key={filter} 
-                  variant={activeFilter === filter ? 'default' : 'outline'}
-                  onClick={() => setActiveFilter(filter)}
-                  className={`
-                    ${activeFilter === filter 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-primary/10 border-primary/50 text-primary hover:bg-primary/20'}
-                  `}
-                >
-                  {filter === "All" ? "All Classes" : `${filter} Grade`}
-                </Button>
-              ))}
-            </div>
-            <Leaderboard students={filteredStudents} onAddXp={addXp} onRemoveStudent={removeStudent} onBuyReward={buyReward} onUseReward={useReward} onAssignTeam={assignTeam} />
-          </div>
+        <Tabs defaultValue="leaderboard" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsTrigger value="leaderboard" className="flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              Leaderboard
+            </TabsTrigger>
+            <TabsTrigger value="tests" className="flex items-center gap-2">
+              <TestTube2 className="h-4 w-4" />
+              Weekly Tests
+            </TabsTrigger>
+          </TabsList>
 
-          <aside className="space-y-6">
-            <WeeklyMVP student={weeklyMvp} />
-            <TeamLeaderboard scores={teamScores} />
-            <div className="p-4 rounded-xl bg-secondary/30">
-                <h3 className="font-bold text-lg font-display text-primary/90">XP Categories</h3>
-                <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    <li><span className="font-semibold text-purple-400">Blackout:</span> +10 XP</li>
-                    <li><span className="font-semibold text-green-400">Future Me:</span> +20 XP</li>
-                    <li><span className="font-semibold text-red-400">Recall War:</span> +50 XP</li>
-                </ul>
-            </div>
-          </aside>
-        </main>
+          <TabsContent value="leaderboard" className="space-y-6">
+            <main className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              <div className="md:col-span-2 space-y-6">
+                <div className="flex gap-2 flex-wrap">
+                  {classFilters.map(filter => (
+                    <Button 
+                      key={filter} 
+                      variant={activeFilter === filter ? 'default' : 'outline'}
+                      onClick={() => setActiveFilter(filter)}
+                      className={`
+                        ${activeFilter === filter 
+                          ? 'bg-primary text-primary-foreground' 
+                          : 'bg-primary/10 border-primary/50 text-primary hover:bg-primary/20'}
+                      `}
+                    >
+                      {filter === "All" ? "All Classes" : `${filter} Grade`}
+                    </Button>
+                  ))}
+                </div>
+                <Leaderboard students={filteredStudents} onAddXp={addXp} onRemoveStudent={removeStudent} onBuyReward={buyReward} onUseReward={useReward} onAssignTeam={assignTeam} />
+              </div>
+
+              <aside className="space-y-6">
+                <WeeklyMVP student={weeklyMvp} />
+                <TeamLeaderboard scores={teamScores} />
+                <div className="p-4 rounded-xl bg-secondary/30">
+                    <h3 className="font-bold text-lg font-display text-primary/90">XP Categories</h3>
+                    <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+                        <li><span className="font-semibold text-purple-400">Blackout:</span> +10 XP</li>
+                        <li><span className="font-semibold text-green-400">Future Me:</span> +20 XP</li>
+                        <li><span className="font-semibold text-red-400">Recall War:</span> +50 XP</li>
+                    </ul>
+                </div>
+              </aside>
+            </main>
+          </TabsContent>
+
+          <TabsContent value="tests">
+            <WeeklyTestManager 
+              tests={weeklyTests}
+              testResults={testResults}
+              students={students}
+              onAddTest={addWeeklyTest}
+              onAddTestResult={addTestResult}
+              onAwardXP={awardXP}
+            />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );
