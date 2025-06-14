@@ -53,7 +53,12 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
   });
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    onAddTest({ ...values, date: values.date.toISOString() });
+    onAddTest({
+      name: values.name,
+      subject: values.subject,
+      maxMarks: values.maxMarks,
+      date: values.date.toISOString()
+    });
     form.reset();
     setIsOpen(false);
   }
