@@ -9,7 +9,312 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      badges: {
+        Row: {
+          description: string
+          emoji: string
+          id: string
+          name: string
+        }
+        Insert: {
+          description: string
+          emoji: string
+          id: string
+          name: string
+        }
+        Update: {
+          description?: string
+          emoji?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      rewards: {
+        Row: {
+          cost: number
+          description: string
+          emoji: string
+          id: string
+          name: string
+        }
+        Insert: {
+          cost: number
+          description: string
+          emoji: string
+          id: string
+          name: string
+        }
+        Update: {
+          cost?: number
+          description?: string
+          emoji?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      student_badges: {
+        Row: {
+          badge_id: string
+          date_earned: string
+          id: string
+          student_id: string
+        }
+        Insert: {
+          badge_id: string
+          date_earned?: string
+          id?: string
+          student_id: string
+        }
+        Update: {
+          badge_id?: string
+          date_earned?: string
+          id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_badges_badge_id_fkey"
+            columns: ["badge_id"]
+            isOneToOne: false
+            referencedRelation: "badges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_badges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_rewards: {
+        Row: {
+          id: string
+          instance_id: string
+          purchased_at: string
+          reward_id: string
+          student_id: string
+        }
+        Insert: {
+          id?: string
+          instance_id: string
+          purchased_at?: string
+          reward_id: string
+          student_id: string
+        }
+        Update: {
+          id?: string
+          instance_id?: string
+          purchased_at?: string
+          reward_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_rewards_reward_id_fkey"
+            columns: ["reward_id"]
+            isOneToOne: false
+            referencedRelation: "rewards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_rewards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_test_results: {
+        Row: {
+          created_at: string
+          id: string
+          marks: number
+          student_id: string
+          test_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marks: number
+          student_id: string
+          test_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marks?: number
+          student_id?: string
+          test_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_test_results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_test_results_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_xp: {
+        Row: {
+          amount: number
+          category: Database["public"]["Enums"]["xp_category"]
+          id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category: Database["public"]["Enums"]["xp_category"]
+          id?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category?: Database["public"]["Enums"]["xp_category"]
+          id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_xp_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          avatar: string | null
+          class: Database["public"]["Enums"]["class_name"]
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          team: Database["public"]["Enums"]["team_name"] | null
+          total_xp: number
+          updated_at: string
+        }
+        Insert: {
+          avatar?: string | null
+          class: Database["public"]["Enums"]["class_name"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          team?: Database["public"]["Enums"]["team_name"] | null
+          total_xp?: number
+          updated_at?: string
+        }
+        Update: {
+          avatar?: string | null
+          class?: Database["public"]["Enums"]["class_name"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          team?: Database["public"]["Enums"]["team_name"] | null
+          total_xp?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      weekly_tests: {
+        Row: {
+          class: Database["public"]["Enums"]["class_name"]
+          created_at: string
+          created_by: string | null
+          id: string
+          max_marks: number
+          name: string
+          subject: string
+          test_date: string
+          updated_at: string
+        }
+        Insert: {
+          class: Database["public"]["Enums"]["class_name"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_marks: number
+          name: string
+          subject: string
+          test_date: string
+          updated_at?: string
+        }
+        Update: {
+          class?: Database["public"]["Enums"]["class_name"]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          max_marks?: number
+          name?: string
+          subject?: string
+          test_date?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_tests_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -18,7 +323,9 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      class_name: "8th" | "9th" | "10th" | "11th" | "All"
+      team_name: "Alpha" | "Bravo" | "Charlie"
+      xp_category: "blackout" | "futureMe" | "recallWar"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -133,6 +440,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      class_name: ["8th", "9th", "10th", "11th", "All"],
+      team_name: ["Alpha", "Bravo", "Charlie"],
+      xp_category: ["blackout", "futureMe", "recallWar"],
+    },
   },
 } as const
