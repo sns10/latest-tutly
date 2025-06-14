@@ -22,6 +22,7 @@ const Index = () => {
     addStudent,
     addWeeklyTest,
     addTestResult,
+    addXp,
     awardXP,
     removeStudent,
     assignTeam,
@@ -116,7 +117,7 @@ const Index = () => {
           <TabsContent value="leaderboard">
             <Leaderboard
               students={students}
-              onAddXp={awardXP}
+              onAddXp={addXp}
               onRemoveStudent={removeStudent}
               onAssignTeam={assignTeam}
               onBuyReward={buyReward}
