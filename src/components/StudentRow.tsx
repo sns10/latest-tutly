@@ -1,10 +1,16 @@
-
-import { Student, XPCategory, Reward } from "@/types";
+import { Student, XPCategory, Reward, TeamName } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Plus, Trash2, Gift } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Plus, Trash2, Gift, Users } from "lucide-react";
 import { XP_STORE_ITEMS } from "@/config/rewards";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,6 +21,7 @@ interface StudentRowProps {
   onRemoveStudent: (studentId: string) => void;
   onBuyReward: (studentId: string, reward: Reward) => void;
   onUseReward: (studentId: string, rewardInstanceId: string) => void;
+  onAssignTeam: (studentId: string, team: TeamName | null) => void;
 }
 
 const rankColor = (rank: number) => {
@@ -30,7 +37,9 @@ const xpCategoryDetails = {
   recallWar: { label: "Recall War", points: 50, color: "bg-red-500/20 text-red-400 hover:bg-red-500/30" }
 }
 
-export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyReward, onUseReward }: StudentRowProps) {
+const teamNames: TeamName[] = ["Alpha", "Bravo", "Charlie"];
+
+export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyReward, onUseReward, onAssignTeam }: StudentRowProps) {
   return (
     <div className="flex items-center gap-4 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-all border border-transparent hover:border-primary/50">
       <div className={`w-10 text-xl font-bold font-display text-center ${rankColor(rank)}`}>
@@ -47,6 +56,46 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
           {student.team && (
              <Badge variant="outline" className="border-primary/20 font-semibold">{student.team} Team</Badge>
           )}
+
+          <Popover>
+            <PopoverTrigger asChild>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-primary/70 hover:bg-primary/10 hover:text-primary">
+                                <Users className="h-4 w-4" />
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent className="border-primary/30 bg-background">
+                            <p>Assign Team</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </PopoverTrigger>
+            <PopoverContent className="w-56 p-4 border-primary/50">
+              <div className="grid gap-4">
+                <div className="space-y-2">
+                  <h4 className="font-medium leading-none font-display text-primary">Assign Team</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Assign {student.name} to a team.
+                  </p>
+                </div>
+                <Select 
+                  onValueChange={(value: TeamName | 'no-team') => onAssignTeam(student.id, value === 'no-team' ? null : value)} 
+                  defaultValue={student.team || 'no-team'}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select team" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="no-team">No Team</SelectItem>
+                    {teamNames.map(team => <SelectItem key={team} value={team}>{team} Team</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </PopoverContent>
+          </Popover>
+
           {student.badges && student.badges.length > 0 && (
             <div className="flex gap-1.5">
               <TooltipProvider>

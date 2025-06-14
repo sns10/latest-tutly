@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Student, ClassName, XPCategory, Reward, PurchasedReward, Badge, TeamName } from '@/types';
@@ -6,6 +5,7 @@ import { AddStudentDialog } from '@/components/AddStudentDialog';
 import { Leaderboard } from '@/components/Leaderboard';
 import { WeeklyMVP } from '@/components/WeeklyMVP';
 import { Button } from '@/components/ui/button';
+import { TeamLeaderboard } from '@/components/TeamLeaderboard';
 
 const initialStudents: Student[] = [
   { id: '1', name: 'Curious Cat', class: '8th', avatar: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=500&h=500&fit=crop', xp: { blackout: 10, futureMe: 40, recallWar: 100 }, totalXp: 150, purchasedRewards: [], team: 'Alpha', badges: [{ id: 'first-100-xp', name: 'Century Club', description: 'Earned over 100 XP', emoji: '💯', dateEarned: new Date('2025-06-10').toISOString() }] },
@@ -61,6 +61,15 @@ const Index = () => {
     }));
   };
 
+  const assignTeam = (studentId: string, team: TeamName | null) => {
+    setStudents(prev => prev.map(s => {
+      if (s.id === studentId) {
+        return { ...s, team };
+      }
+      return s;
+    }));
+  };
+
   const buyReward = (studentId: string, reward: Reward) => {
     setStudents(prev => prev.map(s => {
       if (s.id === studentId && s.totalXp >= reward.cost) {
@@ -100,6 +109,20 @@ const Index = () => {
       return [...students].sort((a,b) => b.totalXp - a.totalXp)[0];
   }, [students]);
 
+  const teamScores = useMemo(() => {
+    const scores: Record<TeamName, number> = {
+      Alpha: 0,
+      Bravo: 0,
+      Charlie: 0,
+    };
+    students.forEach(student => {
+      if (student.team) {
+        scores[student.team] += student.totalXp;
+      }
+    });
+    return scores;
+  }, [students]);
+
   return (
     <div className="min-h-screen bg-background text-foreground p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
@@ -129,11 +152,12 @@ const Index = () => {
                 </Button>
               ))}
             </div>
-            <Leaderboard students={filteredStudents} onAddXp={addXp} onRemoveStudent={removeStudent} onBuyReward={buyReward} onUseReward={useReward} />
+            <Leaderboard students={filteredStudents} onAddXp={addXp} onRemoveStudent={removeStudent} onBuyReward={buyReward} onUseReward={useReward} onAssignTeam={assignTeam} />
           </div>
 
           <aside className="space-y-6">
             <WeeklyMVP student={weeklyMvp} />
+            <TeamLeaderboard scores={teamScores} />
             <div className="p-4 rounded-xl bg-secondary/30">
                 <h3 className="font-bold text-lg font-display text-primary/90">XP Categories</h3>
                 <ul className="mt-2 space-y-1 text-sm text-muted-foreground">

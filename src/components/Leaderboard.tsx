@@ -1,5 +1,5 @@
 
-import { Student, XPCategory, Reward } from "@/types";
+import { Student, XPCategory, Reward, TeamName } from "@/types";
 import { StudentRow } from "./StudentRow";
 
 interface LeaderboardProps {
@@ -8,9 +8,10 @@ interface LeaderboardProps {
   onRemoveStudent: (studentId: string) => void;
   onBuyReward: (studentId: string, reward: Reward) => void;
   onUseReward: (studentId: string, rewardInstanceId: string) => void;
+  onAssignTeam: (studentId: string, team: TeamName | null) => void;
 }
 
-export function Leaderboard({ students, onAddXp, onRemoveStudent, onBuyReward, onUseReward }: LeaderboardProps) {
+export function Leaderboard({ students, onAddXp, onRemoveStudent, onBuyReward, onUseReward, onAssignTeam }: LeaderboardProps) {
   const sortedStudents = [...students].sort((a, b) => b.totalXp - a.totalXp);
 
   return (
@@ -25,6 +26,7 @@ export function Leaderboard({ students, onAddXp, onRemoveStudent, onBuyReward, o
             onRemoveStudent={onRemoveStudent}
             onBuyReward={onBuyReward}
             onUseReward={onUseReward}
+            onAssignTeam={onAssignTeam}
           />
         ))
       ) : (
