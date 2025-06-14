@@ -191,13 +191,29 @@ export function useSupabaseData() {
   };
 
   const addXp = async (studentId: string, category: XPCategory, amount: number) => {
+    // Get current XP for this category
+    const { data: currentXpData, error: fetchError } = await supabase
+      .from('student_xp')
+      .select('amount')
+      .eq('student_id', studentId)
+      .eq('category', category)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching current XP:', fetchError);
+      toast.error('Failed to update XP');
+      return;
+    }
+
+    const newAmount = (currentXpData?.amount || 0) + amount;
+
     // Update XP in database
     const { error: xpError } = await supabase
       .from('student_xp')
       .upsert({
         student_id: studentId,
         category,
-        amount: supabase.raw(`amount + ${amount}`),
+        amount: newAmount,
       });
 
     if (xpError) {
@@ -206,11 +222,25 @@ export function useSupabaseData() {
       return;
     }
 
+    // Get current total XP
+    const { data: studentData, error: studentFetchError } = await supabase
+      .from('students')
+      .select('total_xp')
+      .eq('id', studentId)
+      .single();
+
+    if (studentFetchError) {
+      console.error('Error fetching student total XP:', studentFetchError);
+      return;
+    }
+
+    const newTotalXp = (studentData?.total_xp || 0) + amount;
+
     // Update total XP
     const { error: totalError } = await supabase
       .from('students')
       .update({
-        total_xp: supabase.raw(`total_xp + ${amount}`),
+        total_xp: newTotalXp,
       })
       .eq('id', studentId);
 
@@ -222,10 +252,25 @@ export function useSupabaseData() {
   };
 
   const awardXP = async (studentId: string, amount: number, reason: string) => {
+    // Get current total XP
+    const { data: studentData, error: fetchError } = await supabase
+      .from('students')
+      .select('total_xp')
+      .eq('id', studentId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching student:', fetchError);
+      toast.error('Failed to award XP');
+      return;
+    }
+
+    const newTotalXp = (studentData?.total_xp || 0) + amount;
+
     const { error } = await supabase
       .from('students')
       .update({
-        total_xp: supabase.raw(`total_xp + ${amount}`),
+        total_xp: newTotalXp,
       })
       .eq('id', studentId);
 
