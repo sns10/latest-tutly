@@ -14,5 +14,19 @@ export const BADGE_DEFINITIONS: BadgeDefinition[] = [
         emoji: '💯',
         criteria: (student) => student.totalXp >= 100,
     },
+    {
+        id: 'top-scorer',
+        name: 'Top Scorer',
+        description: 'Was one of the top scorers in a weekly test',
+        emoji: '🏆',
+        criteria: () => false, // To be implemented
+    },
+    {
+        id: 'most-improved',
+        name: 'Most Improved',
+        description: 'Shown significant improvement in a weekly test',
+        emoji: '🚀',
+        criteria: () => false, // To be implemented
+    },
     // Future badges can be added here
 ];

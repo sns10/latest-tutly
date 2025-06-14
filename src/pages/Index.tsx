@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { Student, ClassName, XPCategory, Reward, PurchasedReward, Badge, TeamName } from '@/types';
+import { Student, ClassName, XPCategory, Reward, PurchasedReward, Badge, TeamName, WeeklyTest, StudentTestResult } from '@/types';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
 import { Leaderboard } from '@/components/Leaderboard';
 import { WeeklyMVP } from '@/components/WeeklyMVP';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { TeamLeaderboard } from '@/components/TeamLeaderboard';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 import { toast } from "sonner";
+import { CreateTestDialog } from '@/components/CreateTestDialog';
 
 const initialStudents: Student[] = [
   { id: '1', name: 'Curious Cat', class: '8th', avatar: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=500&h=500&fit=crop', xp: { blackout: 10, futureMe: 40, recallWar: 100 }, totalXp: 150, purchasedRewards: [], team: 'Alpha', badges: [{ id: 'first-100-xp', name: 'Century Club', description: 'Earned over 100 XP', emoji: '💯', dateEarned: new Date('2025-06-10').toISOString() }] },
@@ -21,6 +22,8 @@ const classFilters: ClassName[] = ["All", "8th", "9th", "10th", "11th"];
 const Index = () => {
   const [rawStudents, setStudents] = useLocalStorage<Student[]>('students', initialStudents);
   const [activeFilter, setActiveFilter] = useState<ClassName>("All");
+  const [weeklyTests, setWeeklyTests] = useLocalStorage<WeeklyTest[]>('weeklyTests', []);
+  const [testResults, setTestResults] = useLocalStorage<StudentTestResult[]>('studentTestResults', []);
 
   const students = useMemo(() => {
     if (!rawStudents) return [];
@@ -44,6 +47,15 @@ const Index = () => {
       badges: [],
     };
     setStudents(prev => [...prev, student]);
+  };
+
+  const addWeeklyTest = (newTest: Omit<WeeklyTest, 'id'>) => {
+    const test: WeeklyTest = {
+      ...newTest,
+      id: new Date().toISOString(),
+    };
+    setWeeklyTests(prev => [...prev, test]);
+    toast.success(`Test "${test.name}" created successfully!`);
   };
 
   const removeStudent = (studentId: string) => {
@@ -163,7 +175,10 @@ const Index = () => {
             <h1 className="text-4xl font-display font-black text-primary">LEADERBOARD</h1>
             <p className="text-muted-foreground">Class of 2025</p>
           </div>
-          <AddStudentDialog onAddStudent={addStudent} />
+          <div className="flex items-center gap-2">
+            <CreateTestDialog onAddTest={addWeeklyTest} />
+            <AddStudentDialog onAddStudent={addStudent} />
+          </div>
         </header>
 
         <main className="grid grid-cols-1 md:grid-cols-3 gap-8">

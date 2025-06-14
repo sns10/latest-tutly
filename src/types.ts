@@ -43,3 +43,17 @@ export interface Student {
   team: TeamName | null;
   badges: Badge[];
 }
+
+export interface WeeklyTest {
+  id: string;
+  name:string;
+  subject: string;
+  maxMarks: number;
+  date: string; // ISO date string
+}
+
+export interface StudentTestResult {
+  testId: string;
+  studentId: string;
+  marks: number;
+}
