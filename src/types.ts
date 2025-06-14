@@ -1,3 +1,4 @@
+
 export type ClassName = "8th" | "9th" | "10th" | "11th" | "All";
 
 export type XPCategory = "blackout" | "futureMe" | "recallWar";
@@ -46,10 +47,11 @@ export interface Student {
 
 export interface WeeklyTest {
   id: string;
-  name:string;
+  name: string;
   subject: string;
   maxMarks: number;
   date: string; // ISO date string
+  class: ClassName; // Added class field
 }
 
 export interface StudentTestResult {

@@ -31,8 +31,13 @@ export function WeeklyTestManager({
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
 
   const getTestStats = (test: WeeklyTest) => {
+    // Filter students by test class
+    const eligibleStudents = test.class === "All" 
+      ? students 
+      : students.filter(s => s.class === test.class);
+    
     const results = testResults.filter(r => r.testId === test.id);
-    const totalStudents = students.length;
+    const totalStudents = eligibleStudents.length;
     const studentsCompleted = results.length;
     const averageScore = results.length > 0 
       ? results.reduce((sum, r) => sum + (r.marks / test.maxMarks) * 100, 0) / results.length 
@@ -97,6 +102,9 @@ export function WeeklyTestManager({
                           <CardTitle className="text-lg">{test.name}</CardTitle>
                           <div className="flex items-center gap-4 mt-2">
                             <Badge variant="outline">{test.subject}</Badge>
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                              {test.class === "All" ? "All Classes" : `${test.class} Grade`}
+                            </Badge>
                             <span className="text-sm text-muted-foreground">
                               {new Date(test.date).toLocaleDateString()}
                             </span>
@@ -161,7 +169,12 @@ export function WeeklyTestManager({
                 <Card key={test.id}>
                   <CardHeader>
                     <CardTitle className="flex justify-between items-center">
-                      <span>{test.name}</span>
+                      <div className="flex items-center gap-2">
+                        <span>{test.name}</span>
+                        <Badge variant="outline" className="bg-blue-50">
+                          {test.class === "All" ? "All Classes" : `${test.class} Grade`}
+                        </Badge>
+                      </div>
                       <EnterMarksDialog 
                         test={test} 
                         students={students}

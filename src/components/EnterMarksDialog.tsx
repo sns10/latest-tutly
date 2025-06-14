@@ -36,6 +36,11 @@ export function EnterMarksDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [marks, setMarks] = useState<{ [studentId: string]: number }>({});
 
+  // Filter students by class if test has a specific class
+  const filteredStudents = test.class && test.class !== "All" 
+    ? students.filter(student => student.class === test.class)
+    : students;
+
   const handleMarkChange = (studentId: string, value: string) => {
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue >= 0 && numValue <= test.maxMarks) {
@@ -105,8 +110,10 @@ export function EnterMarksDialog({
     return existing ? existing.marks : undefined;
   };
 
-  const completedCount = existingResults.length;
-  const totalCount = students.length;
+  const completedCount = existingResults.filter(r => 
+    filteredStudents.some(s => s.id === r.studentId)
+  ).length;
+  const totalCount = filteredStudents.length;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -126,12 +133,15 @@ export function EnterMarksDialog({
             <span>{test.subject}</span>
             <span>Max: {test.maxMarks} marks</span>
             <span>{new Date(test.date).toLocaleDateString()}</span>
+            {test.class && test.class !== "All" && (
+              <Badge variant="outline">{test.class} Grade</Badge>
+            )}
           </div>
         </DialogHeader>
         
         <ScrollArea className="h-96 pr-4">
           <div className="space-y-4">
-            {students.map((student) => {
+            {filteredStudents.map((student) => {
               const existingMark = getExistingMark(student.id);
               const currentMark = marks[student.id];
               const hasResult = existingMark !== undefined;
@@ -175,9 +185,9 @@ export function EnterMarksDialog({
                   {currentMark !== undefined && (
                     <div className="flex items-center gap-1">
                       {(currentMark / test.maxMarks) * 100 >= 80 && (
-                        <Trophy className="h-4 w-4 text-yellow-500" title="+5 XP for 80%+" />
+                        <Trophy className="h-4 w-4 text-yellow-500" />
                       )}
-                      <TrendingUp className="h-4 w-4 text-green-500" title="Potential +3 XP for improvement" />
+                      <TrendingUp className="h-4 w-4 text-green-500" />
                     </div>
                   )}
                 </div>
