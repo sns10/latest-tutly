@@ -1,3 +1,4 @@
+
 import { useState, useMemo } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
 import { Student, ClassName, XPCategory, Reward, PurchasedReward } from '@/types';
@@ -16,8 +17,16 @@ const initialStudents: Student[] = [
 const classFilters: ClassName[] = ["All", "8th", "9th", "10th", "11th"];
 
 const Index = () => {
-  const [students, setStudents] = useLocalStorage<Student[]>('students', initialStudents);
+  const [rawStudents, setStudents] = useLocalStorage<Student[]>('students', initialStudents);
   const [activeFilter, setActiveFilter] = useState<ClassName>("All");
+
+  const students = useMemo(() => {
+    if (!rawStudents) return [];
+    return rawStudents.map(s => ({
+      ...s,
+      purchasedRewards: s.purchasedRewards || []
+    }));
+  }, [rawStudents]);
 
   const addStudent = (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards'>) => {
     const student: Student = {
@@ -57,7 +66,7 @@ const Index = () => {
         return {
           ...s,
           totalXp: s.totalXp - reward.cost,
-          purchasedRewards: [...s.purchasedRewards, newPurchasedReward]
+          purchasedRewards: [...(s.purchasedRewards || []), newPurchasedReward]
         };
       }
       return s;
