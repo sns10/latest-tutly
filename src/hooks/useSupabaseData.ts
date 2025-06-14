@@ -214,7 +214,7 @@ export function useSupabaseData() {
         student_id: studentId,
         category,
         amount: newAmount,
-      });
+      }, { onConflict: ['student_id', 'category'] }); // <-- Added onConflict here
 
     if (xpError) {
       console.error('Error updating XP:', xpError);
