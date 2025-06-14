@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory } from '@/types';
@@ -210,11 +209,14 @@ export function useSupabaseData() {
     // Update XP in database
     const { error: xpError } = await supabase
       .from('student_xp')
-      .upsert({
-        student_id: studentId,
-        category,
-        amount: newAmount,
-      }, { onConflict: ['student_id', 'category'] }); // <-- Added onConflict here
+      .upsert(
+        {
+          student_id: studentId,
+          category,
+          amount: newAmount,
+        }, 
+        { onConflict: 'student_id,category' }
+      );
 
     if (xpError) {
       console.error('Error updating XP:', xpError);
