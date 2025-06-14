@@ -8,6 +8,7 @@ import { WeeklyMVP } from "@/components/WeeklyMVP";
 import { AddStudentDialog } from "@/components/AddStudentDialog";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { Trophy, Users, BookOpen, Star } from "lucide-react";
+import { TeamName } from "@/types";
 
 const Index = () => {
   const {
@@ -41,6 +42,24 @@ const Index = () => {
       </div>
     );
   }
+
+  // Calculate team scores
+  const teamScores: Record<TeamName, number> = {
+    Alpha: 0,
+    Bravo: 0,
+    Charlie: 0,
+  };
+
+  students.forEach(student => {
+    if (student.team) {
+      teamScores[student.team] += student.totalXp;
+    }
+  });
+
+  // Get the MVP (student with highest XP)
+  const mvpStudent = students.length > 0 
+    ? students.reduce((prev, current) => (prev.totalXp > current.totalXp) ? prev : current)
+    : null;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50">
@@ -97,6 +116,7 @@ const Index = () => {
           <TabsContent value="leaderboard">
             <Leaderboard
               students={students}
+              onAddXp={awardXP}
               onRemoveStudent={removeStudent}
               onAssignTeam={assignTeam}
               onBuyReward={buyReward}
@@ -105,11 +125,11 @@ const Index = () => {
           </TabsContent>
 
           <TabsContent value="teams">
-            <TeamLeaderboard students={students} />
+            <TeamLeaderboard scores={teamScores} />
           </TabsContent>
 
           <TabsContent value="mvp">
-            <WeeklyMVP students={students} />
+            <WeeklyMVP student={mvpStudent} />
           </TabsContent>
         </Tabs>
       </div>
