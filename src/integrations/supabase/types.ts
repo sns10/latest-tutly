@@ -9,6 +9,44 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          body: string
+          created_by: string | null
+          id: string
+          published_at: string
+          target_class: string | null
+          title: string
+          xp_bonus: number | null
+        }
+        Insert: {
+          body: string
+          created_by?: string | null
+          id?: string
+          published_at?: string
+          target_class?: string | null
+          title: string
+          xp_bonus?: number | null
+        }
+        Update: {
+          body?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string
+          target_class?: string | null
+          title?: string
+          xp_bonus?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       badges: {
         Row: {
           description: string
@@ -27,6 +65,42 @@ export type Database = {
           emoji?: string
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          created_at: string
+          description: string
+          end_date: string | null
+          id: string
+          is_active: boolean
+          start_date: string
+          title: string
+          type: string
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          start_date: string
+          title: string
+          type: string
+          xp_reward?: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean
+          start_date?: string
+          title?: string
+          type?: string
+          xp_reward?: number
         }
         Relationships: []
       }
@@ -107,6 +181,45 @@ export type Database = {
           },
           {
             foreignKeyName: "student_badges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_challenges: {
+        Row: {
+          challenge_id: string
+          completed_at: string
+          id: string
+          status: string
+          student_id: string
+        }
+        Insert: {
+          challenge_id: string
+          completed_at?: string
+          id?: string
+          status?: string
+          student_id: string
+        }
+        Update: {
+          challenge_id?: string
+          completed_at?: string
+          id?: string
+          status?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_challenges_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenges_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"

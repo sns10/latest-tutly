@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory } from '@/types';
+import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement } from '@/types';
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 
@@ -8,6 +8,9 @@ export function useSupabaseData() {
   const [students, setStudents] = useState<Student[]>([]);
   const [weeklyTests, setWeeklyTests] = useState<WeeklyTest[]>([]);
   const [testResults, setTestResults] = useState<StudentTestResult[]>([]);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [studentChallenges, setStudentChallenges] = useState<StudentChallenge[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all data
@@ -21,7 +24,10 @@ export function useSupabaseData() {
       await Promise.all([
         fetchStudents(),
         fetchWeeklyTests(),
-        fetchTestResults()
+        fetchTestResults(),
+        fetchChallenges(),
+        fetchStudentChallenges(),
+        fetchAnnouncements()
       ]);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -118,6 +124,77 @@ export function useSupabaseData() {
     }));
 
     setTestResults(formattedResults);
+  };
+
+  const fetchChallenges = async () => {
+    const { data, error } = await supabase
+      .from('challenges')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching challenges:', error);
+      return;
+    }
+
+    const formattedChallenges: Challenge[] = data.map(challenge => ({
+      id: challenge.id,
+      title: challenge.title,
+      description: challenge.description,
+      type: challenge.type,
+      xpReward: challenge.xp_reward,
+      startDate: challenge.start_date,
+      endDate: challenge.end_date,
+      isActive: challenge.is_active,
+      createdAt: challenge.created_at,
+    }));
+
+    setChallenges(formattedChallenges);
+  };
+
+  const fetchStudentChallenges = async () => {
+    const { data, error } = await supabase
+      .from('student_challenges')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching student challenges:', error);
+      return;
+    }
+
+    const formattedStudentChallenges: StudentChallenge[] = data.map(sc => ({
+      id: sc.id,
+      studentId: sc.student_id,
+      challengeId: sc.challenge_id,
+      completedAt: sc.completed_at,
+      status: sc.status,
+    }));
+
+    setStudentChallenges(formattedStudentChallenges);
+  };
+
+  const fetchAnnouncements = async () => {
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('published_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching announcements:', error);
+      return;
+    }
+
+    const formattedAnnouncements: Announcement[] = data.map(announcement => ({
+      id: announcement.id,
+      title: announcement.title,
+      body: announcement.body,
+      publishedAt: announcement.published_at,
+      createdBy: announcement.created_by,
+      targetClass: announcement.target_class,
+      xpBonus: announcement.xp_bonus,
+    }));
+
+    setAnnouncements(formattedAnnouncements);
   };
 
   const addStudent = async (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
@@ -376,10 +453,81 @@ export function useSupabaseData() {
     toast.success('Reward used!');
   };
 
+  const addChallenge = async (newChallenge: Omit<Challenge, 'id' | 'createdAt'>) => {
+    const { error } = await supabase
+      .from('challenges')
+      .insert({
+        title: newChallenge.title,
+        description: newChallenge.description,
+        type: newChallenge.type,
+        xp_reward: newChallenge.xpReward,
+        start_date: newChallenge.startDate,
+        end_date: newChallenge.endDate,
+        is_active: newChallenge.isActive,
+      });
+
+    if (error) {
+      console.error('Error adding challenge:', error);
+      toast.error('Failed to create challenge');
+      return;
+    }
+
+    await fetchChallenges();
+    toast.success('Challenge created successfully!');
+  };
+
+  const completeChallenge = async (studentId: string, challengeId: string) => {
+    const { error } = await supabase
+      .from('student_challenges')
+      .insert({
+        student_id: studentId,
+        challenge_id: challengeId,
+        status: 'completed',
+      });
+
+    if (error) {
+      console.error('Error completing challenge:', error);
+      toast.error('Failed to complete challenge');
+      return;
+    }
+
+    // Award XP for completing the challenge
+    const challenge = challenges.find(c => c.id === challengeId);
+    if (challenge) {
+      await awardXP(studentId, challenge.xpReward, `Completed challenge: ${challenge.title}`);
+    }
+
+    await fetchStudentChallenges();
+  };
+
+  const addAnnouncement = async (newAnnouncement: Omit<Announcement, 'id' | 'publishedAt'>) => {
+    const { error } = await supabase
+      .from('announcements')
+      .insert({
+        title: newAnnouncement.title,
+        body: newAnnouncement.body,
+        created_by: newAnnouncement.createdBy,
+        target_class: newAnnouncement.targetClass,
+        xp_bonus: newAnnouncement.xpBonus,
+      });
+
+    if (error) {
+      console.error('Error adding announcement:', error);
+      toast.error('Failed to create announcement');
+      return;
+    }
+
+    await fetchAnnouncements();
+    toast.success('Announcement created successfully!');
+  };
+
   return {
     students,
     weeklyTests,
     testResults,
+    challenges,
+    studentChallenges,
+    announcements,
     loading,
     addStudent,
     addWeeklyTest,
@@ -390,5 +538,8 @@ export function useSupabaseData() {
     assignTeam,
     buyReward,
     useReward,
+    addChallenge,
+    completeChallenge,
+    addAnnouncement,
   };
 }

@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { WeeklyTest, StudentTestResult, Student } from "@/types";
+import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,25 +8,39 @@ import { CreateTestDialog } from "./CreateTestDialog";
 import { EnterMarksDialog } from "./EnterMarksDialog";
 import { TestResultsView } from "./TestResultsView";
 import { SmartboardView } from "./SmartboardView";
+import { ChallengesManager } from "./ChallengesManager";
+import { AnnouncementsManager } from "./AnnouncementsManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TestTube2, Users, BarChart3, Monitor } from "lucide-react";
+import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone } from "lucide-react";
 
 interface WeeklyTestManagerProps {
   tests: WeeklyTest[];
   testResults: StudentTestResult[];
   students: Student[];
+  challenges: Challenge[];
+  studentChallenges: StudentChallenge[];
+  announcements: Announcement[];
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onAddTestResult: (result: StudentTestResult) => void;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
+  onAddChallenge: (challenge: Omit<Challenge, 'id' | 'createdAt'>) => void;
+  onCompleteChallenge: (studentId: string, challengeId: string) => void;
+  onAddAnnouncement: (announcement: Omit<Announcement, 'id' | 'publishedAt'>) => void;
 }
 
 export function WeeklyTestManager({ 
   tests, 
   testResults, 
   students, 
+  challenges,
+  studentChallenges,
+  announcements,
   onAddTest, 
   onAddTestResult,
-  onAwardXP 
+  onAwardXP,
+  onAddChallenge,
+  onCompleteChallenge,
+  onAddAnnouncement
 }: WeeklyTestManagerProps) {
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
 
@@ -54,14 +68,14 @@ export function WeeklyTestManager({
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold font-display text-primary">Weekly Tests</h2>
-          <p className="text-muted-foreground">Manage assessments and track student progress</p>
+          <h2 className="text-2xl font-bold font-display text-primary">School Management</h2>
+          <p className="text-muted-foreground">Manage tests, challenges, announcements and track progress</p>
         </div>
         <CreateTestDialog onAddTest={onAddTest} />
       </div>
 
       <Tabs defaultValue="tests" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="tests" className="flex items-center gap-2">
             <TestTube2 className="h-4 w-4" />
             Tests
@@ -69,6 +83,14 @@ export function WeeklyTestManager({
           <TabsTrigger value="marks" className="flex items-center gap-2">
             <Users className="h-4 w-4" />
             Enter Marks
+          </TabsTrigger>
+          <TabsTrigger value="challenges" className="flex items-center gap-2">
+            <Trophy className="h-4 w-4" />
+            Challenges
+          </TabsTrigger>
+          <TabsTrigger value="announcements" className="flex items-center gap-2">
+            <Megaphone className="h-4 w-4" />
+            Announcements
           </TabsTrigger>
           <TabsTrigger value="smartboard" className="flex items-center gap-2">
             <Monitor className="h-4 w-4" />
@@ -188,6 +210,23 @@ export function WeeklyTestManager({
               ))}
             </div>
           )}
+        </TabsContent>
+
+        <TabsContent value="challenges">
+          <ChallengesManager 
+            challenges={challenges}
+            studentChallenges={studentChallenges}
+            students={students}
+            onAddChallenge={onAddChallenge}
+            onCompleteChallenge={onCompleteChallenge}
+          />
+        </TabsContent>
+
+        <TabsContent value="announcements">
+          <AnnouncementsManager 
+            announcements={announcements}
+            onAddAnnouncement={onAddAnnouncement}
+          />
         </TabsContent>
 
         <TabsContent value="smartboard">

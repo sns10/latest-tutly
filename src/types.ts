@@ -59,3 +59,34 @@ export interface StudentTestResult {
   studentId: string;
   marks: number;
 }
+
+// New types for challenges and announcements
+export interface Challenge {
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  xpReward: number;
+  startDate: string;
+  endDate: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface StudentChallenge {
+  id: string;
+  studentId: string;
+  challengeId: string;
+  completedAt: string;
+  status: string;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  publishedAt: string;
+  createdBy: string | null;
+  targetClass: string | null;
+  xpBonus: number | null;
+}
