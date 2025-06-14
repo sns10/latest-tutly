@@ -6,6 +6,8 @@ import { Leaderboard } from '@/components/Leaderboard';
 import { WeeklyMVP } from '@/components/WeeklyMVP';
 import { Button } from '@/components/ui/button';
 import { TeamLeaderboard } from '@/components/TeamLeaderboard';
+import { BADGE_DEFINITIONS } from '@/config/badges';
+import { toast } from "sonner";
 
 const initialStudents: Student[] = [
   { id: '1', name: 'Curious Cat', class: '8th', avatar: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=500&h=500&fit=crop', xp: { blackout: 10, futureMe: 40, recallWar: 100 }, totalXp: 150, purchasedRewards: [], team: 'Alpha', badges: [{ id: 'first-100-xp', name: 'Century Club', description: 'Earned over 100 XP', emoji: '💯', dateEarned: new Date('2025-06-10').toISOString() }] },
@@ -51,14 +53,44 @@ const Index = () => {
   };
   
   const addXp = (studentId: string, category: XPCategory, amount: number) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) return;
+
+    const newXp = { ...student.xp, [category]: student.xp[category] + amount };
+    const totalXp = Object.values(newXp).reduce((sum, val) => sum + val, 0);
+
+    const studentWithNewXp: Student = { ...student, xp: newXp, totalXp };
+    
+    const awardedBadges: Badge[] = [];
+    BADGE_DEFINITIONS.forEach(badgeDef => {
+      const hasBadge = student.badges.some(b => b.id === badgeDef.id);
+      if (!hasBadge && badgeDef.criteria(studentWithNewXp)) {
+        const newBadge: Badge = {
+          ...badgeDef,
+          id: badgeDef.id as Badge['id'],
+          dateEarned: new Date().toISOString(),
+        };
+        awardedBadges.push(newBadge);
+      }
+    });
+
     setStudents(prev => prev.map(s => {
       if (s.id === studentId) {
-        const newXp = { ...s.xp, [category]: s.xp[category] + amount };
-        const totalXp = Object.values(newXp).reduce((sum, val) => sum + val, 0);
-        return { ...s, xp: newXp, totalXp };
+        return {
+          ...s,
+          xp: newXp,
+          totalXp,
+          badges: [...s.badges, ...awardedBadges]
+        };
       }
       return s;
     }));
+
+    if (awardedBadges.length > 0) {
+      awardedBadges.forEach(b => {
+        toast.success(`${student.name} earned the "${b.name}" badge! ${b.emoji}`);
+      });
+    }
   };
 
   const assignTeam = (studentId: string, team: TeamName | null) => {

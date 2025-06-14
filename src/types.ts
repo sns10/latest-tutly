@@ -1,4 +1,3 @@
-
 export type ClassName = "8th" | "9th" | "10th" | "11th" | "All";
 
 export type XPCategory = "blackout" | "futureMe" | "recallWar";
@@ -19,7 +18,7 @@ export interface PurchasedReward extends Reward {
 
 export type TeamName = "Alpha" | "Bravo" | "Charlie";
 
-export type BadgeId = "first-100-xp" | "mvp-of-the-week" | "team-player" | "streak-master";
+export type BadgeId = "first-100-xp" | "mvp-of-the-week" | "team-player" | "streak-master" | string;
 
 export interface Badge {
     id: BadgeId;
