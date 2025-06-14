@@ -62,7 +62,7 @@ export function AuthPage() {
   };
 
   const fillTestCredentials = () => {
-    setEmail('teacher@classroom.test');
+    setEmail('teacher@classroom.com');
     setPassword('classroom123!');
   };
 
@@ -106,7 +106,7 @@ export function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="teacher@classroom.test"
+                    placeholder="teacher@classroom.com"
                   />
                 </div>
                 <div className="space-y-2">
@@ -136,7 +136,7 @@ export function AuthPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    placeholder="teacher@classroom.test"
+                    placeholder="teacher@classroom.com"
                   />
                 </div>
                 <div className="space-y-2">
