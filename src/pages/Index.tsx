@@ -1,17 +1,16 @@
-
 import { useState, useMemo } from 'react';
 import useLocalStorage from '@/hooks/use-local-storage';
-import { Student, ClassName, XPCategory } from '@/types';
+import { Student, ClassName, XPCategory, Reward, PurchasedReward } from '@/types';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
 import { Leaderboard } from '@/components/Leaderboard';
 import { WeeklyMVP } from '@/components/WeeklyMVP';
 import { Button } from '@/components/ui/button';
 
 const initialStudents: Student[] = [
-  { id: '1', name: 'Curious Cat', class: '8th', avatar: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=500&h=500&fit=crop', xp: { blackout: 10, futureMe: 40, recallWar: 100 }, totalXp: 150 },
-  { id: '2', name: 'Clever Kitten', class: '9th', avatar: 'https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=500&h=500&fit=crop', xp: { blackout: 20, futureMe: 80, recallWar: 250 }, totalXp: 350 },
-  { id: '3', name: 'Wise Monkey', class: '10th', avatar: 'https://images.unsplash.com/photo-1501286353178-1ec881214838?w=500&h=500&fit=crop', xp: { blackout: 30, futureMe: 20, recallWar: 50 }, totalXp: 100 },
-  { id: '4', name: 'Chill Penguin', class: '11th', avatar: 'https://images.unsplash.com/photo-1441057206919-63d19fac2369?w=500&h=500&fit=crop', xp: { blackout: 50, futureMe: 100, recallWar: 300 }, totalXp: 450 },
+  { id: '1', name: 'Curious Cat', class: '8th', avatar: 'https://images.unsplash.com/photo-1582562124811-c09040d0a901?w=500&h=500&fit=crop', xp: { blackout: 10, futureMe: 40, recallWar: 100 }, totalXp: 150, purchasedRewards: [] },
+  { id: '2', name: 'Clever Kitten', class: '9th', avatar: 'https://images.unsplash.com/photo-1535268647677-300dbf3d78d1?w=500&h=500&fit=crop', xp: { blackout: 20, futureMe: 80, recallWar: 250 }, totalXp: 350, purchasedRewards: [] },
+  { id: '3', name: 'Wise Monkey', class: '10th', avatar: 'https://images.unsplash.com/photo-1501286353178-1ec881214838?w=500&h=500&fit=crop', xp: { blackout: 30, futureMe: 20, recallWar: 50 }, totalXp: 100, purchasedRewards: [] },
+  { id: '4', name: 'Chill Penguin', class: '11th', avatar: 'https://images.unsplash.com/photo-1441057206919-63d19fac2369?w=500&h=500&fit=crop', xp: { blackout: 50, futureMe: 100, recallWar: 300 }, totalXp: 450, purchasedRewards: [] },
 ];
 
 const classFilters: ClassName[] = ["All", "8th", "9th", "10th", "11th"];
@@ -20,12 +19,13 @@ const Index = () => {
   const [students, setStudents] = useLocalStorage<Student[]>('students', initialStudents);
   const [activeFilter, setActiveFilter] = useState<ClassName>("All");
 
-  const addStudent = (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp'>) => {
+  const addStudent = (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards'>) => {
     const student: Student = {
       ...newStudent,
       id: new Date().toISOString(),
       xp: { blackout: 0, futureMe: 0, recallWar: 0 },
       totalXp: 0,
+      purchasedRewards: [],
     };
     setStudents(prev => [...prev, student]);
   };
@@ -42,6 +42,35 @@ const Index = () => {
         const newXp = { ...s.xp, [category]: s.xp[category] + amount };
         const totalXp = Object.values(newXp).reduce((sum, val) => sum + val, 0);
         return { ...s, xp: newXp, totalXp };
+      }
+      return s;
+    }));
+  };
+
+  const buyReward = (studentId: string, reward: Reward) => {
+    setStudents(prev => prev.map(s => {
+      if (s.id === studentId && s.totalXp >= reward.cost) {
+        const newPurchasedReward: PurchasedReward = {
+          ...reward,
+          instanceId: `${reward.id}-${new Date().toISOString()}`
+        };
+        return {
+          ...s,
+          totalXp: s.totalXp - reward.cost,
+          purchasedRewards: [...s.purchasedRewards, newPurchasedReward]
+        };
+      }
+      return s;
+    }));
+  };
+
+  const useReward = (studentId: string, rewardInstanceId: string) => {
+    setStudents(prev => prev.map(s => {
+      if (s.id === studentId) {
+        return {
+          ...s,
+          purchasedRewards: s.purchasedRewards.filter(r => r.instanceId !== rewardInstanceId)
+        };
       }
       return s;
     }));
@@ -86,7 +115,7 @@ const Index = () => {
                 </Button>
               ))}
             </div>
-            <Leaderboard students={filteredStudents} onAddXp={addXp} onRemoveStudent={removeStudent} />
+            <Leaderboard students={filteredStudents} onAddXp={addXp} onRemoveStudent={removeStudent} onBuyReward={buyReward} onUseReward={useReward} />
           </div>
 
           <aside className="space-y-6">
