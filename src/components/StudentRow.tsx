@@ -1,3 +1,4 @@
+
 import { Student, XPCategory, Reward } from "@/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -5,6 +6,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Trash2, Gift } from "lucide-react";
 import { XP_STORE_ITEMS } from "@/config/rewards";
+import { Badge } from "@/components/ui/badge";
 
 interface StudentRowProps {
   student: Student;
@@ -40,9 +42,32 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
       </Avatar>
       <div className="flex-1">
         <p className="font-semibold text-lg text-foreground">{student.name}</p>
-        <div className="flex items-center gap-2 mt-1">
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
           <p className="text-sm text-muted-foreground">{student.class} Grade</p>
-          {student.purchasedRewards.length > 0 && (
+          {student.team && (
+             <Badge variant="outline" className="border-primary/20 font-semibold">{student.team} Team</Badge>
+          )}
+          {student.badges && student.badges.length > 0 && (
+            <div className="flex gap-1.5">
+              <TooltipProvider>
+                {student.badges.map((badge) => (
+                  <Tooltip key={badge.id}>
+                    <TooltipTrigger asChild>
+                      <span className="text-lg bg-secondary px-1.5 py-0.5 rounded-md cursor-default hover:scale-110 transition-transform">
+                        {badge.emoji}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent className="border-primary/30 bg-background">
+                      <p className="font-semibold">{badge.name}</p>
+                      <p className="text-xs text-muted-foreground">{badge.description}</p>
+                      <p className="text-xs text-muted-foreground italic">Earned: {new Date(badge.dateEarned).toLocaleDateString()}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                ))}
+              </TooltipProvider>
+            </div>
+          )}
+          {student.purchasedRewards && student.purchasedRewards.length > 0 && (
             <div className="flex gap-1.5">
               <TooltipProvider>
                 {student.purchasedRewards.map((reward) => (

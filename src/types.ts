@@ -17,6 +17,18 @@ export interface PurchasedReward extends Reward {
   instanceId: string;
 }
 
+export type TeamName = "Alpha" | "Bravo" | "Charlie";
+
+export type BadgeId = "first-100-xp" | "mvp-of-the-week" | "team-player" | "streak-master";
+
+export interface Badge {
+    id: BadgeId;
+    name: string;
+    description: string;
+    emoji: string;
+    dateEarned: string;
+}
+
 export interface Student {
   id: string;
   name: string;
@@ -29,4 +41,6 @@ export interface Student {
   };
   totalXp: number;
   purchasedRewards: PurchasedReward[];
+  team: TeamName | null;
+  badges: Badge[];
 }

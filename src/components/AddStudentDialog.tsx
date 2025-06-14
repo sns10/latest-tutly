@@ -23,7 +23,7 @@ import { Student, ClassName } from "@/types";
 import { PlusCircle } from "lucide-react";
 
 interface AddStudentDialogProps {
-  onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards'>) => void;
+  onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => void;
 }
 
 const classNames: ClassName[] = ["8th", "9th", "10th", "11th"];
