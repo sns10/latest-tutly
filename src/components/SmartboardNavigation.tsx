@@ -1,7 +1,6 @@
 
 import React from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { SmartboardButton } from '@/components/ui/smartboard-button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { BookOpen, Trophy, Users, Star, Zap, Monitor, BarChart3, Megaphone } from 'lucide-react';
 import { usePresentationMode } from './PresentationMode';
 import { cn } from '@/lib/utils';
@@ -29,7 +28,8 @@ export function SmartboardNavigation({ defaultValue, children }: SmartboardNavig
     <Tabs defaultValue={defaultValue} className="w-full">
       <TabsList className={cn(
         "grid w-full bg-card/50 backdrop-blur-sm mb-8 p-2 gap-2",
-        isPresentationMode ? "grid-cols-4 h-20" : "grid-cols-8 h-16",
+        isPresentationMode ? "grid-cols-4" : "grid-cols-4 md:grid-cols-8",
+        isPresentationMode ? "h-20" : "h-16",
         textSize === 'large' && "h-18",
         textSize === 'extra-large' && "h-24"
       )}>
@@ -50,7 +50,7 @@ export function SmartboardNavigation({ defaultValue, children }: SmartboardNavig
             {tab.icon}
             <span className={cn(
               "font-medium",
-              isPresentationMode && "hidden sm:block"
+              isPresentationMode ? "hidden sm:block" : "hidden md:block"
             )}>
               {tab.label}
             </span>

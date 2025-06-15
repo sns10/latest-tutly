@@ -70,9 +70,9 @@ const Index = () => {
   return (
     <PresentationProvider>
       <div className="min-h-screen bg-background">
-        <div className="container mx-auto p-6">
+        <div className="container mx-auto p-4 sm:p-6">
           <div className="text-center mb-8">
-            <h1 className="text-5xl font-bold font-display text-foreground">
+            <h1 className="text-3xl sm:text-5xl font-bold font-display text-foreground">
               Gamify Pallikoodam
             </h1>
             <p className="text-muted-foreground mt-2">Created by Sanas</p>
