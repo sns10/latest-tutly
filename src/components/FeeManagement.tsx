@@ -1,15 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Student, StudentFee } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { DollarSign, AlertTriangle, CheckCircle, Clock, Plus } from 'lucide-react';
+import { DollarSign, AlertTriangle, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface FeeManagementProps {
@@ -21,58 +17,80 @@ interface FeeManagementProps {
 
 export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: FeeManagementProps) {
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
-  const [isAddFeeOpen, setIsAddFeeOpen] = useState(false);
-  const [newFee, setNewFee] = useState({
-    studentId: '',
-    feeType: '',
-    amount: '',
-    dueDate: '',
-    notes: ''
+  const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
+
+  // Generate monthly fees for all students
+  useEffect(() => {
+    generateMonthlyFees();
+  }, [students]);
+
+  function getCurrentMonth() {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  function generateMonthlyFees() {
+    const currentMonth = getCurrentMonth();
+    const currentYear = new Date().getFullYear();
+    
+    // Generate fees for current month if they don't exist
+    students.forEach(student => {
+      const existingFee = fees.find(f => 
+        f.studentId === student.id && 
+        f.feeType === `Monthly Fee - ${currentMonth}` 
+      );
+      
+      if (!existingFee) {
+        const dueDate = new Date(currentYear, new Date().getMonth(), 5); // 5th of current month
+        onAddFee({
+          studentId: student.id,
+          feeType: `Monthly Fee - ${currentMonth}`,
+          amount: 500, // Default monthly fee amount
+          dueDate: dueDate.toISOString().split('T')[0],
+          status: 'unpaid'
+        });
+      }
+    });
+  }
+
+  // Get months for filter (last 12 months)
+  const getAvailableMonths = () => {
+    const months = [];
+    const now = new Date();
+    for (let i = 0; i < 12; i++) {
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+      months.push({
+        value: monthStr,
+        label: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+      });
+    }
+    return months;
+  };
+
+  // Filter fees by student and month
+  const filteredFees = fees.filter(fee => {
+    const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
+    const monthMatch = fee.feeType.includes(selectedMonth);
+    return studentMatch && monthMatch;
   });
 
-  // Filter fees by student
-  const filteredFees = selectedStudent === 'All' 
-    ? fees 
-    : fees.filter(f => f.studentId === selectedStudent);
+  // Get unpaid fees for current month
+  const unpaidFeesThisMonth = fees.filter(f => 
+    f.status === 'unpaid' && 
+    f.feeType.includes(getCurrentMonth())
+  );
 
-  // Get unpaid fees
-  const unpaidFees = fees.filter(f => f.status === 'unpaid' || f.status === 'overdue');
-
-  // Calculate statistics
-  const totalAmount = fees.reduce((sum, fee) => sum + fee.amount, 0);
-  const paidAmount = fees.filter(f => f.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
-  const unpaidAmount = fees.filter(f => f.status === 'unpaid' || f.status === 'overdue').reduce((sum, fee) => sum + fee.amount, 0);
+  // Calculate statistics for current month
+  const currentMonthFees = fees.filter(f => f.feeType.includes(selectedMonth));
+  const totalAmount = currentMonthFees.reduce((sum, fee) => sum + fee.amount, 0);
+  const paidAmount = currentMonthFees.filter(f => f.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
+  const unpaidAmount = currentMonthFees.filter(f => f.status === 'unpaid').reduce((sum, fee) => sum + fee.amount, 0);
 
   // Get student name by ID
   const getStudentName = (studentId: string) => {
     const student = students.find(s => s.id === studentId);
     return student ? student.name : 'Unknown Student';
-  };
-
-  const handleAddFee = () => {
-    if (!newFee.studentId || !newFee.feeType || !newFee.amount || !newFee.dueDate) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
-    onAddFee({
-      studentId: newFee.studentId,
-      feeType: newFee.feeType,
-      amount: parseFloat(newFee.amount),
-      dueDate: newFee.dueDate,
-      status: 'unpaid',
-      notes: newFee.notes || undefined
-    });
-
-    setNewFee({
-      studentId: '',
-      feeType: '',
-      amount: '',
-      dueDate: '',
-      notes: ''
-    });
-    setIsAddFeeOpen(false);
-    toast.success('Fee added successfully');
   };
 
   const handleMarkAsPaid = (feeId: string) => {
@@ -109,79 +127,12 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold font-display text-primary">Fee Management</h2>
-          <p className="text-muted-foreground">Manage student fees and payments</p>
+          <p className="text-muted-foreground">Track monthly fee payments for all students</p>
         </div>
-        <Dialog open={isAddFeeOpen} onOpenChange={setIsAddFeeOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Fee
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Fee</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="student">Student</Label>
-                <Select value={newFee.studentId} onValueChange={(value) => setNewFee({...newFee, studentId: value})}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select student" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {students.map(student => (
-                      <SelectItem key={student.id} value={student.id}>
-                        {student.name} - {student.class}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label htmlFor="feeType">Fee Type</Label>
-                <Input
-                  id="feeType"
-                  value={newFee.feeType}
-                  onChange={(e) => setNewFee({...newFee, feeType: e.target.value})}
-                  placeholder="e.g., Tuition, Books, Lab Fee"
-                />
-              </div>
-              <div>
-                <Label htmlFor="amount">Amount ($)</Label>
-                <Input
-                  id="amount"
-                  type="number"
-                  step="0.01"
-                  value={newFee.amount}
-                  onChange={(e) => setNewFee({...newFee, amount: e.target.value})}
-                  placeholder="0.00"
-                />
-              </div>
-              <div>
-                <Label htmlFor="dueDate">Due Date</Label>
-                <Input
-                  id="dueDate"
-                  type="date"
-                  value={newFee.dueDate}
-                  onChange={(e) => setNewFee({...newFee, dueDate: e.target.value})}
-                />
-              </div>
-              <div>
-                <Label htmlFor="notes">Notes (Optional)</Label>
-                <Textarea
-                  id="notes"
-                  value={newFee.notes}
-                  onChange={(e) => setNewFee({...newFee, notes: e.target.value})}
-                  placeholder="Additional notes..."
-                />
-              </div>
-              <Button onClick={handleAddFee} className="w-full">
-                Add Fee
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+        <Button onClick={generateMonthlyFees}>
+          <Calendar className="h-4 w-4 mr-2" />
+          Generate Current Month Fees
+        </Button>
       </div>
 
       {/* Statistics */}
@@ -190,7 +141,7 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
           <CardContent className="p-4 text-center">
             <DollarSign className="h-6 w-6 mx-auto mb-2 text-blue-500" />
             <div className="text-2xl font-bold">${totalAmount.toFixed(2)}</div>
-            <div className="text-sm text-muted-foreground">Total Fees</div>
+            <div className="text-sm text-muted-foreground">Total for {getAvailableMonths().find(m => m.value === selectedMonth)?.label}</div>
           </CardContent>
         </Card>
         <Card>
@@ -210,8 +161,8 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
         <Card>
           <CardContent className="p-4 text-center">
             <Clock className="h-6 w-6 mx-auto mb-2 text-yellow-500" />
-            <div className="text-2xl font-bold">{unpaidFees.length}</div>
-            <div className="text-sm text-muted-foreground">Overdue</div>
+            <div className="text-2xl font-bold">{unpaidFeesThisMonth.length}</div>
+            <div className="text-sm text-muted-foreground">Students Pending</div>
           </CardContent>
         </Card>
       </div>
@@ -220,41 +171,58 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
       <Card>
         <CardContent className="p-4">
           <div className="flex gap-4 items-center">
-            <Label>Filter by Student:</Label>
-            <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-              <SelectTrigger className="w-64">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All Students</SelectItem>
-                {students.map(student => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.name} - {student.class}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Month:</span>
+              <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                <SelectTrigger className="w-48">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableMonths().map(month => (
+                    <SelectItem key={month.value} value={month.value}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Student:</span>
+              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                <SelectTrigger className="w-64">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Students</SelectItem>
+                  {students.map(student => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name} - {student.class}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Unpaid Fees Alert */}
-      {unpaidFees.length > 0 && (
+      {/* Unpaid Fees Alert for Current Month */}
+      {unpaidFeesThisMonth.length > 0 && selectedMonth === getCurrentMonth() && (
         <Card className="border-red-200 bg-red-50">
           <CardHeader>
             <CardTitle className="text-red-700 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
-              Students with Unpaid Fees ({unpaidFees.length})
+              Students with Unpaid Fees This Month ({unpaidFeesThisMonth.length})
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {unpaidFees.slice(0, 5).map((fee) => (
+              {unpaidFeesThisMonth.slice(0, 10).map((fee) => (
                 <div key={fee.id} className="flex justify-between items-center p-2 bg-white rounded border">
                   <div>
                     <span className="font-medium">{getStudentName(fee.studentId)}</span>
                     <span className="text-sm text-muted-foreground ml-2">
-                      {fee.feeType} - Due: {new Date(fee.dueDate).toLocaleDateString()}
+                      Due: {new Date(fee.dueDate).toLocaleDateString()}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -265,9 +233,9 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
                   </div>
                 </div>
               ))}
-              {unpaidFees.length > 5 && (
+              {unpaidFeesThisMonth.length > 10 && (
                 <div className="text-sm text-muted-foreground">
-                  And {unpaidFees.length - 5} more...
+                  And {unpaidFeesThisMonth.length - 10} more...
                 </div>
               )}
             </div>
@@ -278,48 +246,52 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
       {/* Fee List */}
       <Card>
         <CardHeader>
-          <CardTitle>All Fees</CardTitle>
+          <CardTitle>
+            Fee Status - {getAvailableMonths().find(m => m.value === selectedMonth)?.label}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {filteredFees.map((fee) => (
-              <div key={fee.id} className="flex justify-between items-center p-4 border rounded-lg">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{getStudentName(fee.studentId)}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {students.find(s => s.id === fee.studentId)?.class}
-                    </Badge>
-                  </div>
-                  <div className="text-sm text-muted-foreground">{fee.feeType}</div>
-                  <div className="text-sm text-muted-foreground">
-                    Due: {new Date(fee.dueDate).toLocaleDateString()}
-                    {fee.paidDate && ` | Paid: ${new Date(fee.paidDate).toLocaleDateString()}`}
-                  </div>
-                  {fee.notes && (
-                    <div className="text-sm text-muted-foreground mt-1">{fee.notes}</div>
-                  )}
-                </div>
-                
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <div className="font-bold">${fee.amount.toFixed(2)}</div>
-                    <div className="flex items-center gap-1">
-                      {getStatusIcon(fee.status)}
-                      <Badge variant={getStatusColor(fee.status)}>
-                        {fee.status}
+            {filteredFees.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                No fees found for the selected month and student filter.
+              </div>
+            ) : (
+              filteredFees.map((fee) => (
+                <div key={fee.id} className="flex justify-between items-center p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="font-medium">{getStudentName(fee.studentId)}</span>
+                      <Badge variant="outline" className="text-xs">
+                        {students.find(s => s.id === fee.studentId)?.class}
                       </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      Due: {new Date(fee.dueDate).toLocaleDateString()}
+                      {fee.paidDate && ` | Paid: ${new Date(fee.paidDate).toLocaleDateString()}`}
                     </div>
                   </div>
                   
-                  {fee.status !== 'paid' && (
-                    <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)}>
-                      Mark Paid
-                    </Button>
-                  )}
+                  <div className="flex items-center gap-4">
+                    <div className="text-right">
+                      <div className="font-bold">${fee.amount.toFixed(2)}</div>
+                      <div className="flex items-center gap-1">
+                        {getStatusIcon(fee.status)}
+                        <Badge variant={getStatusColor(fee.status)}>
+                          {fee.status}
+                        </Badge>
+                      </div>
+                    </div>
+                    
+                    {fee.status !== 'paid' && (
+                      <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)}>
+                        Mark Paid
+                      </Button>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
