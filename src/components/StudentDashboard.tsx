@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Student, StudentTestResult, WeeklyTest, StudentAttendance, StudentFee } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { CalendarDays, TrendingUp, Award, DollarSign, BookOpen, Target } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
 
 interface StudentDashboardProps {
   student: Student;
@@ -185,65 +185,114 @@ export function StudentDashboard({
     </div>
   );
 
-  const renderAttendance = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+  const renderAttendance = () => {
+    const modifiers = {
+      present: attendance.filter(a => a.status === 'present').map(a => new Date(a.date)),
+      absent: attendance.filter(a => a.status === 'absent').map(a => new Date(a.date)),
+      late: attendance.filter(a => a.status === 'late').map(a => new Date(a.date)),
+      excused: attendance.filter(a => a.status === 'excused').map(a => new Date(a.date)),
+    };
+
+    const modifiersStyles = {
+      present: { backgroundColor: '#22c55e', color: 'white', borderRadius: '50%' },
+      absent: { backgroundColor: '#ef4444', color: 'white', borderRadius: '50%' },
+      late: { backgroundColor: '#eab308', color: 'white', borderRadius: '50%' },
+      excused: { backgroundColor: '#3b82f6', color: 'white', borderRadius: '50%' },
+    };
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-center text-green-600">{presentDays}</div>
+              <div className="text-sm text-muted-foreground text-center">Present</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-center text-red-600">
+                {attendance.filter(a => a.status === 'absent').length}
+              </div>
+              <div className="text-sm text-muted-foreground text-center">Absent</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-center text-yellow-600">
+                {attendance.filter(a => a.status === 'late').length}
+              </div>
+              <div className="text-sm text-muted-foreground text-center">Late</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="p-4">
+              <div className="text-2xl font-bold text-center">{attendanceRate.toFixed(1)}%</div>
+              <div className="text-sm text-muted-foreground text-center">Rate</div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-center text-green-600">{presentDays}</div>
-            <div className="text-sm text-muted-foreground text-center">Present</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-center text-red-600">
-              {attendance.filter(a => a.status === 'absent').length}
+          <CardHeader>
+            <CardTitle>Attendance Calendar</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-col items-center gap-4">
+            <Calendar
+              mode="multiple"
+              modifiers={modifiers}
+              modifiersStyles={modifiersStyles}
+              month={attendance.length > 0 ? new Date(attendance[0].date) : new Date()}
+              className="rounded-md border"
+            />
+            <div className="flex flex-wrap justify-center gap-4 text-sm">
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#22c55e]"></div>
+                    <span>Present</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#ef4444]"></div>
+                    <span>Absent</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#eab308]"></div>
+                    <span>Late</span>
+                </div>
+                <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
+                    <span>Excused</span>
+                </div>
             </div>
-            <div className="text-sm text-muted-foreground text-center">Absent</div>
           </CardContent>
         </Card>
+
         <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-center text-yellow-600">
-              {attendance.filter(a => a.status === 'late').length}
+          <CardHeader>
+            <CardTitle>Recent Attendance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {attendance.slice(0, 10).map((record) => (
+                <div key={record.id} className="flex justify-between items-center p-3 border rounded">
+                  <div>
+                    <div className="font-medium">{new Date(record.date).toLocaleDateString()}</div>
+                    {record.notes && <div className="text-sm text-muted-foreground">{record.notes}</div>}
+                  </div>
+                  <Badge variant={
+                    record.status === 'present' ? 'default' :
+                    record.status === 'late' ? 'secondary' :
+                    record.status === 'excused' ? 'outline' : 'destructive'
+                  }>
+                    {record.status}
+                  </Badge>
+                </div>
+              ))}
             </div>
-            <div className="text-sm text-muted-foreground text-center">Late</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-2xl font-bold text-center">{attendanceRate.toFixed(1)}%</div>
-            <div className="text-sm text-muted-foreground text-center">Rate</div>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Attendance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            {attendance.slice(0, 10).map((record) => (
-              <div key={record.id} className="flex justify-between items-center p-3 border rounded">
-                <div>
-                  <div className="font-medium">{new Date(record.date).toLocaleDateString()}</div>
-                  {record.notes && <div className="text-sm text-muted-foreground">{record.notes}</div>}
-                </div>
-                <Badge variant={
-                  record.status === 'present' ? 'default' :
-                  record.status === 'late' ? 'secondary' :
-                  record.status === 'excused' ? 'outline' : 'destructive'
-                }>
-                  {record.status}
-                </Badge>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+    )
+  };
 
   const renderFees = () => (
     <div className="space-y-6">
