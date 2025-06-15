@@ -99,10 +99,10 @@ const Index = () => {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-4xl font-bold font-display bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
-              Classroom Gamification
+              Gamify Pallikoodam
             </h1>
             <p className="text-lg text-muted-foreground">
-              Making learning fun with XP, challenges, and achievements
+              created by sanas
             </p>
             {user && (
               <p className="text-sm text-muted-foreground mt-1">
