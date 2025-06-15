@@ -4,6 +4,12 @@ import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassNa
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 
+// It's recommended to move this interface to `src/types.ts` when possible.
+interface ClassFee {
+  class: string;
+  amount: number;
+}
+
 export function useSupabaseData() {
   const [students, setStudents] = useState<Student[]>([]);
   const [weeklyTests, setWeeklyTests] = useState<WeeklyTest[]>([]);
@@ -13,6 +19,7 @@ export function useSupabaseData() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [attendance, setAttendance] = useState<StudentAttendance[]>([]);
   const [fees, setFees] = useState<StudentFee[]>([]);
+  const [classFees, setClassFees] = useState<ClassFee[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all data
@@ -31,7 +38,8 @@ export function useSupabaseData() {
         fetchStudentChallenges(),
         fetchAnnouncements(),
         fetchAttendance(),
-        fetchFees()
+        fetchFees(),
+        fetchClassFees()
       ]);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -250,6 +258,19 @@ export function useSupabaseData() {
     }));
 
     setFees(formattedFees);
+  };
+
+  const fetchClassFees = async () => {
+    const { data, error } = await supabase
+      .from('class_fees')
+      .select('*');
+
+    if (error) {
+      console.error('Error fetching class fees:', error);
+      toast.error('Failed to load class fees');
+      return;
+    }
+    setClassFees(data.map(d => ({ class: d.class, amount: Number(d.amount) })));
   };
 
   const addStudent = async (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
@@ -666,6 +687,21 @@ export function useSupabaseData() {
     await fetchFees();
   };
 
+  const updateClassFee = async (className: string, amount: number) => {
+    const { error } = await supabase
+      .from('class_fees')
+      .update({ amount })
+      .eq('class', className);
+
+    if (error) {
+      console.error('Error updating class fee:', error);
+      toast.error('Failed to update class fee');
+      return;
+    }
+
+    await fetchClassFees();
+  };
+
   return {
     students,
     weeklyTests,
@@ -675,6 +711,7 @@ export function useSupabaseData() {
     announcements,
     attendance,
     fees,
+    classFees,
     loading,
     addStudent,
     addWeeklyTest,
@@ -692,5 +729,6 @@ export function useSupabaseData() {
     markAttendance,
     addFee,
     updateFeeStatus,
+    updateClassFee,
   };
 }

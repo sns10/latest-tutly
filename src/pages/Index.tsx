@@ -21,6 +21,7 @@ const Index = () => {
     announcements,
     attendance,
     fees,
+    classFees,
     loading,
     addStudent,
     addWeeklyTest,
@@ -38,6 +39,7 @@ const Index = () => {
     markAttendance,
     addFee,
     updateFeeStatus,
+    updateClassFee,
   } = useSupabaseData();
 
   if (loading) {
@@ -79,6 +81,7 @@ const Index = () => {
                 announcements={announcements}
                 attendance={attendance}
                 fees={fees}
+                classFees={classFees}
                 onAddTest={addWeeklyTest}
                 onDeleteTest={deleteWeeklyTest}
                 onAddTestResult={addTestResult}
@@ -89,6 +92,7 @@ const Index = () => {
                 onMarkAttendance={markAttendance}
                 onAddFee={addFee}
                 onUpdateFeeStatus={updateFeeStatus}
+                onUpdateClassFee={updateClassFee}
               />
             </TabsContent>
 

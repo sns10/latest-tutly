@@ -104,6 +104,21 @@ export type Database = {
         }
         Relationships: []
       }
+      class_fees: {
+        Row: {
+          amount: number
+          class: string
+        }
+        Insert: {
+          amount: number
+          class: string
+        }
+        Update: {
+          amount?: number
+          class?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

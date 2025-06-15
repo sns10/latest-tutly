@@ -1,6 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
-import { Student, StudentFee } from '@/types';
+import { Student, StudentFee, ClassName } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,21 +7,29 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DollarSign, AlertTriangle, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface ClassFee {
+  class: ClassName;
+  amount: number;
+}
+
 interface FeeManagementProps {
   students: Student[];
   fees: StudentFee[];
+  classFees: ClassFee[];
   onAddFee: (fee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
 }
 
-export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: FeeManagementProps) {
+export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFeeStatus }: FeeManagementProps) {
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
 
   // Generate monthly fees for all students
   useEffect(() => {
-    generateMonthlyFees();
-  }, [students]);
+    if (students.length > 0 && classFees.length > 0) {
+      generateMonthlyFees();
+    }
+  }, [students, classFees]);
 
   function getCurrentMonth() {
     const now = new Date();
@@ -33,7 +40,6 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
     const currentMonth = getCurrentMonth();
     const currentYear = new Date().getFullYear();
     
-    // Generate fees for current month if they don't exist
     students.forEach(student => {
       const existingFee = fees.find(f => 
         f.studentId === student.id && 
@@ -41,14 +47,19 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
       );
       
       if (!existingFee) {
-        const dueDate = new Date(currentYear, new Date().getMonth(), 5); // 5th of current month
-        onAddFee({
-          studentId: student.id,
-          feeType: `Monthly Fee - ${currentMonth}`,
-          amount: 500, // Default monthly fee amount
-          dueDate: dueDate.toISOString().split('T')[0],
-          status: 'unpaid'
-        });
+        const classFee = classFees.find(cf => cf.class === student.class);
+        const feeAmount = classFee ? classFee.amount : 0;
+
+        if (feeAmount > 0) {
+          const dueDate = new Date(currentYear, new Date().getMonth(), 5); // 5th of current month
+          onAddFee({
+            studentId: student.id,
+            feeType: `Monthly Fee - ${currentMonth}`,
+            amount: feeAmount,
+            dueDate: dueDate.toISOString().split('T')[0],
+            status: 'unpaid'
+          });
+        }
       }
     });
   }
@@ -140,21 +151,21 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
         <Card>
           <CardContent className="p-4 text-center">
             <DollarSign className="h-6 w-6 mx-auto mb-2 text-blue-500" />
-            <div className="text-2xl font-bold">${totalAmount.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₹{totalAmount.toFixed(2)}</div>
             <div className="text-sm text-muted-foreground">Total for {getAvailableMonths().find(m => m.value === selectedMonth)?.label}</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <CheckCircle className="h-6 w-6 mx-auto mb-2 text-green-500" />
-            <div className="text-2xl font-bold">${paidAmount.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₹{paidAmount.toFixed(2)}</div>
             <div className="text-sm text-muted-foreground">Paid</div>
           </CardContent>
         </Card>
         <Card>
           <CardContent className="p-4 text-center">
             <AlertTriangle className="h-6 w-6 mx-auto mb-2 text-red-500" />
-            <div className="text-2xl font-bold">${unpaidAmount.toFixed(2)}</div>
+            <div className="text-2xl font-bold">₹{unpaidAmount.toFixed(2)}</div>
             <div className="text-sm text-muted-foreground">Unpaid</div>
           </CardContent>
         </Card>
@@ -226,7 +237,7 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-red-600">${fee.amount.toFixed(2)}</span>
+                    <span className="font-bold text-red-600">₹{fee.amount.toFixed(2)}</span>
                     <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)}>
                       Mark Paid
                     </Button>
@@ -274,7 +285,7 @@ export function FeeManagement({ students, fees, onAddFee, onUpdateFeeStatus }: F
                   
                   <div className="flex items-center gap-4">
                     <div className="text-right">
-                      <div className="font-bold">${fee.amount.toFixed(2)}</div>
+                      <div className="font-bold">₹{fee.amount.toFixed(2)}</div>
                       <div className="flex items-center gap-1">
                         {getStatusIcon(fee.status)}
                         <Badge variant={getStatusColor(fee.status)}>

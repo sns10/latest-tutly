@@ -1,6 +1,5 @@
-
 import { useState } from "react";
-import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement } from "@/types";
+import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +15,12 @@ import { StudentDashboard } from "./StudentDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2 } from "lucide-react";
+import { ClassFeeManager } from "./ClassFeeManager";
+
+interface ClassFee {
+  class: ClassName;
+  amount: number;
+}
 
 interface WeeklyTestManagerProps {
   tests: WeeklyTest[];
@@ -26,6 +31,7 @@ interface WeeklyTestManagerProps {
   announcements: Announcement[];
   attendance: any[];
   fees: any[];
+  classFees: ClassFee[];
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onDeleteTest: (testId: string) => void;
   onAddTestResult: (result: StudentTestResult) => void;
@@ -36,6 +42,7 @@ interface WeeklyTestManagerProps {
   onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => void;
   onAddFee: (fee: any) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
+  onUpdateClassFee: (className: string, amount: number) => void;
 }
 
 export function WeeklyTestManager({ 
@@ -47,6 +54,7 @@ export function WeeklyTestManager({
   announcements,
   attendance,
   fees,
+  classFees,
   onAddTest,
   onDeleteTest,
   onAddTestResult,
@@ -56,7 +64,8 @@ export function WeeklyTestManager({
   onAddAnnouncement,
   onMarkAttendance,
   onAddFee,
-  onUpdateFeeStatus
+  onUpdateFeeStatus,
+  onUpdateClassFee
 }: WeeklyTestManagerProps) {
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -316,10 +325,15 @@ export function WeeklyTestManager({
           />
         </TabsContent>
 
-        <TabsContent value="fees">
+        <TabsContent value="fees" className="space-y-6">
+          <ClassFeeManager 
+            classFees={classFees}
+            onUpdateClassFee={onUpdateClassFee}
+          />
           <FeeManagement 
             students={students}
             fees={fees}
+            classFees={classFees}
             onAddFee={onAddFee}
             onUpdateFeeStatus={onUpdateFeeStatus}
           />
