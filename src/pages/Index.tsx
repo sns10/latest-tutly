@@ -1,16 +1,18 @@
-
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { Leaderboard } from "@/components/Leaderboard";
 import { TeamLeaderboard } from "@/components/TeamLeaderboard";
 import { WeeklyMVP } from "@/components/WeeklyMVP";
 import { AddStudentDialog } from "@/components/AddStudentDialog";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { Trophy, Users, BookOpen, Star } from "lucide-react";
+import { useAuth } from "@/components/AuthProvider";
+import { Trophy, Users, BookOpen, Star, LogOut } from "lucide-react";
 import { TeamName } from "@/types";
 
 const Index = () => {
+  const { signOut, user } = useAuth();
   const {
     students,
     weeklyTests,
@@ -32,6 +34,10 @@ const Index = () => {
     completeChallenge,
     addAnnouncement,
   } = useSupabaseData();
+
+  const handleSignOut = async () => {
+    await signOut();
+  };
 
   if (loading) {
     return (
@@ -73,8 +79,24 @@ const Index = () => {
             <p className="text-lg text-muted-foreground">
               Making learning fun with XP, challenges, and achievements
             </p>
+            {user && (
+              <p className="text-sm text-muted-foreground mt-1">
+                Signed in as: {user.email}
+              </p>
+            )}
           </div>
-          <AddStudentDialog onAddStudent={addStudent} />
+          <div className="flex items-center gap-4">
+            <AddStudentDialog onAddStudent={addStudent} />
+            <Button 
+              onClick={handleSignOut}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="management" className="w-full">
