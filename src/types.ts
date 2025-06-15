@@ -1,4 +1,3 @@
-
 export type ClassName = "8th" | "9th" | "10th" | "11th" | "All";
 
 export type XPCategory = "blackout" | "futureMe" | "recallWar";
@@ -113,4 +112,9 @@ export interface StudentFee {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ClassFee {
+  class: ClassName;
+  amount: number;
 }

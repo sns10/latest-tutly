@@ -1,14 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee } from '@/types';
+import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee } from '@/types';
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 
-// It's recommended to move this interface to `src/types.ts` when possible.
-interface ClassFee {
-  class: string;
-  amount: number;
-}
+// The ClassFee interface has been moved to src/types.ts to be shared across the application.
 
 export function useSupabaseData() {
   const [students, setStudents] = useState<Student[]>([]);
@@ -270,7 +266,7 @@ export function useSupabaseData() {
       toast.error('Failed to load class fees');
       return;
     }
-    setClassFees(data.map(d => ({ class: d.class, amount: Number(d.amount) })));
+    setClassFees(data.map(d => ({ class: d.class as ClassName, amount: Number(d.amount) })));
   };
 
   const addStudent = async (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
