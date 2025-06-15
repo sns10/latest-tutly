@@ -90,3 +90,27 @@ export interface Announcement {
   targetClass: string | null;
   xpBonus: number | null;
 }
+
+// New types for attendance and fees
+export interface StudentAttendance {
+  id: string;
+  studentId: string;
+  date: string;
+  status: 'present' | 'absent' | 'late' | 'excused';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StudentFee {
+  id: string;
+  studentId: string;
+  feeType: string;
+  amount: number;
+  dueDate: string;
+  paidDate?: string;
+  status: 'paid' | 'unpaid' | 'partial' | 'overdue';
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}

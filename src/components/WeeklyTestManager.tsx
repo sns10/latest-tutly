@@ -10,8 +10,12 @@ import { TestResultsView } from "./TestResultsView";
 import { SmartboardView } from "./SmartboardView";
 import { ChallengesManager } from "./ChallengesManager";
 import { AnnouncementsManager } from "./AnnouncementsManager";
+import { AttendanceTracker } from "./AttendanceTracker";
+import { FeeManagement } from "./FeeManagement";
+import { StudentDashboard } from "./StudentDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
+import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2 } from "lucide-react";
 
 interface WeeklyTestManagerProps {
   tests: WeeklyTest[];
@@ -20,12 +24,18 @@ interface WeeklyTestManagerProps {
   challenges: Challenge[];
   studentChallenges: StudentChallenge[];
   announcements: Announcement[];
+  attendance: any[];
+  fees: any[];
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
+  onDeleteTest: (testId: string) => void;
   onAddTestResult: (result: StudentTestResult) => void;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
   onAddChallenge: (challenge: Omit<Challenge, 'id' | 'createdAt'>) => void;
   onCompleteChallenge: (studentId: string, challengeId: string) => void;
   onAddAnnouncement: (announcement: Omit<Announcement, 'id' | 'publishedAt'>) => void;
+  onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => void;
+  onAddFee: (fee: any) => void;
+  onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
 }
 
 export function WeeklyTestManager({ 
@@ -35,14 +45,21 @@ export function WeeklyTestManager({
   challenges,
   studentChallenges,
   announcements,
-  onAddTest, 
+  attendance,
+  fees,
+  onAddTest,
+  onDeleteTest,
   onAddTestResult,
   onAwardXP,
   onAddChallenge,
   onCompleteChallenge,
-  onAddAnnouncement
+  onAddAnnouncement,
+  onMarkAttendance,
+  onAddFee,
+  onUpdateFeeStatus
 }: WeeklyTestManagerProps) {
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   const getTestStats = (test: WeeklyTest) => {
     // Filter students by test class
@@ -64,6 +81,23 @@ export function WeeklyTestManager({
     };
   };
 
+  const handleDeleteTest = (testId: string) => {
+    onDeleteTest(testId);
+  };
+
+  if (selectedStudent) {
+    return (
+      <StudentDashboard
+        student={selectedStudent}
+        testResults={testResults}
+        tests={tests}
+        attendance={attendance.filter(a => a.studentId === selectedStudent.id)}
+        fees={fees.filter(f => f.studentId === selectedStudent.id)}
+        onClose={() => setSelectedStudent(null)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -75,7 +109,7 @@ export function WeeklyTestManager({
       </div>
 
       <Tabs defaultValue="tests" className="w-full">
-        <TabsList className="grid w-full grid-cols-6">
+        <TabsList className="grid w-full grid-cols-8">
           <TabsTrigger value="tests" className="flex items-center gap-2">
             <TestTube2 className="h-4 w-4" />
             Tests
@@ -84,6 +118,18 @@ export function WeeklyTestManager({
             <Users className="h-4 w-4" />
             Enter Marks
           </TabsTrigger>
+          <TabsTrigger value="students" className="flex items-center gap-2">
+            <UserCheck className="h-4 w-4" />
+            Students
+          </TabsTrigger>
+          <TabsTrigger value="attendance" className="flex items-center gap-2">
+            <CalendarDays className="h-4 w-4" />
+            Attendance
+          </TabsTrigger>
+          <TabsTrigger value="fees" className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            Fees
+          </TabsTrigger>
           <TabsTrigger value="challenges" className="flex items-center gap-2">
             <Trophy className="h-4 w-4" />
             Challenges
@@ -91,10 +137,6 @@ export function WeeklyTestManager({
           <TabsTrigger value="announcements" className="flex items-center gap-2">
             <Megaphone className="h-4 w-4" />
             Announcements
-          </TabsTrigger>
-          <TabsTrigger value="smartboard" className="flex items-center gap-2">
-            <Monitor className="h-4 w-4" />
-            Smartboard
           </TabsTrigger>
           <TabsTrigger value="reports" className="flex items-center gap-2">
             <BarChart3 className="h-4 w-4" />
@@ -168,6 +210,30 @@ export function WeeklyTestManager({
                           >
                             View Results
                           </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Test</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete "{test.name}"? This will also delete all associated test results. This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => handleDeleteTest(test.id)}
+                                  className="bg-red-600 hover:bg-red-700"
+                                >
+                                  Delete
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
                         </div>
                       </div>
                     </CardContent>
@@ -212,6 +278,53 @@ export function WeeklyTestManager({
           )}
         </TabsContent>
 
+        <TabsContent value="students">
+          <Card>
+            <CardHeader>
+              <CardTitle>Student Dashboard</CardTitle>
+              <p className="text-muted-foreground">Click on a student to view their detailed information</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {students.map((student) => (
+                  <Card key={student.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedStudent(student)}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                          {student.name.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div>
+                          <div className="font-medium">{student.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Class: {student.class} | XP: {student.totalXp}
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="attendance">
+          <AttendanceTracker 
+            students={students}
+            attendance={attendance}
+            onMarkAttendance={onMarkAttendance}
+          />
+        </TabsContent>
+
+        <TabsContent value="fees">
+          <FeeManagement 
+            students={students}
+            fees={fees}
+            onAddFee={onAddFee}
+            onUpdateFeeStatus={onUpdateFeeStatus}
+          />
+        </TabsContent>
+
         <TabsContent value="challenges">
           <ChallengesManager 
             challenges={challenges}
@@ -226,14 +339,6 @@ export function WeeklyTestManager({
           <AnnouncementsManager 
             announcements={announcements}
             onAddAnnouncement={onAddAnnouncement}
-          />
-        </TabsContent>
-
-        <TabsContent value="smartboard">
-          <SmartboardView 
-            tests={tests}
-            testResults={testResults}
-            students={students}
           />
         </TabsContent>
 

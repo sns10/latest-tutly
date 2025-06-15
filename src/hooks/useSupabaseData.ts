@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement } from '@/types';
+import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee } from '@/types';
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 
@@ -11,6 +11,8 @@ export function useSupabaseData() {
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [studentChallenges, setStudentChallenges] = useState<StudentChallenge[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [attendance, setAttendance] = useState<StudentAttendance[]>([]);
+  const [fees, setFees] = useState<StudentFee[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all data
@@ -27,7 +29,9 @@ export function useSupabaseData() {
         fetchTestResults(),
         fetchChallenges(),
         fetchStudentChallenges(),
-        fetchAnnouncements()
+        fetchAnnouncements(),
+        fetchAttendance(),
+        fetchFees()
       ]);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -197,6 +201,57 @@ export function useSupabaseData() {
     setAnnouncements(formattedAnnouncements);
   };
 
+  const fetchAttendance = async () => {
+    const { data, error } = await supabase
+      .from('student_attendance')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching attendance:', error);
+      return;
+    }
+
+    const formattedAttendance: StudentAttendance[] = data.map(attendance => ({
+      id: attendance.id,
+      studentId: attendance.student_id,
+      date: attendance.date,
+      status: attendance.status as 'present' | 'absent' | 'late' | 'excused',
+      notes: attendance.notes || undefined,
+      createdAt: attendance.created_at,
+      updatedAt: attendance.updated_at,
+    }));
+
+    setAttendance(formattedAttendance);
+  };
+
+  const fetchFees = async () => {
+    const { data, error } = await supabase
+      .from('student_fees')
+      .select('*')
+      .order('due_date', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching fees:', error);
+      return;
+    }
+
+    const formattedFees: StudentFee[] = data.map(fee => ({
+      id: fee.id,
+      studentId: fee.student_id,
+      feeType: fee.fee_type,
+      amount: Number(fee.amount),
+      dueDate: fee.due_date,
+      paidDate: fee.paid_date || undefined,
+      status: fee.status as 'paid' | 'unpaid' | 'partial' | 'overdue',
+      notes: fee.notes || undefined,
+      createdAt: fee.created_at,
+      updatedAt: fee.updated_at,
+    }));
+
+    setFees(formattedFees);
+  };
+
   const addStudent = async (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
     const { data, error } = await supabase
       .from('students')
@@ -246,6 +301,36 @@ export function useSupabaseData() {
 
     await fetchWeeklyTests();
     toast.success(`Test "${newTest.name}" created successfully!`);
+  };
+
+  const deleteWeeklyTest = async (testId: string) => {
+    // First delete all related test results
+    const { error: resultsError } = await supabase
+      .from('student_test_results')
+      .delete()
+      .eq('test_id', testId);
+
+    if (resultsError) {
+      console.error('Error deleting test results:', resultsError);
+      toast.error('Failed to delete test results');
+      return;
+    }
+
+    // Then delete the test
+    const { error } = await supabase
+      .from('weekly_tests')
+      .delete()
+      .eq('id', testId);
+
+    if (error) {
+      console.error('Error deleting test:', error);
+      toast.error('Failed to delete test');
+      return;
+    }
+
+    await fetchWeeklyTests();
+    await fetchTestResults();
+    toast.success('Test deleted successfully!');
   };
 
   const addTestResult = async (result: StudentTestResult) => {
@@ -521,6 +606,66 @@ export function useSupabaseData() {
     toast.success('Announcement created successfully!');
   };
 
+  const markAttendance = async (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => {
+    const { error } = await supabase
+      .from('student_attendance')
+      .upsert({
+        student_id: studentId,
+        date,
+        status,
+        notes: notes || null,
+      }, { onConflict: 'student_id,date' });
+
+    if (error) {
+      console.error('Error marking attendance:', error);
+      toast.error('Failed to mark attendance');
+      return;
+    }
+
+    await fetchAttendance();
+  };
+
+  const addFee = async (newFee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const { error } = await supabase
+      .from('student_fees')
+      .insert({
+        student_id: newFee.studentId,
+        fee_type: newFee.feeType,
+        amount: newFee.amount,
+        due_date: newFee.dueDate,
+        paid_date: newFee.paidDate || null,
+        status: newFee.status,
+        notes: newFee.notes || null,
+      });
+
+    if (error) {
+      console.error('Error adding fee:', error);
+      toast.error('Failed to add fee');
+      return;
+    }
+
+    await fetchFees();
+    toast.success('Fee added successfully!');
+  };
+
+  const updateFeeStatus = async (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => {
+    const { error } = await supabase
+      .from('student_fees')
+      .update({
+        status,
+        paid_date: paidDate || null,
+      })
+      .eq('id', feeId);
+
+    if (error) {
+      console.error('Error updating fee status:', error);
+      toast.error('Failed to update fee status');
+      return;
+    }
+
+    await fetchFees();
+  };
+
   return {
     students,
     weeklyTests,
@@ -528,9 +673,12 @@ export function useSupabaseData() {
     challenges,
     studentChallenges,
     announcements,
+    attendance,
+    fees,
     loading,
     addStudent,
     addWeeklyTest,
+    deleteWeeklyTest,
     addTestResult,
     addXp,
     awardXP,
@@ -541,5 +689,8 @@ export function useSupabaseData() {
     addChallenge,
     completeChallenge,
     addAnnouncement,
+    markAttendance,
+    addFee,
+    updateFeeStatus,
   };
 }
