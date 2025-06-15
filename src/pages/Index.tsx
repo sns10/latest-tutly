@@ -1,4 +1,3 @@
-
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { SmartboardNavigation } from "@/components/SmartboardNavigation";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
@@ -96,6 +95,7 @@ const Index = () => {
             <TabsContent value="leaderboard">
               <Leaderboard
                 students={students}
+                onAddStudent={addStudent}
                 onAddXp={addXp}
                 onRemoveStudent={removeStudent}
                 onBuyReward={buyReward}

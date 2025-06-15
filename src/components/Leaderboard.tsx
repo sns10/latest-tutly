@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Student, XPCategory, TeamName } from "@/types";
 import { StudentRow } from "./StudentRow";
@@ -10,6 +9,7 @@ import { Users, Trophy, Star, Plus } from "lucide-react";
 
 interface LeaderboardProps {
   students: Student[];
+  onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => void;
   onAddXp: (studentId: string, category: XPCategory, amount: number) => void;
   onRemoveStudent: (studentId: string) => void;
   onBuyReward: (studentId: string, reward: any) => void;
@@ -19,6 +19,7 @@ interface LeaderboardProps {
 
 export function Leaderboard({ 
   students, 
+  onAddStudent,
   onAddXp, 
   onRemoveStudent, 
   onBuyReward, 
@@ -45,7 +46,7 @@ export function Leaderboard({
           <h2 className="text-2xl font-bold font-display text-primary">Student Leaderboard</h2>
           <p className="text-muted-foreground">Track student progress and manage XP</p>
         </div>
-        <AddStudentDialog onAddStudent={() => {}} />
+        <AddStudentDialog onAddStudent={onAddStudent} />
       </div>
 
       {/* Filters */}
@@ -125,7 +126,7 @@ export function Leaderboard({
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No students found</h3>
               <p className="text-muted-foreground mb-4">Add your first student to get started</p>
-              <AddStudentDialog onAddStudent={() => {}} />
+              <AddStudentDialog onAddStudent={onAddStudent} />
             </div>
           ) : (
             <div className="space-y-4">
