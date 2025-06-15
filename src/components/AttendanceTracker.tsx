@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Student, StudentAttendance } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarDays, Users, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -51,7 +51,7 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
 
   const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => {
     onMarkAttendance(studentId, selectedDateStr, status, notes);
-    toast.success('Attendance marked successfully');
+    toast.success('Attendance updated successfully');
   };
 
   const handleBulkAttendance = () => {
@@ -206,49 +206,37 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
                       </div>
                       
                       <div className="flex items-center gap-2">
-                        {studentAttendance ? (
-                          <div className="flex items-center gap-2">
-                            {getStatusIcon(studentAttendance.status)}
-                            <Badge variant={
-                              studentAttendance.status === 'present' ? 'default' :
-                              studentAttendance.status === 'late' ? 'secondary' :
-                              studentAttendance.status === 'excused' ? 'outline' : 'destructive'
-                            }>
-                              {studentAttendance.status}
-                            </Badge>
-                          </div>
-                        ) : (
-                          <div className="flex gap-1">
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleMarkAttendance(student.id, 'present')}
-                            >
-                              <CheckCircle className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleMarkAttendance(student.id, 'absent')}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleMarkAttendance(student.id, 'late')}
-                            >
-                              <Clock className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleMarkAttendance(student.id, 'excused')}
-                            >
-                              <AlertCircle className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex gap-1">
+                          <Button 
+                            size="sm" 
+                            variant={studentAttendance?.status === 'present' ? 'default' : 'outline'}
+                            onClick={() => handleMarkAttendance(student.id, 'present')}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant={studentAttendance?.status === 'absent' ? 'destructive' : 'outline'}
+                            onClick={() => handleMarkAttendance(student.id, 'absent')}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant={studentAttendance?.status === 'late' ? 'secondary' : 'outline'}
+                            onClick={() => handleMarkAttendance(student.id, 'late')}
+                          >
+                            <Clock className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            className={cn(studentAttendance?.status === 'excused' && 'bg-blue-100 text-blue-800')}
+                            onClick={() => handleMarkAttendance(student.id, 'excused')}
+                          >
+                            <AlertCircle className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   );
