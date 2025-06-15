@@ -1,20 +1,26 @@
-
 import { Toaster } from "@/components/ui/sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { Leaderboard } from "@/components/Leaderboard";
 import { TeamLeaderboard } from "@/components/TeamLeaderboard";
 import { WeeklyMVP } from "@/components/WeeklyMVP";
 import { AddStudentDialog } from "@/components/AddStudentDialog";
+import { SmartboardView } from "@/components/SmartboardView";
+import { LiveCompetition } from "@/components/LiveCompetition";
+import { InteractiveMiniGames } from "@/components/InteractiveMiniGames";
+import { SmartboardNavigation } from "@/components/SmartboardNavigation";
+import { PresentationProvider, usePresentationMode } from "@/components/PresentationMode";
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/components/AuthProvider";
-import { Trophy, Users, BookOpen, Star, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { TeamName } from "@/types";
 import { Navigate } from "react-router-dom";
+import { TabsContent } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
-const Index = () => {
+function IndexContent() {
   const { signOut, user, loading: authLoading } = useAuth();
+  const { isPresentationMode, textSize } = usePresentationMode();
   const {
     students,
     weeklyTests,
@@ -94,18 +100,41 @@ const Index = () => {
     : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5">
-      <div className="container mx-auto px-4 py-8">
+    <div className={cn(
+      "min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5",
+      isPresentationMode && "overflow-hidden"
+    )}>
+      <div className={cn(
+        "container mx-auto px-4 py-8",
+        isPresentationMode && "px-8 py-4",
+        textSize === 'large' && "text-lg",
+        textSize === 'extra-large' && "text-xl"
+      )}>
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-4xl font-bold font-display bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2">
+            <h1 className={cn(
+              "font-bold font-display bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent mb-2",
+              textSize === 'normal' && "text-4xl",
+              textSize === 'large' && "text-5xl",
+              textSize === 'extra-large' && "text-6xl"
+            )}>
               Gamify Pallikoodam
             </h1>
-            <p className="text-lg text-muted-foreground">
+            <p className={cn(
+              "text-muted-foreground",
+              textSize === 'normal' && "text-lg",
+              textSize === 'large' && "text-xl",
+              textSize === 'extra-large' && "text-2xl"
+            )}>
               created by sanas
             </p>
             {user && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <p className={cn(
+                "text-muted-foreground mt-1",
+                textSize === 'normal' && "text-sm",
+                textSize === 'large' && "text-base",
+                textSize === 'extra-large' && "text-lg"
+              )}>
                 Signed in as: {user.email}
               </p>
             )}
@@ -115,7 +144,7 @@ const Index = () => {
             <Button 
               onClick={handleSignOut}
               variant="outline"
-              size="sm"
+              size={isPresentationMode ? "lg" : "sm"}
               className="flex items-center gap-2"
             >
               <LogOut className="h-4 w-4" />
@@ -124,26 +153,7 @@ const Index = () => {
           </div>
         </div>
 
-        <Tabs defaultValue="management" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-8 bg-card/50 backdrop-blur-sm">
-            <TabsTrigger value="management" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <BookOpen className="h-4 w-4" />
-              Management
-            </TabsTrigger>
-            <TabsTrigger value="leaderboard" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Trophy className="h-4 w-4" />
-              Leaderboard
-            </TabsTrigger>
-            <TabsTrigger value="teams" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Users className="h-4 w-4" />
-              Teams
-            </TabsTrigger>
-            <TabsTrigger value="mvp" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              <Star className="h-4 w-4" />
-              MVP
-            </TabsTrigger>
-          </TabsList>
-
+        <SmartboardNavigation defaultValue="management">
           <TabsContent value="management">
             <WeeklyTestManager
               tests={weeklyTests}
@@ -179,10 +189,44 @@ const Index = () => {
           <TabsContent value="mvp">
             <WeeklyMVP student={mvpStudent} />
           </TabsContent>
-        </Tabs>
+
+          <TabsContent value="live-competition">
+            <LiveCompetition
+              students={students}
+              onAwardXP={awardXP}
+            />
+          </TabsContent>
+
+          <TabsContent value="smartboard">
+            <SmartboardView 
+              tests={weeklyTests}
+              testResults={testResults}
+              students={students}
+            />
+          </TabsContent>
+
+          <TabsContent value="announcements">
+            <InteractiveMiniGames
+              students={students}
+              onAwardXP={awardXP}
+            />
+          </TabsContent>
+
+          <TabsContent value="reports">
+            {/* Keep existing reports content */}
+          </TabsContent>
+        </SmartboardNavigation>
       </div>
       <Toaster />
     </div>
+  );
+}
+
+const Index = () => {
+  return (
+    <PresentationProvider>
+      <IndexContent />
+    </PresentationProvider>
   );
 };
 

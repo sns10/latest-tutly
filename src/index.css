@@ -48,6 +48,22 @@
     --input: 215 25% 27%;
     --ring: 263 70% 50%;
   }
+
+  /* High contrast theme */
+  .high-contrast-theme {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --primary: 220 100% 25%; /* Deep blue */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 95%;
+    --secondary-foreground: 0 0% 0%;
+    --accent: 120 100% 25%; /* Deep green */
+    --accent-foreground: 0 0% 100%;
+    --border: 0 0% 20%;
+    --input: 0 0% 95%;
+  }
 }
 
 @layer base {
@@ -57,5 +73,82 @@
   body {
     @apply bg-background text-foreground;
     font-family: 'Inter', sans-serif;
+  }
+
+  /* Text size variants */
+  .text-normal * {
+    font-size: inherit;
+  }
+  
+  .text-large {
+    font-size: 1.125rem;
+  }
+  
+  .text-large * {
+    font-size: inherit;
+  }
+  
+  .text-extra-large {
+    font-size: 1.25rem;
+  }
+  
+  .text-extra-large * {
+    font-size: inherit;
+  }
+
+  /* Touch-friendly utilities */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Presentation mode utilities */
+  .presentation-mode {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+  }
+
+  /* High contrast mode improvements */
+  .high-contrast .bg-gradient-to-br {
+    background: var(--background) !important;
+  }
+
+  .high-contrast .bg-gradient-to-r {
+    background: var(--primary) !important;
+    -webkit-background-clip: initial !important;
+    background-clip: initial !important;
+    color: var(--primary-foreground) !important;
+  }
+}
+
+@layer components {
+  /* Smartboard-specific animations */
+  .animate-pop {
+    animation: pop 0.3s ease-out;
+  }
+
+  @keyframes pop {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  /* Touch feedback */
+  .touch-feedback:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease-out;
+  }
+
+  /* Large click targets for accessibility */
+  .click-target-large {
+    min-height: 44px;
+    min-width: 44px;
   }
 }
