@@ -8,7 +8,7 @@ import { WeeklyMVP } from "@/components/WeeklyMVP";
 import { LiveCompetition } from "@/components/LiveCompetition";
 import { SmartboardView } from "@/components/SmartboardView";
 import { TestResultsView } from "@/components/TestResultsView";
-import { PresentationModeProvider } from "@/components/PresentationMode";
+import { PresentationProvider } from "@/components/PresentationMode";
 import { TabsContent } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
 
@@ -52,8 +52,21 @@ const Index = () => {
     );
   }
 
+  // Calculate MVP (student with highest XP)
+  const mvpStudent = students.length > 0 
+    ? students.reduce((prev, current) => (prev.totalXp > current.totalXp) ? prev : current)
+    : null;
+
+  // Calculate team scores
+  const teamScores = students.reduce((acc, student) => {
+    if (student.team) {
+      acc[student.team] = (acc[student.team] || 0) + student.totalXp;
+    }
+    return acc;
+  }, {} as Record<string, number>);
+
   return (
-    <PresentationModeProvider>
+    <PresentationProvider>
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="container mx-auto p-6">
           <SmartboardNavigation defaultValue="management">
@@ -83,27 +96,23 @@ const Index = () => {
             <TabsContent value="leaderboard">
               <Leaderboard
                 students={students}
-                onAddStudent={addStudent}
-                onRemoveStudent={removeStudent}
                 onAddXp={addXp}
-                onAwardXP={awardXP}
+                onRemoveStudent={removeStudent}
                 onBuyReward={buyReward}
                 onUseReward={useReward}
+                onAssignTeam={assignTeam}
               />
             </TabsContent>
 
             <TabsContent value="teams">
               <TeamLeaderboard
-                students={students}
-                onAssignTeam={assignTeam}
+                scores={teamScores}
               />
             </TabsContent>
 
             <TabsContent value="mvp">
               <WeeklyMVP
-                students={students}
-                testResults={testResults}
-                tests={weeklyTests}
+                student={mvpStudent}
               />
             </TabsContent>
 
@@ -153,7 +162,7 @@ const Index = () => {
           </SmartboardNavigation>
         </div>
       </div>
-    </PresentationModeProvider>
+    </PresentationProvider>
   );
 };
 
