@@ -13,7 +13,7 @@ interface StudentAttendanceRowProps {
 
 export function StudentAttendanceRow({ student, studentAttendance, onMarkAttendance }: StudentAttendanceRowProps) {
   return (
-    <div className="flex items-center justify-between p-3 border rounded-lg">
+    <div className="flex flex-wrap items-center justify-between gap-2 p-3 border rounded-lg">
       <div className="flex items-center gap-3">
         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
           {student.name.split(' ').map(n => n[0]).join('')}

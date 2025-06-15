@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Users, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
@@ -15,7 +14,7 @@ interface AttendanceStatsProps {
 
 export function AttendanceStats({ stats }: AttendanceStatsProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
       <Card>
         <CardContent className="p-4 text-center">
           <Users className="h-6 w-6 mx-auto mb-2 text-blue-500" />
