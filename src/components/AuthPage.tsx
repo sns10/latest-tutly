@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useAuth } from './AuthProvider';
 import { Button } from '@/components/ui/button';
@@ -45,11 +46,6 @@ export function AuthPage() {
     setIsSubmitting(false);
   };
 
-  const fillTestCredentials = () => {
-    setEmail('teacher@classroom.com');
-    setPassword('classroom123!');
-  };
-
   // Instead of returning early, use conditional rendering
   return (
     <div>
@@ -72,20 +68,6 @@ export function AuthPage() {
                 <p className="text-muted-foreground">Teacher Portal</p>
               </CardHeader>
               <CardContent>
-                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                  <p className="text-sm text-blue-800 mb-2">
-                    <strong>For testing:</strong> Click below to fill test credentials, then sign up first if you haven't already.
-                  </p>
-                  <Button
-                    onClick={fillTestCredentials}
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                  >
-                    Fill Test Credentials
-                  </Button>
-                </div>
-
                 <Tabs defaultValue="signin" className="w-full">
                   <TabsList className="grid w-full grid-cols-2">
                     <TabsTrigger value="signin">Sign In</TabsTrigger>
@@ -102,7 +84,7 @@ export function AuthPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           required
-                          placeholder="teacher@classroom.com"
+                          placeholder="Enter your email"
                         />
                       </div>
                       <div className="space-y-2">
@@ -132,7 +114,7 @@ export function AuthPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           required
-                          placeholder="teacher@classroom.com"
+                          placeholder="Enter your email"
                         />
                       </div>
                       <div className="space-y-2">
