@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/sonner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -10,9 +11,10 @@ import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useAuth } from "@/components/AuthProvider";
 import { Trophy, Users, BookOpen, Star, LogOut } from "lucide-react";
 import { TeamName } from "@/types";
+import { Navigate } from "react-router-dom";
 
 const Index = () => {
-  const { signOut, user } = useAuth();
+  const { signOut, user, loading: authLoading } = useAuth();
   const {
     students,
     weeklyTests,
@@ -36,8 +38,31 @@ const Index = () => {
   } = useSupabaseData();
 
   const handleSignOut = async () => {
-    await signOut();
+    console.log('Sign out button clicked');
+    try {
+      await signOut();
+      console.log('Sign out successful');
+    } catch (error) {
+      console.error('Sign out error:', error);
+    }
   };
+
+  // Show loading while checking authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Redirect to auth page if not authenticated
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   if (loading) {
     return (
