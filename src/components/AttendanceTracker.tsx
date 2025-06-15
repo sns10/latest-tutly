@@ -7,7 +7,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarDays, Users, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { CalendarDays, Users, CheckCircle, XCircle, Clock, AlertCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -21,14 +21,19 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedClass, setSelectedClass] = useState<string>('All');
   const [bulkStatus, setBulkStatus] = useState<'present' | 'absent' | 'late' | 'excused'>('present');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const formatDate = (date: Date) => date.toISOString().split('T')[0];
   const selectedDateStr = formatDate(selectedDate);
 
-  // Filter students by class
-  const filteredStudents = selectedClass === 'All' 
+  // Filter students by class and search query
+  const classFilteredStudents = selectedClass === 'All' 
     ? students 
     : students.filter(s => s.class === selectedClass);
+  
+  const filteredStudents = classFilteredStudents.filter(student =>
+    student.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   // Get attendance for selected date
   const getAttendanceForStudent = (studentId: string) => {
@@ -38,7 +43,7 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
   // Calculate attendance statistics
   const getAttendanceStats = () => {
     const totalStudents = filteredStudents.length;
-    const dateAttendance = attendance.filter(a => a.date === selectedDateStr);
+    const dateAttendance = attendance.filter(a => a.date === selectedDateStr && filteredStudents.some(s => s.id === a.studentId));
     const present = dateAttendance.filter(a => a.status === 'present').length;
     const absent = dateAttendance.filter(a => a.status === 'absent').length;
     const late = dateAttendance.filter(a => a.status === 'late').length;
@@ -122,6 +127,20 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="search-student">Search Student</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="search-student"
+                  placeholder="Search by name..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>Bulk Mark As</Label>
               <Select value={bulkStatus} onValueChange={(value: any) => setBulkStatus(value)}>
                 <SelectTrigger>
@@ -191,56 +210,60 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {filteredStudents.map((student) => {
-                  const studentAttendance = getAttendanceForStudent(student.id);
-                  return (
-                    <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
-                          {student.name.split(' ').map(n => n[0]).join('')}
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => {
+                    const studentAttendance = getAttendanceForStudent(student.id);
+                    return (
+                      <div key={student.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                            {student.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-sm text-muted-foreground">Class: {student.class}</div>
+                          </div>
                         </div>
-                        <div>
-                          <div className="font-medium">{student.name}</div>
-                          <div className="text-sm text-muted-foreground">Class: {student.class}</div>
+                        
+                        <div className="flex items-center gap-2">
+                          <div className="flex gap-1">
+                            <Button 
+                              size="sm" 
+                              variant={studentAttendance?.status === 'present' ? 'default' : 'outline'}
+                              onClick={() => handleMarkAttendance(student.id, 'present')}
+                            >
+                              <CheckCircle className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={studentAttendance?.status === 'absent' ? 'destructive' : 'outline'}
+                              onClick={() => handleMarkAttendance(student.id, 'absent')}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={studentAttendance?.status === 'late' ? 'secondary' : 'outline'}
+                              onClick={() => handleMarkAttendance(student.id, 'late')}
+                            >
+                              <Clock className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className={cn(studentAttendance?.status === 'excused' && 'bg-blue-100 text-blue-800')}
+                              onClick={() => handleMarkAttendance(student.id, 'excused')}
+                            >
+                              <AlertCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <div className="flex gap-1">
-                          <Button 
-                            size="sm" 
-                            variant={studentAttendance?.status === 'present' ? 'default' : 'outline'}
-                            onClick={() => handleMarkAttendance(student.id, 'present')}
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant={studentAttendance?.status === 'absent' ? 'destructive' : 'outline'}
-                            onClick={() => handleMarkAttendance(student.id, 'absent')}
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant={studentAttendance?.status === 'late' ? 'secondary' : 'outline'}
-                            onClick={() => handleMarkAttendance(student.id, 'late')}
-                          >
-                            <Clock className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline"
-                            className={cn(studentAttendance?.status === 'excused' && 'bg-blue-100 text-blue-800')}
-                            onClick={() => handleMarkAttendance(student.id, 'excused')}
-                          >
-                            <AlertCircle className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                ) : (
+                  <p className="text-muted-foreground text-center py-4">No students found.</p>
+                )}
               </div>
             </CardContent>
           </Card>
