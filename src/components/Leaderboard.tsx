@@ -1,7 +1,9 @@
+
 import { useState } from "react";
 import { Student, XPCategory, TeamName } from "@/types";
 import { StudentRow } from "./StudentRow";
 import { AddStudentDialog } from "./AddStudentDialog";
+import { BulkImportStudentsDialog } from "./BulkImportStudentsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -39,14 +41,23 @@ export function Leaderboard({
   // Sort by total XP
   const sortedStudents = [...filteredStudents].sort((a, b) => b.totalXp - a.totalXp);
 
+  const handleBulkImport = async (studentsToImport: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>[]) => {
+    for (const student of studentsToImport) {
+      await onAddStudent(student);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold font-display text-primary">Student Leaderboard</h2>
           <p className="text-muted-foreground">Track student progress and manage XP</p>
         </div>
-        <AddStudentDialog onAddStudent={onAddStudent} />
+        <div className="flex flex-wrap gap-2">
+          <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
+          <AddStudentDialog onAddStudent={onAddStudent} />
+        </div>
       </div>
 
       {/* Filters */}
@@ -126,7 +137,10 @@ export function Leaderboard({
               <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg font-semibold mb-2">No students found</h3>
               <p className="text-muted-foreground mb-4">Add your first student to get started</p>
-              <AddStudentDialog onAddStudent={onAddStudent} />
+              <div className="flex flex-wrap justify-center gap-2">
+                <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
+                <AddStudentDialog onAddStudent={onAddStudent} />
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
