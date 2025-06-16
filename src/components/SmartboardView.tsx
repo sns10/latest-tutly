@@ -1,88 +1,76 @@
-
 import { useMemo } from "react";
 import { WeeklyTest, StudentTestResult, Student } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy, TrendingUp, Award, Star } from "lucide-react";
-
 interface SmartboardViewProps {
   tests: WeeklyTest[];
   testResults: StudentTestResult[];
   students: Student[];
 }
-
-export function SmartboardView({ tests, testResults, students }: SmartboardViewProps) {
+export function SmartboardView({
+  tests,
+  testResults,
+  students
+}: SmartboardViewProps) {
   const smartboardData = useMemo(() => {
     if (tests.length === 0) return null;
-
     const latestTest = tests.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     const latestResults = testResults.filter(r => r.testId === latestTest.id);
 
     // Top 5 scorers for latest test
-    const topScorers = latestResults
-      .map(result => {
-        const student = students.find(s => s.id === result.studentId);
-        const percentage = (result.marks / latestTest.maxMarks) * 100;
-        return { student, result, percentage };
-      })
-      .filter(item => item.student)
-      .sort((a, b) => b.percentage - a.percentage)
-      .slice(0, 5);
+    const topScorers = latestResults.map(result => {
+      const student = students.find(s => s.id === result.studentId);
+      const percentage = result.marks / latestTest.maxMarks * 100;
+      return {
+        student,
+        result,
+        percentage
+      };
+    }).filter(item => item.student).sort((a, b) => b.percentage - a.percentage).slice(0, 5);
 
     // Most improved student (compare with previous test)
-    const previousTest = tests
-      .filter(t => new Date(t.date) < new Date(latestTest.date))
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-
+    const previousTest = tests.filter(t => new Date(t.date) < new Date(latestTest.date)).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
     let mostImproved = null;
     if (previousTest) {
       const previousResults = testResults.filter(r => r.testId === previousTest.id);
-      const improvements = latestResults
-        .map(current => {
-          const previous = previousResults.find(p => p.studentId === current.studentId);
-          if (!previous) return null;
-          
-          const currentPercentage = (current.marks / latestTest.maxMarks) * 100;
-          const previousPercentage = (previous.marks / previousTest.maxMarks) * 100;
-          const improvement = currentPercentage - previousPercentage;
-          
-          return {
-            student: students.find(s => s.id === current.studentId),
-            improvement,
-            currentPercentage,
-            previousPercentage
-          };
-        })
-        .filter(item => item && item.improvement > 0)
-        .sort((a, b) => b!.improvement - a!.improvement);
-
+      const improvements = latestResults.map(current => {
+        const previous = previousResults.find(p => p.studentId === current.studentId);
+        if (!previous) return null;
+        const currentPercentage = current.marks / latestTest.maxMarks * 100;
+        const previousPercentage = previous.marks / previousTest.maxMarks * 100;
+        const improvement = currentPercentage - previousPercentage;
+        return {
+          student: students.find(s => s.id === current.studentId),
+          improvement,
+          currentPercentage,
+          previousPercentage
+        };
+      }).filter(item => item && item.improvement > 0).sort((a, b) => b!.improvement - a!.improvement);
       mostImproved = improvements[0] || null;
     }
-
     return {
       latestTest,
       topScorers,
       mostImproved
     };
   }, [tests, testResults, students]);
-
   if (!smartboardData) {
-    return (
-      <Card>
+    return <Card>
         <CardContent className="p-8 text-center">
           <Award className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
           <h3 className="text-lg font-semibold mb-2">No test results yet</h3>
           <p className="text-muted-foreground">Create and complete tests to see the smartboard view</p>
         </CardContent>
-      </Card>
-    );
+      </Card>;
   }
-
-  const { latestTest, topScorers, mostImproved } = smartboardData;
-
-  return (
-    <div className="space-y-6">
+  const {
+    latestTest,
+    topScorers,
+    mostImproved
+  } = smartboardData;
+  return <div className="space-y-6">
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold font-display text-primary mb-2">🏆 SMARTBOARD 🏆</h2>
         <p className="text-lg text-muted-foreground">Latest Test: {latestTest.name}</p>
@@ -91,23 +79,18 @@ export function SmartboardView({ tests, testResults, students }: SmartboardViewP
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Top 5 Scorers */}
-        <Card className="border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-xl">
+        <Card className="border-2 border-yellow-200 bg-gradient-to-br from-yellow-50 to-orange-50 bg-zinc-100">
+          <CardHeader className="bg-zinc-100">
+            <CardTitle className="flex items-center gap-2 text-xl text-zinc-900">
               <Trophy className="h-6 w-6 text-yellow-500" />
               Top 5 Scorers
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="bg-zinc-800">
             <div className="space-y-4">
-              {topScorers.map((item, index) => (
-                <div key={item.student!.id} className="flex items-center gap-4 p-3 rounded-lg bg-white/50">
+              {topScorers.map((item, index) => <div key={item.student!.id} className="flex items-center gap-4 p-3 rounded-lg bg-white/50">
                   <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
-                      index === 0 ? 'bg-yellow-500' : 
-                      index === 1 ? 'bg-gray-400' : 
-                      index === 2 ? 'bg-amber-600' : 'bg-blue-500'
-                    }`}>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${index === 0 ? 'bg-yellow-500' : index === 1 ? 'bg-gray-400' : index === 2 ? 'bg-amber-600' : 'bg-blue-500'}`}>
                       {index + 1}
                     </div>
                     <Avatar className="h-10 w-10">
@@ -128,8 +111,7 @@ export function SmartboardView({ tests, testResults, students }: SmartboardViewP
                     </div>
                   </div>
                   {index === 0 && <Star className="h-5 w-5 text-yellow-500" />}
-                </div>
-              ))}
+                </div>)}
             </div>
           </CardContent>
         </Card>
@@ -143,8 +125,7 @@ export function SmartboardView({ tests, testResults, students }: SmartboardViewP
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {mostImproved ? (
-              <div className="text-center space-y-4">
+            {mostImproved ? <div className="text-center space-y-4">
                 <div className="relative">
                   <Avatar className="h-20 w-20 mx-auto border-4 border-green-300">
                     <AvatarImage src={mostImproved.student!.avatar} />
@@ -166,15 +147,12 @@ export function SmartboardView({ tests, testResults, students }: SmartboardViewP
                     From {Math.round(mostImproved.previousPercentage)}% to {Math.round(mostImproved.currentPercentage)}%
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
+              </div> : <div className="text-center py-8">
                 <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <p className="text-muted-foreground">
                   Need at least 2 tests to show improvement
                 </p>
-              </div>
-            )}
+              </div>}
           </CardContent>
         </Card>
       </div>
@@ -211,6 +189,5 @@ export function SmartboardView({ tests, testResults, students }: SmartboardViewP
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
