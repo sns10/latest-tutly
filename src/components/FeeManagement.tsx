@@ -6,12 +6,10 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, AlertTriangle, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-
 interface ClassFee {
   class: ClassName;
   amount: number;
 }
-
 interface FeeManagementProps {
   students: Student[];
   fees: StudentFee[];
@@ -19,8 +17,13 @@ interface FeeManagementProps {
   onAddFee: (fee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
 }
-
-export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFeeStatus }: FeeManagementProps) {
+export function FeeManagement({
+  students,
+  fees,
+  classFees,
+  onAddFee,
+  onUpdateFeeStatus
+}: FeeManagementProps) {
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
 
@@ -30,26 +33,18 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
       generateMonthlyFees();
     }
   }, [students, classFees]);
-
   function getCurrentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
-
   function generateMonthlyFees() {
     const currentMonth = getCurrentMonth();
     const currentYear = new Date().getFullYear();
-    
     students.forEach(student => {
-      const existingFee = fees.find(f => 
-        f.studentId === student.id && 
-        f.feeType === `Monthly Fee - ${currentMonth}` 
-      );
-      
+      const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${currentMonth}`);
       if (!existingFee) {
         const classFee = classFees.find(cf => cf.class === student.class);
         const feeAmount = classFee ? classFee.amount : 0;
-
         if (feeAmount > 0) {
           const dueDate = new Date(currentYear, new Date().getMonth(), 5); // 5th of current month
           onAddFee({
@@ -73,7 +68,10 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
       const monthStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
       months.push({
         value: monthStr,
-        label: date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+        label: date.toLocaleDateString('en-US', {
+          month: 'long',
+          year: 'numeric'
+        })
       });
     }
     return months;
@@ -87,10 +85,7 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
   });
 
   // Get unpaid fees for current month
-  const unpaidFeesThisMonth = fees.filter(f => 
-    f.status === 'unpaid' && 
-    f.feeType.includes(getCurrentMonth())
-  );
+  const unpaidFeesThisMonth = fees.filter(f => f.status === 'unpaid' && f.feeType.includes(getCurrentMonth()));
 
   // Calculate statistics for current month
   const currentMonthFees = fees.filter(f => f.feeType.includes(selectedMonth));
@@ -103,12 +98,10 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
     const student = students.find(s => s.id === studentId);
     return student ? student.name : 'Unknown Student';
   };
-
   const handleMarkAsPaid = (feeId: string) => {
     onUpdateFeeStatus(feeId, 'paid', new Date().toISOString().split('T')[0]);
     toast.success('Fee marked as paid');
   };
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'paid':
@@ -121,7 +114,6 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
         return 'outline';
     }
   };
-
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'paid':
@@ -132,9 +124,7 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
         return <Clock className="h-4 w-4 text-yellow-500" />;
     }
   };
-
-  return (
-    <div className="space-y-6">
+  return <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold font-display text-primary">Fee Management</h2>
@@ -189,11 +179,9 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {getAvailableMonths().map(month => (
-                    <SelectItem key={month.value} value={month.value}>
+                  {getAvailableMonths().map(month => <SelectItem key={month.value} value={month.value}>
                       {month.label}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -205,11 +193,9 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Students</SelectItem>
-                  {students.map(student => (
-                    <SelectItem key={student.id} value={student.id}>
+                  {students.map(student => <SelectItem key={student.id} value={student.id}>
                       {student.name} - {student.class}
-                    </SelectItem>
-                  ))}
+                    </SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
@@ -218,8 +204,7 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
       </Card>
 
       {/* Unpaid Fees Alert for Current Month */}
-      {unpaidFeesThisMonth.length > 0 && selectedMonth === getCurrentMonth() && (
-        <Card className="border-red-200 bg-red-50">
+      {unpaidFeesThisMonth.length > 0 && selectedMonth === getCurrentMonth() && <Card className="border-red-200 bg-red-50">
           <CardHeader>
             <CardTitle className="text-red-700 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4" />
@@ -228,10 +213,9 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {unpaidFeesThisMonth.slice(0, 10).map((fee) => (
-                <div key={fee.id} className="flex justify-between items-center p-2 bg-white rounded border">
+              {unpaidFeesThisMonth.slice(0, 10).map(fee => <div key={fee.id} className="flex justify-between items-center p-2 bg-white rounded border">
                   <div>
-                    <span className="font-medium">{getStudentName(fee.studentId)}</span>
+                    <span className="font-medium text-zinc-600">{getStudentName(fee.studentId)}</span>
                     <span className="text-sm text-muted-foreground ml-2">
                       Due: {new Date(fee.dueDate).toLocaleDateString()}
                     </span>
@@ -242,17 +226,13 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
                       Mark Paid
                     </Button>
                   </div>
-                </div>
-              ))}
-              {unpaidFeesThisMonth.length > 10 && (
-                <div className="text-sm text-muted-foreground">
+                </div>)}
+              {unpaidFeesThisMonth.length > 10 && <div className="text-sm text-muted-foreground">
                   And {unpaidFeesThisMonth.length - 10} more...
-                </div>
-              )}
+                </div>}
             </div>
           </CardContent>
-        </Card>
-      )}
+        </Card>}
 
       {/* Fee List */}
       <Card>
@@ -263,13 +243,9 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {filteredFees.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+            {filteredFees.length === 0 ? <div className="text-center py-8 text-muted-foreground">
                 No fees found for the selected month and student filter.
-              </div>
-            ) : (
-              filteredFees.map((fee) => (
-                <div key={fee.id} className="flex justify-between items-center p-4 border rounded-lg">
+              </div> : filteredFees.map(fee => <div key={fee.id} className="flex justify-between items-center p-4 border rounded-lg">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-1">
                       <span className="font-medium">{getStudentName(fee.studentId)}</span>
@@ -294,18 +270,13 @@ export function FeeManagement({ students, fees, classFees, onAddFee, onUpdateFee
                       </div>
                     </div>
                     
-                    {fee.status !== 'paid' && (
-                      <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)}>
+                    {fee.status !== 'paid' && <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)}>
                         Mark Paid
-                      </Button>
-                    )}
+                      </Button>}
                   </div>
-                </div>
-              ))
-            )}
+                </div>)}
           </div>
         </CardContent>
       </Card>
-    </div>
-  );
+    </div>;
 }
