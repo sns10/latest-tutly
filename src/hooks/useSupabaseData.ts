@@ -543,7 +543,7 @@ export function useSupabaseData() {
     const { error } = await supabase
       .from('student_rewards')
       .delete()
-      .eq('instance_id', rewardInstanceId);
+      .eq('id', rewardInstanceId);
 
     if (error) {
       console.error('Error using reward:', error);
@@ -558,15 +558,16 @@ export function useSupabaseData() {
   const addChallenge = async (newChallenge: Omit<Challenge, 'id' | 'createdAt'>) => {
     const { error } = await supabase
       .from('challenges')
-      .insert({
+      .insert([{
         title: newChallenge.title,
         description: newChallenge.description,
         type: newChallenge.type,
         xp_reward: newChallenge.xpReward,
+        difficulty: 'medium',
         start_date: newChallenge.startDate,
         end_date: newChallenge.endDate,
         is_active: newChallenge.isActive,
-      });
+      }]);
 
     if (error) {
       console.error('Error adding challenge:', error);

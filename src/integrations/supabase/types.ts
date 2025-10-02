@@ -67,6 +67,385 @@ export type Database = {
           },
         ]
       }
+      announcements: {
+        Row: {
+          body: string
+          created_by: string | null
+          id: string
+          published_at: string
+          target_class: string | null
+          title: string
+          xp_bonus: number | null
+        }
+        Insert: {
+          body: string
+          created_by?: string | null
+          id?: string
+          published_at?: string
+          target_class?: string | null
+          title: string
+          xp_bonus?: number | null
+        }
+        Update: {
+          body?: string
+          created_by?: string | null
+          id?: string
+          published_at?: string
+          target_class?: string | null
+          title?: string
+          xp_bonus?: number | null
+        }
+        Relationships: []
+      }
+      challenges: {
+        Row: {
+          created_at: string
+          description: string
+          difficulty: string
+          end_date: string | null
+          id: string
+          is_active: boolean | null
+          start_date: string | null
+          title: string
+          type: string | null
+          xp_reward: number
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          difficulty: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          start_date?: string | null
+          title: string
+          type?: string | null
+          xp_reward: number
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          difficulty?: string
+          end_date?: string | null
+          id?: string
+          is_active?: boolean | null
+          start_date?: string | null
+          title?: string
+          type?: string | null
+          xp_reward?: number
+        }
+        Relationships: []
+      }
+      class_fees: {
+        Row: {
+          amount: number
+          class: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          amount: number
+          class: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          class?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      student_attendance: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          notes: string | null
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          notes?: string | null
+          status: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          notes?: string | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "attendance_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_badges: {
+        Row: {
+          badge_id: string
+          earned_at: string
+          id: string
+          student_id: string | null
+        }
+        Insert: {
+          badge_id: string
+          earned_at?: string
+          id?: string
+          student_id?: string | null
+        }
+        Update: {
+          badge_id?: string
+          earned_at?: string
+          id?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_badges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_challenges: {
+        Row: {
+          challenge_id: string | null
+          completed_at: string
+          id: string
+          status: string | null
+          student_id: string | null
+        }
+        Insert: {
+          challenge_id?: string | null
+          completed_at?: string
+          id?: string
+          status?: string | null
+          student_id?: string | null
+        }
+        Update: {
+          challenge_id?: string | null
+          completed_at?: string
+          id?: string
+          status?: string | null
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_challenges_challenge_id_fkey"
+            columns: ["challenge_id"]
+            isOneToOne: false
+            referencedRelation: "challenges"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_challenges_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_fees: {
+        Row: {
+          amount: number
+          created_at: string
+          due_date: string
+          fee_type: string | null
+          id: string
+          notes: string | null
+          paid_date: string | null
+          status: string
+          student_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          due_date: string
+          fee_type?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          status: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          due_date?: string
+          fee_type?: string | null
+          id?: string
+          notes?: string | null
+          paid_date?: string | null
+          status?: string
+          student_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_fees_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_rewards: {
+        Row: {
+          id: string
+          purchased_at: string
+          reward_id: string
+          student_id: string | null
+          used: boolean
+          used_at: string | null
+        }
+        Insert: {
+          id?: string
+          purchased_at?: string
+          reward_id: string
+          student_id?: string | null
+          used?: boolean
+          used_at?: string | null
+        }
+        Update: {
+          id?: string
+          purchased_at?: string
+          reward_id?: string
+          student_id?: string | null
+          used?: boolean
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_rewards_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_test_results: {
+        Row: {
+          created_at: string
+          id: string
+          marks: number
+          student_id: string | null
+          test_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          marks: number
+          student_id?: string | null
+          test_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          marks?: number
+          student_id?: string | null
+          test_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_test_results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_test_results_test_id_fkey"
+            columns: ["test_id"]
+            isOneToOne: false
+            referencedRelation: "weekly_tests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_xp: {
+        Row: {
+          amount: number
+          category: string
+          created_at: string
+          id: string
+          student_id: string | null
+        }
+        Insert: {
+          amount?: number
+          category: string
+          created_at?: string
+          id?: string
+          student_id?: string | null
+        }
+        Update: {
+          amount?: number
+          category?: string
+          created_at?: string
+          id?: string
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_xp_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          avatar: string | null
+          class: string
+          created_at: string
+          id: string
+          name: string
+          team: string | null
+          total_xp: number
+        }
+        Insert: {
+          avatar?: string | null
+          class: string
+          created_at?: string
+          id?: string
+          name: string
+          team?: string | null
+          total_xp?: number
+        }
+        Update: {
+          avatar?: string | null
+          class?: string
+          created_at?: string
+          id?: string
+          name?: string
+          team?: string | null
+          total_xp?: number
+        }
+        Relationships: []
+      }
       subjects: {
         Row: {
           class: string
@@ -85,6 +464,36 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+        }
+        Relationships: []
+      }
+      weekly_tests: {
+        Row: {
+          class: string | null
+          created_at: string
+          id: string
+          max_marks: number
+          name: string
+          subject: string
+          test_date: string
+        }
+        Insert: {
+          class?: string | null
+          created_at?: string
+          id?: string
+          max_marks: number
+          name: string
+          subject: string
+          test_date: string
+        }
+        Update: {
+          class?: string | null
+          created_at?: string
+          id?: string
+          max_marks?: number
+          name?: string
+          subject?: string
+          test_date?: string
         }
         Relationships: []
       }
