@@ -1,1 +1,4 @@
 project_id = "nuzryygxmaildmvobtui"
+
+[functions.analyze-student]
+verify_jwt = false

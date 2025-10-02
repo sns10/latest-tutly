@@ -1,21 +1,19 @@
 
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from '@/components/AuthProvider';
 import { useSupabaseData } from "@/hooks/useSupabaseData";
-import { SmartboardNavigation } from "@/components/SmartboardNavigation";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
-import { Leaderboard } from "@/components/Leaderboard";
-import { TeamLeaderboard } from "@/components/TeamLeaderboard";
-import { WeeklyMVP } from "@/components/WeeklyMVP";
-import { LiveCompetition } from "@/components/LiveCompetition";
-import { SmartboardView } from "@/components/SmartboardView";
-import { TestResultsView } from "@/components/TestResultsView";
-import MaterialsManager from "@/components/MaterialsManager";
-import { PresentationProvider } from "@/components/PresentationMode";
-import { TabsContent } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import LeaderboardPage from './Leaderboard';
+import TeamsPage from './Teams';
+import MVPPage from './MVP';
+import MaterialsPage from './Materials';
+import AnalysisPage from './Analysis';
+import ReportsPage from './Reports';
+import FeesPage from './Fees';
 
 const Index = () => {
-  const [currentClass, setCurrentClass] = useState<string>('8th');
+  const { user, loading: authLoading } = useAuth();
   const {
     students,
     weeklyTests,
@@ -46,43 +44,26 @@ const Index = () => {
     updateClassFee,
   } = useSupabaseData();
 
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-2">
           <Loader2 className="h-6 w-6 animate-spin" />
-          <span>Loading school data...</span>
+          <span>Loading...</span>
         </div>
       </div>
     );
   }
 
-  // Calculate MVP (student with highest XP)
-  const mvpStudent = students.length > 0 
-    ? students.reduce((prev, current) => (prev.totalXp > current.totalXp) ? prev : current)
-    : null;
-
-  // Calculate team scores
-  const teamScores = students.reduce((acc, student) => {
-    if (student.team) {
-      acc[student.team] = (acc[student.team] || 0) + student.totalXp;
-    }
-    return acc;
-  }, {} as Record<string, number>);
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
 
   return (
-    <PresentationProvider>
-      <div className="min-h-screen bg-background">
+    <Routes>
+      <Route path="/" element={
         <div className="container mx-auto p-4 sm:p-6">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl sm:text-5xl font-bold font-display text-foreground">
-              Gamify Pallikoodam
-            </h1>
-            <p className="text-muted-foreground mt-2">Created by Sanas</p>
-          </div>
-          <SmartboardNavigation defaultValue="management">
-            <TabsContent value="management">
-              <WeeklyTestManager
+          <WeeklyTestManager
                 tests={weeklyTests}
                 testResults={testResults}
                 students={students}
@@ -104,104 +85,16 @@ const Index = () => {
                 onUpdateFeeStatus={updateFeeStatus}
                 onUpdateClassFee={updateClassFee}
               />
-            </TabsContent>
-
-            <TabsContent value="leaderboard">
-              <Leaderboard
-                students={students}
-                onAddStudent={addStudent}
-                onAddXp={addXp}
-                onRemoveStudent={removeStudent}
-                onBuyReward={buyReward}
-                onUseReward={useReward}
-                onAssignTeam={assignTeam}
-              />
-            </TabsContent>
-
-            <TabsContent value="teams">
-              <TeamLeaderboard
-                scores={teamScores}
-              />
-            </TabsContent>
-
-            <TabsContent value="mvp">
-              <WeeklyMVP
-                student={mvpStudent}
-              />
-            </TabsContent>
-
-            <TabsContent value="live-competition">
-              <LiveCompetition
-                students={students}
-                onAwardXP={awardXP}
-              />
-            </TabsContent>
-
-            <TabsContent value="smartboard">
-              <SmartboardView
-                students={students}
-                tests={weeklyTests}
-                testResults={testResults}
-              />
-            </TabsContent>
-
-            <TabsContent value="announcements">
-              <div className="space-y-6">
-                <h2 className="text-2xl font-bold">Announcements</h2>
-                {announcements.length === 0 ? (
-                  <p className="text-muted-foreground">No announcements yet.</p>
-                ) : (
-                  <div className="space-y-4">
-                    {announcements.map((announcement) => (
-                      <div key={announcement.id} className="p-4 bg-white rounded-lg shadow">
-                        <h3 className="font-semibold">{announcement.title}</h3>
-                        <p className="text-muted-foreground">{announcement.body}</p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {new Date(announcement.publishedAt).toLocaleDateString()}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-
-            <TabsContent value="reports">
-              <TestResultsView
-                tests={weeklyTests}
-                testResults={testResults}
-                students={students}
-              />
-            </TabsContent>
-
-            <TabsContent value="materials">
-              <div className="space-y-6">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h2 className="text-2xl font-bold">Study Materials</h2>
-                    <p className="text-muted-foreground">Upload and manage notes and PYQs</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Class:</span>
-                    <select
-                      value={currentClass}
-                      onChange={(e) => setCurrentClass(e.target.value)}
-                      className="border rounded px-3 py-2"
-                    >
-                      <option value="8th">8th</option>
-                      <option value="9th">9th</option>
-                      <option value="10th">10th</option>
-                      <option value="11th">11th</option>
-                    </select>
-                  </div>
-                </div>
-                <MaterialsManager currentClass={currentClass} />
-              </div>
-            </TabsContent>
-          </SmartboardNavigation>
-        </div>
-      </div>
-    </PresentationProvider>
+            </div>
+          } />
+      <Route path="/leaderboard" element={<LeaderboardPage />} />
+      <Route path="/teams" element={<TeamsPage />} />
+      <Route path="/mvp" element={<MVPPage />} />
+      <Route path="/materials" element={<MaterialsPage />} />
+      <Route path="/analysis" element={<AnalysisPage />} />
+      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/fees" element={<FeesPage />} />
+    </Routes>
   );
 };
 
