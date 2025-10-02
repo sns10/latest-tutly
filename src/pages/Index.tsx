@@ -8,11 +8,14 @@ import { WeeklyMVP } from "@/components/WeeklyMVP";
 import { LiveCompetition } from "@/components/LiveCompetition";
 import { SmartboardView } from "@/components/SmartboardView";
 import { TestResultsView } from "@/components/TestResultsView";
+import MaterialsManager from "@/components/MaterialsManager";
 import { PresentationProvider } from "@/components/PresentationMode";
 import { TabsContent } from "@/components/ui/tabs";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 const Index = () => {
+  const [currentClass, setCurrentClass] = useState<string>('8th');
   const {
     students,
     weeklyTests,
@@ -169,6 +172,31 @@ const Index = () => {
                 testResults={testResults}
                 students={students}
               />
+            </TabsContent>
+
+            <TabsContent value="materials">
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold">Study Materials</h2>
+                    <p className="text-muted-foreground">Upload and manage notes and PYQs</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Class:</span>
+                    <select
+                      value={currentClass}
+                      onChange={(e) => setCurrentClass(e.target.value)}
+                      className="border rounded px-3 py-2"
+                    >
+                      <option value="8th">8th</option>
+                      <option value="9th">9th</option>
+                      <option value="10th">10th</option>
+                      <option value="11th">11th</option>
+                    </select>
+                  </div>
+                </div>
+                <MaterialsManager currentClass={currentClass} />
+              </div>
             </TabsContent>
           </SmartboardNavigation>
         </div>
