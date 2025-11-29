@@ -33,7 +33,7 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="icon" className="hidden md:flex">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupLabel>Gamify Pallikoodam</SidebarGroupLabel>
