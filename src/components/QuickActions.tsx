@@ -10,9 +10,9 @@ interface QuickActionsProps {
 
 export function QuickActions({ onAddTest }: QuickActionsProps) {
   return (
-    <Card className="border-none shadow-sm">
+    <Card className="bg-white border border-gray-100 shadow-sm">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold">Quick Actions</CardTitle>
+        <CardTitle className="text-base font-semibold text-gray-900">Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="grid grid-cols-2 gap-2">
         <div className="w-full">
