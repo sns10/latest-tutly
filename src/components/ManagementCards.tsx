@@ -72,7 +72,7 @@ export function ManagementCards({
       {cards.map((card) => (
         <Card
           key={card.title}
-          className="cursor-pointer hover:shadow-md transition-all hover:scale-[1.02] border-none"
+          className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-white border border-gray-100"
           onClick={() => navigate(card.route)}
         >
           <CardContent className="p-4">

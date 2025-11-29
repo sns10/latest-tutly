@@ -38,10 +38,10 @@ export function RecentTests({
   };
 
   return (
-    <Card className="border-none shadow-sm">
+    <Card className="bg-white border border-gray-100 shadow-sm">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold">Recent Tests</CardTitle>
+          <CardTitle className="text-base font-semibold text-gray-900">Recent Tests</CardTitle>
           <Button variant="ghost" size="sm" className="h-8 text-xs">
             View All
             <ChevronRight className="h-3 w-3 ml-1" />

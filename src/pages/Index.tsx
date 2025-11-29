@@ -66,10 +66,10 @@ const Index = () => {
   return (
     <Routes>
       <Route path="/" element={
-        <div className="p-4 space-y-4 max-w-7xl mx-auto">
+        <div className="p-4 space-y-4 max-w-7xl mx-auto bg-[#f8f9fa]">
           <div>
-            <h2 className="text-xl font-bold mb-1">Dashboard</h2>
-            <p className="text-sm text-muted-foreground">Welcome back! Here's your overview</p>
+            <h2 className="text-xl font-bold mb-1 text-gray-900">Dashboard</h2>
+            <p className="text-sm text-gray-600">Welcome back! Here's your overview</p>
           </div>
           
           <ManagementCards 
@@ -91,9 +91,9 @@ const Index = () => {
             />
           </div>
 
-          <Card className="border-none shadow-sm">
+          <Card className="bg-white border border-gray-100 shadow-sm">
             <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">All Tests</CardTitle>
+              <CardTitle className="text-base font-semibold text-gray-900">All Tests</CardTitle>
             </CardHeader>
             <CardContent>
               <WeeklyTestManager
