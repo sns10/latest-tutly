@@ -113,40 +113,42 @@ export function WeeklyTestManager({
       </div>
 
       <Tabs defaultValue="tests" className="w-full">
-        <TabsList className="grid w-full grid-cols-8">
-          <TabsTrigger value="tests" className="flex items-center gap-2">
-            <TestTube2 className="h-4 w-4" />
-            Tests
-          </TabsTrigger>
-          <TabsTrigger value="marks" className="flex items-center gap-2">
-            <Users className="h-4 w-4" />
-            Enter Marks
-          </TabsTrigger>
-          <TabsTrigger value="students" className="flex items-center gap-2">
-            <UserCheck className="h-4 w-4" />
-            Students
-          </TabsTrigger>
-          <TabsTrigger value="attendance" className="flex items-center gap-2">
-            <CalendarDays className="h-4 w-4" />
-            Attendance
-          </TabsTrigger>
-          <TabsTrigger value="fees" className="flex items-center gap-2">
-            <DollarSign className="h-4 w-4" />
-            Fees
-          </TabsTrigger>
-          <TabsTrigger value="challenges" className="flex items-center gap-2">
-            <Trophy className="h-4 w-4" />
-            Challenges
-          </TabsTrigger>
-          <TabsTrigger value="announcements" className="flex items-center gap-2">
-            <Megaphone className="h-4 w-4" />
-            Announcements
-          </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Reports
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="inline-flex w-auto min-w-full md:w-full justify-start md:justify-center">
+            <TabsTrigger value="tests" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <TestTube2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Tests</span>
+            </TabsTrigger>
+            <TabsTrigger value="marks" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <Users className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Marks</span>
+            </TabsTrigger>
+            <TabsTrigger value="students" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <UserCheck className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Students</span>
+            </TabsTrigger>
+            <TabsTrigger value="attendance" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <CalendarDays className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Attendance</span>
+            </TabsTrigger>
+            <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Fees</span>
+            </TabsTrigger>
+            <TabsTrigger value="challenges" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Challenges</span>
+            </TabsTrigger>
+            <TabsTrigger value="announcements" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <Megaphone className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">News</span>
+            </TabsTrigger>
+            <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
+              <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              <span className="hidden sm:inline">Reports</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="tests" className="space-y-4">
           {tests.length === 0 ? (
