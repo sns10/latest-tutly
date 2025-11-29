@@ -3,6 +3,10 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
+import { ManagementCards } from "@/components/ManagementCards";
+import { QuickActions } from "@/components/QuickActions";
+import { RecentTests } from "@/components/RecentTests";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import LeaderboardPage from './Leaderboard';
 import TeamsPage from './Teams';
@@ -62,8 +66,37 @@ const Index = () => {
   return (
     <Routes>
       <Route path="/" element={
-        <div className="container mx-auto p-4 sm:p-6">
-          <WeeklyTestManager
+        <div className="p-4 space-y-4 max-w-7xl mx-auto">
+          <div>
+            <h2 className="text-xl font-bold mb-1">Dashboard</h2>
+            <p className="text-sm text-muted-foreground">Welcome back! Here's your overview</p>
+          </div>
+          
+          <ManagementCards 
+            testsCount={weeklyTests.length}
+            studentsCount={students.length}
+            attendanceToday={75}
+            pendingFees={12}
+            activeChallenges={challenges.filter(c => c.isActive).length}
+          />
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <QuickActions onAddTest={addWeeklyTest} />
+            <RecentTests 
+              tests={weeklyTests}
+              testResults={testResults}
+              students={students}
+              onAddTestResult={addTestResult}
+              onAwardXP={awardXP}
+            />
+          </div>
+
+          <Card className="border-none shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">All Tests</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <WeeklyTestManager
                 tests={weeklyTests}
                 testResults={testResults}
                 students={students}
@@ -85,8 +118,10 @@ const Index = () => {
                 onUpdateFeeStatus={updateFeeStatus}
                 onUpdateClassFee={updateClassFee}
               />
-            </div>
-          } />
+            </CardContent>
+          </Card>
+        </div>
+      } />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
       <Route path="/teams" element={<TeamsPage />} />
       <Route path="/mvp" element={<MVPPage />} />
