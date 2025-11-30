@@ -9,10 +9,8 @@ import { RecentTests } from "@/components/RecentTests";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import LeaderboardPage from './Leaderboard';
-import TeamsPage from './Teams';
 import MVPPage from './MVP';
 import MaterialsPage from './Materials';
-import AnalysisPage from './Analysis';
 import ReportsPage from './Reports';
 import FeesPage from './Fees';
 
@@ -123,10 +121,8 @@ const Index = () => {
         </div>
       } />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
-      <Route path="/teams" element={<TeamsPage />} />
       <Route path="/mvp" element={<MVPPage />} />
       <Route path="/materials" element={<MaterialsPage />} />
-      <Route path="/analysis" element={<AnalysisPage />} />
       <Route path="/reports" element={<ReportsPage />} />
       <Route path="/fees" element={<FeesPage />} />
     </Routes>

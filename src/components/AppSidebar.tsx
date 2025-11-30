@@ -1,4 +1,4 @@
-import { BookOpen, Trophy, Users, Star, FolderOpen, BarChart3, DollarSign, Brain } from 'lucide-react';
+import { BookOpen, Trophy, Star, FolderOpen, BarChart3, DollarSign } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -15,10 +15,8 @@ import {
 const menuItems = [
   { title: 'Management', url: '/', icon: BookOpen },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
-  { title: 'Teams', url: '/teams', icon: Users },
   { title: 'MVP', url: '/mvp', icon: Star },
   { title: 'Materials', url: '/materials', icon: FolderOpen },
-  { title: 'AI Analysis', url: '/analysis', icon: Brain },
   { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Fees', url: '/fees', icon: DollarSign },
 ];
