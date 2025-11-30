@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee } from '@/types';
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
+import { XP_STORE_ITEMS } from '@/config/rewards';
 
 // The ClassFee interface has been moved to src/types.ts to be shared across the application.
 
@@ -51,8 +52,8 @@ export function useSupabaseData() {
       .select(`
         *,
         student_xp (category, amount),
-        student_badges (badge_id, date_earned, badges (name, description, emoji)),
-        student_rewards (reward_id, instance_id, purchased_at, rewards (name, cost, description, emoji))
+        student_badges (badge_id, earned_at),
+        student_rewards (reward_id, purchased_at)
       `);
 
     if (error) {
@@ -72,21 +73,27 @@ export function useSupabaseData() {
         futureMe: student.student_xp.find((x: any) => x.category === 'futureMe')?.amount || 0,
         recallWar: student.student_xp.find((x: any) => x.category === 'recallWar')?.amount || 0,
       },
-      badges: student.student_badges.map((sb: any) => ({
-        id: sb.badge_id,
-        name: sb.badges.name,
-        description: sb.badges.description,
-        emoji: sb.badges.emoji,
-        dateEarned: sb.date_earned,
-      })),
-      purchasedRewards: student.student_rewards.map((sr: any) => ({
-        id: sr.reward_id,
-        instanceId: sr.instance_id,
-        name: sr.rewards.name,
-        cost: sr.rewards.cost,
-        description: sr.rewards.description,
-        emoji: sr.rewards.emoji,
-      })),
+      badges: student.student_badges.map((sb: any) => {
+        const badgeDef = BADGE_DEFINITIONS.find(b => b.id === sb.badge_id);
+        return {
+          id: sb.badge_id,
+          name: badgeDef?.name || '',
+          description: badgeDef?.description || '',
+          emoji: badgeDef?.emoji || '',
+          dateEarned: sb.earned_at,
+        };
+      }),
+      purchasedRewards: student.student_rewards.map((sr: any) => {
+        const rewardDef = XP_STORE_ITEMS.find(r => r.id === sr.reward_id);
+        return {
+          id: sr.reward_id,
+          instanceId: sr.id || `${sr.reward_id}-${sr.purchased_at}`,
+          name: rewardDef?.name || '',
+          cost: rewardDef?.cost || 0,
+          description: rewardDef?.description || '',
+          emoji: rewardDef?.emoji || '',
+        };
+      }),
     }));
 
     setStudents(formattedStudents);
