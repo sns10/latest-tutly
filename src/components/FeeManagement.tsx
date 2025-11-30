@@ -26,6 +26,7 @@ export function FeeManagement({
 }: FeeManagementProps) {
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
+  const [selectedClass, setSelectedClass] = useState<string>('All');
 
   // Generate monthly fees for all students
   useEffect(() => {
@@ -77,11 +78,16 @@ export function FeeManagement({
     return months;
   };
 
-  // Filter fees by student and month
+  // Get unique classes from students
+  const uniqueClasses = Array.from(new Set(students.map(s => s.class))).sort();
+
+  // Filter fees by student, month, and class
   const filteredFees = fees.filter(fee => {
+    const student = students.find(s => s.id === fee.studentId);
     const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
     const monthMatch = fee.feeType.includes(selectedMonth);
-    return studentMatch && monthMatch;
+    const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
+    return studentMatch && monthMatch && classMatch;
   });
 
   // Get unpaid fees for current month
@@ -171,7 +177,7 @@ export function FeeManagement({
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Month:</span>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -186,6 +192,20 @@ export function FeeManagement({
               </Select>
             </div>
             <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Class:</span>
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Classes</SelectItem>
+                  {uniqueClasses.map(className => <SelectItem key={className} value={className}>
+                      {className}
+                    </SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Student:</span>
               <Select value={selectedStudent} onValueChange={setSelectedStudent}>
                 <SelectTrigger className="w-64">
@@ -193,7 +213,9 @@ export function FeeManagement({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All Students</SelectItem>
-                  {students.map(student => <SelectItem key={student.id} value={student.id}>
+                  {students
+                    .filter(s => selectedClass === 'All' || s.class === selectedClass)
+                    .map(student => <SelectItem key={student.id} value={student.id}>
                       {student.name} - {student.class}
                     </SelectItem>)}
                 </SelectContent>
