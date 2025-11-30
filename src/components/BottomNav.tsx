@@ -1,12 +1,12 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Trophy, Users, Star, FileText, Brain, BarChart3, DollarSign } from 'lucide-react';
+import { Home, Trophy, Star, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { title: 'Home', url: '/', icon: Home },
   { title: 'Board', url: '/leaderboard', icon: Trophy },
-  { title: 'Teams', url: '/teams', icon: Users },
-  { title: 'AI', url: '/analysis', icon: Brain },
+  { title: 'MVP', url: '/mvp', icon: Star },
+  { title: 'Fees', url: '/fees', icon: DollarSign },
 ];
 
 export function BottomNav() {
