@@ -54,6 +54,9 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
         <p className="font-semibold text-lg text-foreground">{student.name}</p>
         <div className="flex items-center gap-2 mt-1 flex-wrap">
           <p className="text-sm text-muted-foreground">{student.class} Grade</p>
+          {student.division && (
+            <Badge variant="outline" className="border-primary/20 font-semibold">Division {student.division.name}</Badge>
+          )}
           {student.team && (
              <Badge variant="outline" className="border-primary/20 font-semibold">{student.team} Team</Badge>
           )}

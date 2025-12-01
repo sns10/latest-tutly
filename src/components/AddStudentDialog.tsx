@@ -19,10 +19,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Student, ClassName } from "@/types";
+import { Student, ClassName, Division } from "@/types";
 import { PlusCircle } from "lucide-react";
 
 interface AddStudentDialogProps {
+  divisions: Division[];
   onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => void;
 }
 
@@ -34,10 +35,14 @@ const avatars = [
   'photo-1441057206919-63d19fac2369',
 ];
 
-export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
+export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [studentClass, setStudentClass] = useState<ClassName>("8th");
+  const [divisionId, setDivisionId] = useState<string>("");
+
+  // Filter divisions based on selected class
+  const availableDivisions = divisions.filter(d => d.class === studentClass);
 
   const handleSubmit = () => {
     if (name.trim() && studentClass) {
@@ -45,10 +50,12 @@ export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
       onAddStudent({ 
         name: name.trim(), 
         class: studentClass,
+        divisionId: divisionId || undefined,
         avatar: `https://images.unsplash.com/${randomAvatar}?w=500&h=500&fit=crop`
       });
       setName("");
       setStudentClass("8th");
+      setDivisionId("");
       setIsOpen(false);
     }
   };
@@ -85,12 +92,39 @@ export function AddStudentDialog({ onAddStudent }: AddStudentDialogProps) {
             <Label htmlFor="class" className="text-right">
               Class
             </Label>
-            <Select onValueChange={(value: ClassName) => setStudentClass(value)} defaultValue={studentClass}>
+            <Select 
+              onValueChange={(value: ClassName) => {
+                setStudentClass(value);
+                setDivisionId(""); // Reset division when class changes
+              }} 
+              defaultValue={studentClass}
+            >
               <SelectTrigger className="col-span-3">
                 <SelectValue placeholder="Select a class" />
               </SelectTrigger>
               <SelectContent>
                 {classNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid grid-cols-4 items-center gap-4">
+            <Label htmlFor="division" className="text-right">
+              Division
+            </Label>
+            <Select 
+              value={divisionId}
+              onValueChange={setDivisionId}
+            >
+              <SelectTrigger className="col-span-3">
+                <SelectValue placeholder="Select a division (optional)" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">No Division</SelectItem>
+                {availableDivisions.map(d => (
+                  <SelectItem key={d.id} value={d.id}>
+                    Division {d.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
