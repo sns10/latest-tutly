@@ -43,21 +43,21 @@ export function ClassFeeManager({ classFees, onUpdateClassFee }: ClassFeeManager
         <CardTitle>Set Class Fees</CardTitle>
         <CardDescription>Define the monthly tuition fee for each class.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 p-3 sm:p-6">
         {fees.map(fee => (
-          <div key={fee.class} className="flex items-center justify-between p-2 border rounded-md">
-            <Label htmlFor={`fee-${fee.class}`} className="font-medium">{fee.class} Grade</Label>
+          <div key={fee.class} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 p-2 sm:p-3 border rounded-md">
+            <Label htmlFor={`fee-${fee.class}`} className="font-medium text-sm sm:text-base">{fee.class} Grade</Label>
             <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">₹</span>
+              <span className="text-muted-foreground text-sm">₹</span>
               <Input 
                 id={`fee-${fee.class}`}
                 type="number"
                 value={fee.amount}
                 onChange={(e) => handleAmountChange(fee.class, e.target.value)}
-                className="w-32"
+                className="w-full sm:w-32 text-sm"
                 min="0"
               />
-              <Button size="sm" onClick={() => handleSave(fee.class)}>Save</Button>
+              <Button size="sm" onClick={() => handleSave(fee.class)} className="shrink-0 text-xs sm:text-sm">Save</Button>
             </div>
           </div>
         ))}

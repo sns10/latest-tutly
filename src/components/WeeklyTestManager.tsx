@@ -113,39 +113,27 @@ export function WeeklyTestManager({
       </div>
 
       <Tabs defaultValue="tests" className="w-full">
-        <div className="w-full overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
-          <TabsList className="inline-flex w-auto min-w-full md:w-full justify-start md:justify-center">
-            <TabsTrigger value="tests" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <TestTube2 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Tests</span>
+        <div className="w-full overflow-x-auto pb-2 -mx-3 px-3 sm:mx-0 sm:px-0">
+          <TabsList className="inline-flex w-auto min-w-max">
+            <TabsTrigger value="tests" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+              <TestTube2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Tests</span>
             </TabsTrigger>
-            <TabsTrigger value="marks" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <Users className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Marks</span>
+            <TabsTrigger value="marks" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Marks</span>
             </TabsTrigger>
-            <TabsTrigger value="students" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <UserCheck className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Students</span>
+            <TabsTrigger value="students" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+              <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Students</span>
             </TabsTrigger>
-            <TabsTrigger value="attendance" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <CalendarDays className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Attendance</span>
+            <TabsTrigger value="attendance" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+              <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden xs:inline">Attend</span>
             </TabsTrigger>
-            <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <DollarSign className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Fees</span>
-            </TabsTrigger>
-            <TabsTrigger value="challenges" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <Trophy className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Challenges</span>
-            </TabsTrigger>
-            <TabsTrigger value="announcements" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <Megaphone className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">News</span>
-            </TabsTrigger>
-            <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs md:text-sm whitespace-nowrap">
-              <BarChart3 className="h-3.5 w-3.5 md:h-4 md:w-4" />
-              <span className="hidden sm:inline">Reports</span>
+            <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Fees</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -166,42 +154,42 @@ export function WeeklyTestManager({
                 const stats = getTestStats(test);
                 return (
                   <Card key={test.id} className="hover:shadow-md transition-shadow">
-                    <CardHeader>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{test.name}</CardTitle>
-                          <div className="flex items-center gap-4 mt-2">
-                            <Badge variant="outline">{test.subject}</Badge>
-                            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                    <CardHeader className="p-3 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg truncate">{test.name}</CardTitle>
+                          <div className="flex flex-wrap items-center gap-2 mt-2">
+                            <Badge variant="outline" className="text-xs">{test.subject}</Badge>
+                            <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
                               {test.class === "All" ? "All Classes" : `${test.class} Grade`}
                             </Badge>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-xs sm:text-sm text-muted-foreground">
                               {new Date(test.date).toLocaleDateString()}
                             </span>
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-xs sm:text-sm text-muted-foreground">
                               Max: {test.maxMarks} marks
                             </span>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-primary">
+                        <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0 shrink-0">
+                          <div className="text-xl sm:text-2xl font-bold text-primary">
                             {stats.completed}/{stats.total}
                           </div>
-                          <div className="text-sm text-muted-foreground">completed</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">completed</div>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex justify-between items-center">
+                    <CardContent className="p-3 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
                         <div className="flex items-center gap-4">
-                          <div className="text-sm">
+                          <div className="text-xs sm:text-sm">
                             <span className="font-semibold">Avg Score: </span>
                             <span className={`font-bold ${stats.average >= 80 ? 'text-green-500' : stats.average >= 60 ? 'text-yellow-500' : 'text-red-500'}`}>
                               {stats.average}%
                             </span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-2">
                           <EnterMarksDialog 
                             test={test} 
                             students={students}
@@ -213,27 +201,28 @@ export function WeeklyTestManager({
                             variant="outline" 
                             size="sm"
                             onClick={() => setSelectedTest(test)}
+                            className="text-xs sm:text-sm"
                           >
                             View Results
                           </Button>
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
                               <Button variant="outline" size="sm" className="text-red-600 hover:text-red-700">
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent className="max-w-[90vw] sm:max-w-md">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Test</AlertDialogTitle>
-                                <AlertDialogDescription>
+                                <AlertDialogTitle className="text-base sm:text-lg">Delete Test</AlertDialogTitle>
+                                <AlertDialogDescription className="text-sm">
                                   Are you sure you want to delete "{test.name}"? This will also delete all associated test results. This action cannot be undone.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                                <AlertDialogCancel className="m-0">Cancel</AlertDialogCancel>
                                 <AlertDialogAction 
                                   onClick={() => handleDeleteTest(test.id)}
-                                  className="bg-red-600 hover:bg-red-700"
+                                  className="bg-red-600 hover:bg-red-700 m-0"
                                 >
                                   Delete
                                 </AlertDialogAction>

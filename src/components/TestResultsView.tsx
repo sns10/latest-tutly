@@ -96,19 +96,21 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h3 className="text-xl font-semibold">Test Results & Reports</h3>
-        <Button onClick={exportResults} className="flex items-center gap-2">
-          <Download className="h-4 w-4" />
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        <div>
+          <h3 className="text-base sm:text-xl font-semibold">Test Results & Reports</h3>
+        </div>
+        <Button onClick={exportResults} className="flex items-center gap-2 text-xs sm:text-sm" size="sm">
+          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
           Export CSV
         </Button>
       </div>
 
       {/* Filters */}
-      <div className="flex gap-4">
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
         <Select value={selectedClass} onValueChange={setSelectedClass}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Filter by class" />
           </SelectTrigger>
           <SelectContent>
@@ -119,7 +121,7 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
         </Select>
 
         <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Filter by subject" />
           </SelectTrigger>
           <SelectContent>
@@ -132,18 +134,18 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
 
       {/* Subject Averages */}
       <Card>
-        <CardHeader>
-          <CardTitle>Subject Performance Overview</CardTitle>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Subject Performance Overview</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <CardContent className="p-3 sm:p-6">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
             {subjects.filter(s => s !== "All").map(subject => (
-              <div key={subject} className="text-center p-4 bg-secondary/20 rounded-lg">
-                <div className="text-2xl font-bold text-primary">
+              <div key={subject} className="text-center p-3 sm:p-4 bg-secondary/20 rounded-lg">
+                <div className="text-xl sm:text-2xl font-bold text-primary">
                   {getSubjectAverage(subject)}%
                 </div>
-                <div className="text-sm text-muted-foreground font-semibold">{subject}</div>
-                <div className="text-xs text-muted-foreground">Average Score</div>
+                <div className="text-xs sm:text-sm text-muted-foreground font-semibold truncate">{subject}</div>
+                <div className="text-xs text-muted-foreground">Average</div>
               </div>
             ))}
           </div>
@@ -152,11 +154,11 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
 
       {/* Student Results Table */}
       <Card>
-        <CardHeader>
-          <CardTitle>Individual Student Results</CardTitle>
+        <CardHeader className="p-3 sm:p-6">
+          <CardTitle className="text-base sm:text-lg">Individual Student Results</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
+        <CardContent className="p-3 sm:p-6">
+          <div className="space-y-3 sm:space-y-4">
             {filteredStudents.map(student => {
               const results = getStudentResults(student.id);
               const completedTests = results.filter(r => r.result).length;
@@ -165,47 +167,47 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
                 : 0;
 
               return (
-                <div key={student.id} className="border rounded-lg p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
+                <div key={student.id} className="border rounded-lg p-3 sm:p-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
                         <AvatarImage src={student.avatar} />
                         <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
                       </Avatar>
-                      <div>
-                        <div className="font-semibold">{student.name}</div>
-                        <div className="text-sm text-muted-foreground">{student.class} Grade</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary">
+                    <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
+                      <div className="text-base sm:text-lg font-bold text-primary">
                         {Math.round(averageScore || 0)}%
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs sm:text-sm text-muted-foreground">
                         {completedTests}/{filteredTests.length} tests
                       </div>
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
                     {results.map(({ test, result, percentage }) => (
-                      <div key={test.id} className="flex justify-between items-center p-2 bg-secondary/10 rounded">
-                        <div className="text-sm">
-                          <div className="font-medium">{test.name}</div>
-                          <div className="text-xs text-muted-foreground">{test.subject}</div>
+                      <div key={test.id} className="flex justify-between items-center p-2 bg-secondary/10 rounded min-w-0">
+                        <div className="text-xs sm:text-sm min-w-0 flex-1 mr-2">
+                          <div className="font-medium truncate">{test.name}</div>
+                          <div className="text-xs text-muted-foreground truncate">{test.subject}</div>
                         </div>
-                        <div className="text-right">
+                        <div className="text-right shrink-0">
                           {result ? (
                             <>
-                              <Badge variant={percentage! >= 80 ? "default" : percentage! >= 60 ? "secondary" : "destructive"}>
+                              <Badge variant={percentage! >= 80 ? "default" : percentage! >= 60 ? "secondary" : "destructive"} className="text-xs">
                                 {Math.round(percentage!)}%
                               </Badge>
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-xs text-muted-foreground mt-1">
                                 {result.marks}/{test.maxMarks}
                               </div>
                             </>
                           ) : (
-                            <Badge variant="outline">Not taken</Badge>
+                            <Badge variant="outline" className="text-xs">Not taken</Badge>
                           )}
                         </div>
                       </div>
