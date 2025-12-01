@@ -13,6 +13,7 @@ import {
 import { Plus, Trash2, Gift, Users } from "lucide-react";
 import { XP_STORE_ITEMS } from "@/config/rewards";
 import { Badge } from "@/components/ui/badge";
+import { ReportExporter } from "./ReportExporter";
 
 interface StudentRowProps {
   student: Student;
@@ -195,9 +196,23 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
         </PopoverContent>
       </Popover>
 
-      <Button variant="ghost" size="icon" className="text-red-500/70 hover:bg-red-500/10 hover:text-red-500" onClick={() => onRemoveStudent(student.id)}>
-        <Trash2 className="h-5 w-5" />
-      </Button>
+      <div className="flex gap-1">
+        <ReportExporter
+          type="student-report"
+          studentId={student.id}
+          variant="ghost"
+          size="icon"
+        />
+        <ReportExporter
+          type="attendance-calendar"
+          studentId={student.id}
+          variant="ghost"
+          size="icon"
+        />
+        <Button variant="ghost" size="icon" className="text-red-500/70 hover:bg-red-500/10 hover:text-red-500" onClick={() => onRemoveStudent(student.id)}>
+          <Trash2 className="h-5 w-5" />
+        </Button>
+      </div>
     </div>
   );
 }

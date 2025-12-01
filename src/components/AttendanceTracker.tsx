@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { AttendanceControls } from './attendance/AttendanceControls';
 import { AttendanceStats } from './attendance/AttendanceStats';
 import { StudentAttendanceList } from './attendance/StudentAttendanceList';
+import { ReportExporter } from './ReportExporter';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -111,6 +112,12 @@ export function AttendanceTracker({ students, attendance, timetable = [], subjec
           <h2 className="text-2xl font-bold font-display text-primary">Attendance Tracker</h2>
           <p className="text-muted-foreground">Track and manage student attendance</p>
         </div>
+        <ReportExporter
+          type="absentees"
+          label="Export Absentees"
+          classValue={selectedClass === 'All' ? undefined : selectedClass}
+          startDate={selectedDateStr}
+        />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
