@@ -65,7 +65,7 @@ const Index = () => {
   return (
     <Routes>
       <Route path="/" element={
-        <div className="p-4 space-y-4 max-w-7xl mx-auto bg-[#f8f9fa]">
+        <div className="p-3 sm:p-4 space-y-4 w-full bg-[#f8f9fa]">
           <div>
             <h2 className="text-xl font-bold mb-1 text-gray-900">Dashboard</h2>
             <p className="text-sm text-gray-600">Welcome back! Here's your overview</p>
