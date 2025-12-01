@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
+import { ReportExporter } from "./ReportExporter";
 
 interface TestResultsViewProps {
   tests: WeeklyTest[];
