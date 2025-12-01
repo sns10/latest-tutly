@@ -38,19 +38,19 @@ export function RecentTests({
   };
 
   return (
-    <Card className="bg-white border border-gray-100 shadow-sm">
-      <CardHeader className="pb-3">
+    <Card className="bg-white border border-gray-100 shadow-sm w-full">
+      <CardHeader className="pb-2 sm:pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base font-semibold text-gray-900">Recent Tests</CardTitle>
-          <Button variant="ghost" size="sm" className="h-8 text-xs">
+          <CardTitle className="text-sm sm:text-base font-semibold text-gray-900">Recent Tests</CardTitle>
+          <Button variant="ghost" size="sm" className="h-7 sm:h-8 text-[10px] sm:text-xs px-2">
             View All
             <ChevronRight className="h-3 w-3 ml-1" />
           </Button>
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 sm:space-y-3">
         {recentTests.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">
+          <p className="text-xs sm:text-sm text-muted-foreground text-center py-4">
             No tests created yet
           </p>
         ) : (
@@ -59,18 +59,18 @@ export function RecentTests({
             return (
               <div
                 key={test.id}
-                className="flex items-center justify-between p-3 bg-secondary/30 rounded-lg"
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 sm:p-3 bg-secondary/30 rounded-lg"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{test.name}</p>
+                  <p className="text-xs sm:text-sm font-medium truncate">{test.name}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline" className="text-xs">{test.subject}</Badge>
-                    <span className="text-xs text-muted-foreground">
+                    <Badge variant="outline" className="text-[10px] sm:text-xs">{test.subject}</Badge>
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">
                       {stats.completed}/{stats.total}
                     </span>
                   </div>
                 </div>
-                <div className="ml-2">
+                <div className="sm:ml-2 w-full sm:w-auto">
                   <EnterMarksDialog 
                     test={test} 
                     students={students}
