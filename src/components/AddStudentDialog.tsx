@@ -50,7 +50,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
       onAddStudent({ 
         name: name.trim(), 
         class: studentClass,
-        divisionId: divisionId || undefined,
+        divisionId: divisionId === 'none' ? undefined : divisionId,
         avatar: `https://images.unsplash.com/${randomAvatar}?w=500&h=500&fit=crop`
       });
       setName("");
@@ -116,10 +116,9 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
               onValueChange={setDivisionId}
             >
               <SelectTrigger className="col-span-3">
-                <SelectValue placeholder="Select a division (optional)" />
+                <SelectValue placeholder="Auto-assign to Division A" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">No Division</SelectItem>
                 {availableDivisions.map(d => (
                   <SelectItem key={d.id} value={d.id}>
                     Division {d.name}

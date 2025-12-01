@@ -9,9 +9,7 @@ import { RecentTests } from "@/components/RecentTests";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Loader2 } from "lucide-react";
 import LeaderboardPage from './Leaderboard';
-import MVPPage from './MVP';
 import MaterialsPage from './Materials';
-import ReportsPage from './Reports';
 import FeesPage from './Fees';
 import AttendancePage from './Attendance';
 import TimetablePage from './Timetable';
@@ -124,9 +122,7 @@ const Index = () => {
         </div>
       } />
       <Route path="/leaderboard" element={<LeaderboardPage />} />
-      <Route path="/mvp" element={<MVPPage />} />
       <Route path="/materials" element={<MaterialsPage />} />
-      <Route path="/reports" element={<ReportsPage />} />
       <Route path="/fees" element={<FeesPage />} />
       <Route path="/attendance" element={<AttendancePage />} />
       <Route path="/timetable" element={<TimetablePage />} />
