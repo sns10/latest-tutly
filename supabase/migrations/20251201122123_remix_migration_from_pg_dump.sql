@@ -99,6 +99,44 @@ CREATE TABLE public.class_fees (
 
 
 --
+-- Name: divisions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.divisions (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    class text NOT NULL,
+    name text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: faculty; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.faculty (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    name text NOT NULL,
+    email text,
+    phone text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: faculty_subjects; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.faculty_subjects (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    faculty_id uuid NOT NULL,
+    subject_id uuid NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: student_attendance; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -110,6 +148,8 @@ CREATE TABLE public.student_attendance (
     notes text,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    subject_id uuid,
+    faculty_id uuid,
     CONSTRAINT attendance_status_check CHECK ((status = ANY (ARRAY['present'::text, 'absent'::text, 'late'::text, 'excused'::text])))
 );
 
@@ -209,7 +249,8 @@ CREATE TABLE public.students (
     class text NOT NULL,
     team text,
     total_xp integer DEFAULT 0 NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    division_id uuid
 );
 
 
@@ -222,6 +263,30 @@ CREATE TABLE public.subjects (
     name text NOT NULL,
     class text NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: timetable; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.timetable (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    class text NOT NULL,
+    subject_id uuid NOT NULL,
+    faculty_id uuid NOT NULL,
+    day_of_week integer NOT NULL,
+    start_time time without time zone NOT NULL,
+    end_time time without time zone NOT NULL,
+    room_number text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    type text DEFAULT 'regular'::text NOT NULL,
+    specific_date date,
+    start_date date,
+    end_date date,
+    CONSTRAINT timetable_day_of_week_check CHECK (((day_of_week >= 0) AND (day_of_week <= 6))),
+    CONSTRAINT timetable_type_check CHECK ((type = ANY (ARRAY['regular'::text, 'special'::text])))
 );
 
 
@@ -294,6 +359,46 @@ ALTER TABLE ONLY public.class_fees
 
 ALTER TABLE ONLY public.class_fees
     ADD CONSTRAINT class_fees_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: divisions divisions_class_name_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.divisions
+    ADD CONSTRAINT divisions_class_name_key UNIQUE (class, name);
+
+
+--
+-- Name: divisions divisions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.divisions
+    ADD CONSTRAINT divisions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: faculty faculty_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.faculty
+    ADD CONSTRAINT faculty_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: faculty_subjects faculty_subjects_faculty_id_subject_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.faculty_subjects
+    ADD CONSTRAINT faculty_subjects_faculty_id_subject_id_key UNIQUE (faculty_id, subject_id);
+
+
+--
+-- Name: faculty_subjects faculty_subjects_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.faculty_subjects
+    ADD CONSTRAINT faculty_subjects_pkey PRIMARY KEY (id);
 
 
 --
@@ -377,11 +482,33 @@ ALTER TABLE ONLY public.subjects
 
 
 --
+-- Name: timetable timetable_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.timetable
+    ADD CONSTRAINT timetable_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: weekly_tests weekly_tests_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.weekly_tests
     ADD CONSTRAINT weekly_tests_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: idx_students_division_id; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_students_division_id ON public.students USING btree (division_id);
+
+
+--
+-- Name: idx_timetable_dates; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_timetable_dates ON public.timetable USING btree (specific_date, start_date, end_date);
 
 
 --
@@ -406,6 +533,38 @@ ALTER TABLE ONLY public.academic_materials
 
 ALTER TABLE ONLY public.student_attendance
     ADD CONSTRAINT attendance_student_id_fkey FOREIGN KEY (student_id) REFERENCES public.students(id) ON DELETE CASCADE;
+
+
+--
+-- Name: faculty_subjects faculty_subjects_faculty_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.faculty_subjects
+    ADD CONSTRAINT faculty_subjects_faculty_id_fkey FOREIGN KEY (faculty_id) REFERENCES public.faculty(id) ON DELETE CASCADE;
+
+
+--
+-- Name: faculty_subjects faculty_subjects_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.faculty_subjects
+    ADD CONSTRAINT faculty_subjects_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: student_attendance student_attendance_faculty_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.student_attendance
+    ADD CONSTRAINT student_attendance_faculty_id_fkey FOREIGN KEY (faculty_id) REFERENCES public.faculty(id) ON DELETE SET NULL;
+
+
+--
+-- Name: student_attendance student_attendance_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.student_attendance
+    ADD CONSTRAINT student_attendance_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id) ON DELETE SET NULL;
 
 
 --
@@ -473,6 +632,30 @@ ALTER TABLE ONLY public.student_xp
 
 
 --
+-- Name: students students_division_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.students
+    ADD CONSTRAINT students_division_id_fkey FOREIGN KEY (division_id) REFERENCES public.divisions(id) ON DELETE SET NULL;
+
+
+--
+-- Name: timetable timetable_faculty_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.timetable
+    ADD CONSTRAINT timetable_faculty_id_fkey FOREIGN KEY (faculty_id) REFERENCES public.faculty(id) ON DELETE CASCADE;
+
+
+--
+-- Name: timetable timetable_subject_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.timetable
+    ADD CONSTRAINT timetable_subject_id_fkey FOREIGN KEY (subject_id) REFERENCES public.subjects(id) ON DELETE CASCADE;
+
+
+--
 -- Name: announcements Allow all for authenticated users; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -491,6 +674,27 @@ CREATE POLICY "Allow all for authenticated users" ON public.challenges TO authen
 --
 
 CREATE POLICY "Allow all for authenticated users" ON public.class_fees TO authenticated USING (true) WITH CHECK (true);
+
+
+--
+-- Name: divisions Allow all for authenticated users; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow all for authenticated users" ON public.divisions TO authenticated USING (true) WITH CHECK (true);
+
+
+--
+-- Name: faculty Allow all for authenticated users; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow all for authenticated users" ON public.faculty TO authenticated USING (true) WITH CHECK (true);
+
+
+--
+-- Name: faculty_subjects Allow all for authenticated users; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow all for authenticated users" ON public.faculty_subjects TO authenticated USING (true) WITH CHECK (true);
 
 
 --
@@ -547,6 +751,13 @@ CREATE POLICY "Allow all for authenticated users" ON public.student_xp TO authen
 --
 
 CREATE POLICY "Allow all for authenticated users" ON public.students TO authenticated USING (true) WITH CHECK (true);
+
+
+--
+-- Name: timetable Allow all for authenticated users; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow all for authenticated users" ON public.timetable TO authenticated USING (true) WITH CHECK (true);
 
 
 --
@@ -623,6 +834,24 @@ ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.class_fees ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: divisions; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.divisions ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: faculty; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.faculty ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: faculty_subjects; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.faculty_subjects ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: student_attendance; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -675,6 +904,12 @@ ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
 --
 
 ALTER TABLE public.subjects ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: timetable; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.timetable ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: weekly_tests; Type: ROW SECURITY; Schema: public; Owner: -
