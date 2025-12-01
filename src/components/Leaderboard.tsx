@@ -57,11 +57,11 @@ export function Leaderboard({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+    <div className="space-y-3 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-4">
         <div>
-          <h2 className="text-2xl font-bold font-display text-primary">Student Leaderboard</h2>
-          <p className="text-muted-foreground">Track student progress and manage XP</p>
+          <h2 className="text-xl sm:text-2xl font-bold font-display text-primary">Student Leaderboard</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground">Track student progress and manage XP</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
@@ -71,15 +71,15 @@ export function Leaderboard({
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4 items-center">
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Class:</span>
+        <CardContent className="p-2 sm:p-4">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Class:</span>
               <Select value={classFilter} onValueChange={(value) => {
                 setClassFilter(value);
                 setDivisionFilter("All");
               }}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -91,10 +91,10 @@ export function Leaderboard({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Division:</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Division:</span>
               <Select value={divisionFilter} onValueChange={setDivisionFilter}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -107,10 +107,10 @@ export function Leaderboard({
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Team:</span>
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs sm:text-sm font-medium whitespace-nowrap">Team:</span>
               <Select value={teamFilter} onValueChange={setTeamFilter}>
-                <SelectTrigger className="w-32">
+                <SelectTrigger className="w-full sm:w-32">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -126,30 +126,30 @@ export function Leaderboard({
       </Card>
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="p-4 text-center">
-            <Users className="h-6 w-6 mx-auto mb-2 text-blue-500" />
-            <div className="text-2xl font-bold">{filteredStudents.length}</div>
-            <div className="text-sm text-muted-foreground">Total Students</div>
+          <CardContent className="p-2 sm:p-4 text-center">
+            <Users className="h-4 w-4 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-blue-500" />
+            <div className="text-base sm:text-2xl font-bold">{filteredStudents.length}</div>
+            <div className="text-[10px] sm:text-sm text-muted-foreground">Students</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <Trophy className="h-6 w-6 mx-auto mb-2 text-yellow-500" />
-            <div className="text-2xl font-bold">
+          <CardContent className="p-2 sm:p-4 text-center">
+            <Trophy className="h-4 w-4 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-yellow-500" />
+            <div className="text-base sm:text-2xl font-bold">
               {sortedStudents.length > 0 ? sortedStudents[0].totalXp : 0}
             </div>
-            <div className="text-sm text-muted-foreground">Highest XP</div>
+            <div className="text-[10px] sm:text-sm text-muted-foreground">Highest</div>
           </CardContent>
         </Card>
         <Card>
-          <CardContent className="p-4 text-center">
-            <Star className="h-6 w-6 mx-auto mb-2 text-purple-500" />
-            <div className="text-2xl font-bold">
+          <CardContent className="p-2 sm:p-4 text-center">
+            <Star className="h-4 w-4 sm:h-6 sm:w-6 mx-auto mb-1 sm:mb-2 text-purple-500" />
+            <div className="text-base sm:text-2xl font-bold">
               {Math.round(filteredStudents.reduce((sum, s) => sum + s.totalXp, 0) / (filteredStudents.length || 1))}
             </div>
-            <div className="text-sm text-muted-foreground">Average XP</div>
+            <div className="text-[10px] sm:text-sm text-muted-foreground">Average</div>
           </CardContent>
         </Card>
       </div>
@@ -171,7 +171,7 @@ export function Leaderboard({
               </div>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-2 sm:space-y-4">
               {sortedStudents.map((student, index) => (
                 <StudentRow
                   key={student.id}

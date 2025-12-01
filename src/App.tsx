@@ -29,7 +29,7 @@ const App = () => (
                     <h1 className="text-base sm:text-lg font-bold ml-2 text-gray-900 truncate">Gamify Pallikoodam</h1>
                   </div>
                 </div>
-                <div className="flex-1 pb-16 md:pb-0 bg-[#f8f9fa] w-full overflow-x-hidden">
+                <div className="flex-1 pb-20 md:pb-0 bg-[#f8f9fa] w-full overflow-x-hidden">
                   <Routes>
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/*" element={<Index />} />
