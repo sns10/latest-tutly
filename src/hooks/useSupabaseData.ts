@@ -315,12 +315,42 @@ export function useSupabaseData() {
   };
 
   const addStudent = async (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
+    let divisionIdToUse = newStudent.divisionId;
+
+    // If no division provided, check if Division A exists for this class
+    if (!divisionIdToUse || divisionIdToUse === 'none') {
+      const existingDivisionA = divisions.find(
+        d => d.class === newStudent.class && d.name === 'A'
+      );
+
+      if (existingDivisionA) {
+        divisionIdToUse = existingDivisionA.id;
+      } else {
+        // Create Division A for this class
+        const { data: newDivision, error: divError } = await supabase
+          .from('divisions')
+          .insert({
+            class: newStudent.class,
+            name: 'A',
+          })
+          .select()
+          .single();
+
+        if (divError) {
+          console.error('Error creating default division:', divError);
+        } else {
+          divisionIdToUse = newDivision.id;
+          await fetchDivisions(); // Refresh divisions
+        }
+      }
+    }
+
     const { data, error } = await supabase
       .from('students')
       .insert({
         name: newStudent.name,
         class: newStudent.class,
-        division_id: newStudent.divisionId,
+        division_id: divisionIdToUse,
         avatar: newStudent.avatar,
       })
       .select()
