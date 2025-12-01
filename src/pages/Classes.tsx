@@ -5,10 +5,16 @@ import { Loader2 } from 'lucide-react';
 export default function ClassesPage() {
   const { 
     divisions, 
+    subjects,
+    faculty,
     loading,
     addDivision,
     updateDivision,
-    deleteDivision
+    deleteDivision,
+    addSubject,
+    addFaculty,
+    updateFaculty,
+    deleteFaculty
   } = useSupabaseData();
 
   if (loading) {
@@ -23,9 +29,15 @@ export default function ClassesPage() {
     <div className="container mx-auto p-4 sm:p-6 space-y-6">
       <ClassManagement
         divisions={divisions}
+        subjects={subjects}
+        faculty={faculty}
         onAddDivision={addDivision}
         onUpdateDivision={updateDivision}
         onDeleteDivision={deleteDivision}
+        onAddSubject={addSubject}
+        onAddFaculty={addFaculty}
+        onUpdateFaculty={updateFaculty}
+        onDeleteFaculty={deleteFaculty}
       />
     </div>
   );

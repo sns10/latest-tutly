@@ -31,13 +31,20 @@ export function Leaderboard({
   onAssignTeam 
 }: LeaderboardProps) {
   const [classFilter, setClassFilter] = useState("All");
+  const [divisionFilter, setDivisionFilter] = useState("All");
   const [teamFilter, setTeamFilter] = useState("All");
+
+  // Get divisions for selected class
+  const availableDivisions = classFilter === "All" 
+    ? divisions 
+    : divisions.filter(d => d.class === classFilter);
 
   // Filter students
   const filteredStudents = students.filter(student => {
     const classMatch = classFilter === "All" || student.class === classFilter;
+    const divisionMatch = divisionFilter === "All" || student.divisionId === divisionFilter;
     const teamMatch = teamFilter === "All" || student.team === teamFilter;
-    return classMatch && teamMatch;
+    return classMatch && divisionMatch && teamMatch;
   });
 
   // Sort by total XP
@@ -65,10 +72,13 @@ export function Leaderboard({
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
               <span className="text-sm font-medium">Class:</span>
-              <Select value={classFilter} onValueChange={setClassFilter}>
+              <Select value={classFilter} onValueChange={(value) => {
+                setClassFilter(value);
+                setDivisionFilter("All");
+              }}>
                 <SelectTrigger className="w-32">
                   <SelectValue />
                 </SelectTrigger>
@@ -78,6 +88,22 @@ export function Leaderboard({
                   <SelectItem value="9th">9th</SelectItem>
                   <SelectItem value="10th">10th</SelectItem>
                   <SelectItem value="11th">11th</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Division:</span>
+              <Select value={divisionFilter} onValueChange={setDivisionFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  {availableDivisions.map(div => (
+                    <SelectItem key={div.id} value={div.id}>
+                      {div.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
