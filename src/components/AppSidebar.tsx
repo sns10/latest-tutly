@@ -32,10 +32,10 @@ export function AppSidebar() {
   };
 
   return (
-    <Sidebar collapsible="icon" className="hidden md:flex">
-      <SidebarContent>
+    <Sidebar collapsible="icon" className="hidden md:flex bg-white border-r border-gray-200">
+      <SidebarContent className="bg-white">
         <SidebarGroup>
-          <SidebarGroupLabel>Gamify Pallikoodam</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-gray-900 font-semibold">Gamify Pallikoodam</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
