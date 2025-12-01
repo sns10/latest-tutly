@@ -28,7 +28,7 @@ export default function TimetablePage() {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6">
+    <div className="w-full px-3 py-4 sm:px-6">
       <Tabs defaultValue="timetable" className="space-y-4">
         <TabsList>
           <TabsTrigger value="timetable">Timetable</TabsTrigger>

@@ -68,20 +68,20 @@ export function ManagementCards({
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:gap-3 md:grid-cols-4">
       {cards.map((card) => (
         <Card
           key={card.title}
           className="cursor-pointer hover:shadow-lg transition-all hover:scale-[1.02] bg-white border border-gray-100"
           onClick={() => navigate(card.route)}
         >
-          <CardContent className="p-4">
-            <div className={`w-10 h-10 rounded-xl ${card.bgColor} flex items-center justify-center mb-3`}>
-              <card.icon className={`h-5 w-5 ${card.color}`} />
+          <CardContent className="p-3 sm:p-4">
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl ${card.bgColor} flex items-center justify-center mb-2 sm:mb-3`}>
+              <card.icon className={`h-4 w-4 sm:h-5 sm:w-5 ${card.color}`} />
             </div>
-            <div className="space-y-1">
-              <p className="text-2xl font-bold">{card.value}</p>
-              <p className="text-xs text-muted-foreground">{card.description}</p>
+            <div className="space-y-0.5 sm:space-y-1">
+              <p className="text-xl sm:text-2xl font-bold">{card.value}</p>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">{card.description}</p>
             </div>
           </CardContent>
         </Card>
