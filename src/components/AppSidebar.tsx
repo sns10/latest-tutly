@@ -1,4 +1,4 @@
-import { BookOpen, Trophy, Star, FolderOpen, BarChart3, DollarSign, CalendarDays, Clock } from 'lucide-react';
+import { BookOpen, Trophy, Star, FolderOpen, BarChart3, DollarSign, CalendarDays, Clock, Users } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -19,6 +19,7 @@ const menuItems = [
   { title: 'Materials', url: '/materials', icon: FolderOpen },
   { title: 'Timetable', url: '/timetable', icon: Clock },
   { title: 'Attendance', url: '/attendance', icon: CalendarDays },
+  { title: 'Classes', url: '/classes', icon: Users },
   { title: 'Reports', url: '/reports', icon: BarChart3 },
   { title: 'Fees', url: '/fees', icon: DollarSign },
 ];

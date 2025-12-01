@@ -1,5 +1,12 @@
 export type ClassName = "8th" | "9th" | "10th" | "11th" | "All";
 
+export interface Division {
+  id: string;
+  class: ClassName;
+  name: string;
+  createdAt: string;
+}
+
 export type XPCategory = "blackout" | "futureMe" | "recallWar";
 
 export type RewardId = "streak-freeze" | "recall-shield" | "double-xp" | "question-master";
@@ -32,6 +39,8 @@ export interface Student {
   id: string;
   name: string;
   class: ClassName;
+  divisionId?: string;
+  division?: Division;
   avatar: string;
   xp: {
     blackout: number;

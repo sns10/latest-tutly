@@ -1,6 +1,6 @@
 
 import { useState } from "react";
-import { Student, XPCategory, TeamName } from "@/types";
+import { Student, XPCategory, TeamName, Division } from "@/types";
 import { StudentRow } from "./StudentRow";
 import { AddStudentDialog } from "./AddStudentDialog";
 import { BulkImportStudentsDialog } from "./BulkImportStudentsDialog";
@@ -11,6 +11,7 @@ import { Users, Trophy, Star, Plus } from "lucide-react";
 
 interface LeaderboardProps {
   students: Student[];
+  divisions: Division[];
   onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => void;
   onAddXp: (studentId: string, category: XPCategory, amount: number) => void;
   onRemoveStudent: (studentId: string) => void;
@@ -20,7 +21,8 @@ interface LeaderboardProps {
 }
 
 export function Leaderboard({ 
-  students, 
+  students,
+  divisions,
   onAddStudent,
   onAddXp, 
   onRemoveStudent, 
@@ -56,7 +58,7 @@ export function Leaderboard({
         </div>
         <div className="flex flex-wrap gap-2">
           <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
-          <AddStudentDialog onAddStudent={onAddStudent} />
+          <AddStudentDialog divisions={divisions} onAddStudent={onAddStudent} />
         </div>
       </div>
 
@@ -139,7 +141,7 @@ export function Leaderboard({
               <p className="text-muted-foreground mb-4">Add your first student to get started</p>
               <div className="flex flex-wrap justify-center gap-2">
                 <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
-                <AddStudentDialog onAddStudent={onAddStudent} />
+                <AddStudentDialog divisions={divisions} onAddStudent={onAddStudent} />
               </div>
             </div>
           ) : (

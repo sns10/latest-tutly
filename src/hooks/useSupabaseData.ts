@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee, Faculty, Subject, Timetable } from '@/types';
+import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee, Faculty, Subject, Timetable, Division } from '@/types';
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 import { XP_STORE_ITEMS } from '@/config/rewards';
@@ -20,6 +20,7 @@ export function useSupabaseData() {
   const [faculty, setFaculty] = useState<Faculty[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
+  const [divisions, setDivisions] = useState<Division[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all data
@@ -31,6 +32,7 @@ export function useSupabaseData() {
     try {
       setLoading(true);
       await Promise.all([
+        fetchDivisions(),
         fetchStudents(),
         fetchWeeklyTests(),
         fetchTestResults(),
@@ -52,6 +54,28 @@ export function useSupabaseData() {
     }
   };
 
+  const fetchDivisions = async () => {
+    const { data, error } = await supabase
+      .from('divisions')
+      .select('*')
+      .order('class', { ascending: true })
+      .order('name', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching divisions:', error);
+      return;
+    }
+
+    const formattedDivisions: Division[] = data.map(div => ({
+      id: div.id,
+      class: div.class as ClassName,
+      name: div.name,
+      createdAt: div.created_at,
+    }));
+
+    setDivisions(formattedDivisions);
+  };
+
   const fetchStudents = async () => {
     const { data: studentsData, error } = await supabase
       .from('students')
@@ -59,7 +83,8 @@ export function useSupabaseData() {
         *,
         student_xp (category, amount),
         student_badges (badge_id, earned_at),
-        student_rewards (reward_id, purchased_at)
+        student_rewards (reward_id, purchased_at),
+        division:divisions (id, class, name)
       `);
 
     if (error) {
@@ -71,6 +96,13 @@ export function useSupabaseData() {
       id: student.id,
       name: student.name,
       class: student.class as ClassName,
+      divisionId: student.division_id,
+      division: student.division ? {
+        id: student.division.id,
+        class: student.division.class as ClassName,
+        name: student.division.name,
+        createdAt: new Date().toISOString(),
+      } : undefined,
       avatar: student.avatar || '',
       team: student.team as TeamName | null,
       totalXp: student.total_xp,
@@ -288,6 +320,7 @@ export function useSupabaseData() {
       .insert({
         name: newStudent.name,
         class: newStudent.class,
+        division_id: newStudent.divisionId,
         avatar: newStudent.avatar,
       })
       .select()
@@ -1016,6 +1049,81 @@ export function useSupabaseData() {
     await fetchTimetable();
   };
 
+  // Add Division
+  const addDivision = async (classValue: ClassName, name: string) => {
+    const { error } = await supabase
+      .from('divisions')
+      .insert({
+        class: classValue,
+        name: name.trim(),
+      });
+
+    if (error) {
+      console.error('Error adding division:', error);
+      toast.error('Failed to add division');
+      return;
+    }
+
+    toast.success('Division added successfully');
+    await fetchDivisions();
+  };
+
+  // Update Division
+  const updateDivision = async (id: string, name: string) => {
+    const { error } = await supabase
+      .from('divisions')
+      .update({
+        name: name.trim(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating division:', error);
+      toast.error('Failed to update division');
+      return;
+    }
+
+    toast.success('Division updated successfully');
+    await fetchDivisions();
+    await fetchStudents(); // Refresh students to get updated division names
+  };
+
+  // Delete Division
+  const deleteDivision = async (id: string) => {
+    const { error } = await supabase
+      .from('divisions')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting division:', error);
+      toast.error('Failed to delete division. Make sure no students are assigned to it.');
+      return;
+    }
+
+    toast.success('Division deleted successfully');
+    await fetchDivisions();
+    await fetchStudents(); // Refresh students in case any were affected
+  };
+
+  // Update Student Division
+  const updateStudentDivision = async (studentId: string, divisionId: string | null) => {
+    const { error } = await supabase
+      .from('students')
+      .update({ division_id: divisionId })
+      .eq('id', studentId);
+
+    if (error) {
+      console.error('Error updating student division:', error);
+      toast.error('Failed to update student division');
+      return;
+    }
+
+    toast.success('Student division updated successfully');
+    await fetchStudents();
+  };
+
   return {
     students,
     weeklyTests,
@@ -1029,6 +1137,7 @@ export function useSupabaseData() {
     faculty,
     subjects,
     timetable,
+    divisions,
     loading,
     addStudent,
     addWeeklyTest,
@@ -1054,5 +1163,9 @@ export function useSupabaseData() {
     addTimetableEntry,
     updateTimetableEntry,
     deleteTimetableEntry,
+    addDivision,
+    updateDivision,
+    deleteDivision,
+    updateStudentDivision,
   };
 }

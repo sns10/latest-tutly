@@ -5,6 +5,7 @@ import { Loader2 } from 'lucide-react';
 export default function LeaderboardPage() {
   const {
     students,
+    divisions,
     loading,
     addStudent,
     addXp,
@@ -26,6 +27,7 @@ export default function LeaderboardPage() {
     <div className="container mx-auto p-4 sm:p-6">
       <LeaderboardComponent
         students={students}
+        divisions={divisions}
         onAddStudent={addStudent}
         onAddXp={addXp}
         onRemoveStudent={removeStudent}

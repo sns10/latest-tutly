@@ -157,6 +157,27 @@ export type Database = {
         }
         Relationships: []
       }
+      divisions: {
+        Row: {
+          class: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       faculty: {
         Row: {
           created_at: string
@@ -504,6 +525,7 @@ export type Database = {
           avatar: string | null
           class: string
           created_at: string
+          division_id: string | null
           id: string
           name: string
           team: string | null
@@ -513,6 +535,7 @@ export type Database = {
           avatar?: string | null
           class: string
           created_at?: string
+          division_id?: string | null
           id?: string
           name: string
           team?: string | null
@@ -522,12 +545,21 @@ export type Database = {
           avatar?: string | null
           class?: string
           created_at?: string
+          division_id?: string | null
           id?: string
           name?: string
           team?: string | null
           total_xp?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "students_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {
