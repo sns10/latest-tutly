@@ -20,16 +20,16 @@ const App = () => (
         <TooltipProvider>
           <Sonner />
           <SidebarProvider>
-            <div className="min-h-screen flex w-full bg-[#f8f9fa]">
+            <div className="min-h-screen flex w-full overflow-x-hidden bg-[#f8f9fa]">
               <AppSidebar />
-              <main className="flex-1 flex flex-col bg-[#f8f9fa]">
+              <main className="flex-1 flex flex-col bg-[#f8f9fa] w-full min-w-0">
                 <div className="border-b bg-white sticky top-0 z-40 shadow-sm">
-                  <div className="flex h-14 items-center px-4">
+                  <div className="flex h-14 items-center px-3 sm:px-4">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-lg font-bold ml-2 text-gray-900">Gamify Pallikoodam</h1>
+                    <h1 className="text-base sm:text-lg font-bold ml-2 text-gray-900 truncate">Gamify Pallikoodam</h1>
                   </div>
                 </div>
-                <div className="flex-1 pb-16 md:pb-0 bg-[#f8f9fa]">
+                <div className="flex-1 pb-16 md:pb-0 bg-[#f8f9fa] w-full overflow-x-hidden">
                   <Routes>
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/*" element={<Index />} />

@@ -23,7 +23,7 @@ export default function FeesPage() {
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 space-y-6">
+    <div className="w-full px-3 py-4 sm:px-6 space-y-4">
       <ClassFeeManager 
         classFees={classFees}
         onUpdateClassFee={updateClassFee}

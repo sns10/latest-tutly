@@ -14,36 +14,36 @@ export function QuickActions({ onAddTest }: QuickActionsProps) {
 
   return (
     <Card className="bg-white border border-gray-100 shadow-sm">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-base font-semibold text-gray-900">Quick Actions</CardTitle>
+      <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6">
+        <CardTitle className="text-sm sm:text-base font-semibold text-gray-900">Quick Actions</CardTitle>
       </CardHeader>
-      <CardContent className="grid grid-cols-2 gap-2">
+      <CardContent className="grid grid-cols-2 gap-2 px-3 sm:px-6">
         <Button 
           variant="outline" 
-          className="w-full justify-start h-auto py-3 flex-col items-start gap-1"
+          className="w-full justify-start h-auto py-2 sm:py-3 flex-col items-start gap-1"
           onClick={() => navigate('/attendance')}
         >
-          <CalendarDays className="h-4 w-4 mb-1" />
-          <span className="text-xs">Attendance</span>
+          <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4 mb-0.5 sm:mb-1" />
+          <span className="text-[10px] sm:text-xs">Attendance</span>
         </Button>
         <Button 
           variant="outline" 
-          className="w-full justify-start h-auto py-3 flex-col items-start gap-1"
+          className="w-full justify-start h-auto py-2 sm:py-3 flex-col items-start gap-1"
           onClick={() => navigate('/timetable')}
         >
-          <Clock className="h-4 w-4 mb-1" />
-          <span className="text-xs">Timetable</span>
+          <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mb-0.5 sm:mb-1" />
+          <span className="text-[10px] sm:text-xs">Timetable</span>
         </Button>
         <div className="w-full">
           <CreateTestDialog onAddTest={onAddTest} />
         </div>
         <Button 
           variant="outline" 
-          className="w-full justify-start h-auto py-3 flex-col items-start gap-1"
+          className="w-full justify-start h-auto py-2 sm:py-3 flex-col items-start gap-1"
           onClick={() => navigate('/fees')}
         >
-          <DollarSign className="h-4 w-4 mb-1" />
-          <span className="text-xs">Collect Fee</span>
+          <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 mb-0.5 sm:mb-1" />
+          <span className="text-[10px] sm:text-xs">Collect Fee</span>
         </Button>
       </CardContent>
     </Card>

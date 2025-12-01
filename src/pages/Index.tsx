@@ -65,10 +65,10 @@ const Index = () => {
   return (
     <Routes>
       <Route path="/" element={
-        <div className="p-3 sm:p-4 space-y-4 w-full bg-[#f8f9fa]">
+        <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
           <div>
-            <h2 className="text-xl font-bold mb-1 text-gray-900">Dashboard</h2>
-            <p className="text-sm text-gray-600">Welcome back! Here's your overview</p>
+            <h2 className="text-lg sm:text-xl font-bold mb-1 text-gray-900">Dashboard</h2>
+            <p className="text-xs sm:text-sm text-gray-600">Welcome back! Here's your overview</p>
           </div>
           
           <ManagementCards 
@@ -79,7 +79,7 @@ const Index = () => {
             activeChallenges={challenges.filter(c => c.isActive).length}
           />
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
             <QuickActions onAddTest={addWeeklyTest} />
             <RecentTests 
               tests={weeklyTests}
@@ -91,10 +91,10 @@ const Index = () => {
           </div>
 
           <Card className="bg-white border border-gray-100 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold text-gray-900">All Tests</CardTitle>
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base font-semibold text-gray-900">All Tests</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-3 sm:px-6">
               <WeeklyTestManager
                 tests={weeklyTests}
                 testResults={testResults}
