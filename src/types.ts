@@ -97,6 +97,8 @@ export interface StudentAttendance {
   date: string;
   status: 'present' | 'absent' | 'late' | 'excused';
   notes?: string;
+  subjectId?: string;
+  facultyId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -117,4 +119,37 @@ export interface StudentFee {
 export interface ClassFee {
   class: ClassName;
   amount: number;
+}
+
+// Faculty and Timetable types
+export interface Subject {
+  id: string;
+  name: string;
+  class: ClassName;
+  createdAt: string;
+}
+
+export interface Faculty {
+  id: string;
+  name: string;
+  email?: string;
+  phone?: string;
+  subjects?: Subject[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Timetable {
+  id: string;
+  class: ClassName;
+  subjectId: string;
+  facultyId: string;
+  dayOfWeek: number; // 0=Sunday, 6=Saturday
+  startTime: string;
+  endTime: string;
+  roomNumber?: string;
+  subject?: Subject;
+  faculty?: Faculty;
+  createdAt: string;
+  updatedAt: string;
 }

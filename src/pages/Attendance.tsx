@@ -5,7 +5,10 @@ import { Loader2 } from 'lucide-react';
 export default function AttendancePage() {
   const { 
     students, 
-    attendance, 
+    attendance,
+    timetable,
+    subjects,
+    faculty,
     loading,
     markAttendance
   } = useSupabaseData();
@@ -23,6 +26,9 @@ export default function AttendancePage() {
       <AttendanceTracker
         students={students}
         attendance={attendance}
+        timetable={timetable}
+        subjects={subjects}
+        faculty={faculty}
         onMarkAttendance={markAttendance}
       />
     </div>

@@ -14,6 +14,7 @@ import MaterialsPage from './Materials';
 import ReportsPage from './Reports';
 import FeesPage from './Fees';
 import AttendancePage from './Attendance';
+import TimetablePage from './Timetable';
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
@@ -127,6 +128,7 @@ const Index = () => {
       <Route path="/reports" element={<ReportsPage />} />
       <Route path="/fees" element={<FeesPage />} />
       <Route path="/attendance" element={<AttendancePage />} />
+      <Route path="/timetable" element={<TimetablePage />} />
     </Routes>
   );
 };
