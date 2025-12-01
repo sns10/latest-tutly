@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { Student, StudentAttendance } from '@/types';
+import { Student, StudentAttendance, Timetable, Subject, Faculty } from '@/types';
 import { toast } from 'sonner';
 import { AttendanceControls } from './attendance/AttendanceControls';
 import { AttendanceStats } from './attendance/AttendanceStats';
@@ -9,12 +8,17 @@ import { StudentAttendanceList } from './attendance/StudentAttendanceList';
 interface AttendanceTrackerProps {
   students: Student[];
   attendance: StudentAttendance[];
-  onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => void;
+  timetable?: Timetable[];
+  subjects?: Subject[];
+  faculty?: Faculty[];
+  onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => void;
 }
 
-export function AttendanceTracker({ students, attendance, onMarkAttendance }: AttendanceTrackerProps) {
+export function AttendanceTracker({ students, attendance, timetable = [], subjects = [], faculty = [], onMarkAttendance }: AttendanceTrackerProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedClass, setSelectedClass] = useState<string>('All');
+  const [selectedSubject, setSelectedSubject] = useState<string>('');
+  const [selectedFaculty, setSelectedFaculty] = useState<string>('');
   const [bulkStatus, setBulkStatus] = useState<'present' | 'absent' | 'late' | 'excused'>('present');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -32,8 +36,31 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
 
   // Get attendance for selected date
   const getAttendanceForStudent = (studentId: string) => {
-    return attendance.find(a => a.studentId === studentId && a.date === selectedDateStr);
+    let matchingAttendance = attendance.filter(a => a.studentId === studentId && a.date === selectedDateStr);
+    
+    // If subject/faculty is selected, filter by those too
+    if (selectedSubject) {
+      matchingAttendance = matchingAttendance.filter(a => a.subjectId === selectedSubject);
+    }
+    if (selectedFaculty) {
+      matchingAttendance = matchingAttendance.filter(a => a.facultyId === selectedFaculty);
+    }
+    
+    return matchingAttendance[0];
   };
+
+  // Get available subjects and faculty based on selected class and day
+  const dayOfWeek = selectedDate.getDay();
+  const availableTimetableEntries = timetable.filter(t => 
+    (selectedClass === 'All' || t.class === selectedClass) && 
+    t.dayOfWeek === dayOfWeek
+  );
+  const availableSubjects = subjects.filter(s => 
+    selectedClass === 'All' || s.class === selectedClass
+  );
+  const availableFaculty = selectedFaculty 
+    ? faculty.filter(f => f.id === selectedFaculty)
+    : faculty;
 
   // Calculate attendance statistics
   const getAttendanceStats = () => {
@@ -51,8 +78,13 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
 
   const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
-    onMarkAttendance(studentId, selectedDateStr, status);
-    toast.success(`Attendance for ${studentName} marked as ${status}.`);
+    onMarkAttendance(studentId, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
+    
+    const subjectName = selectedSubject ? subjects.find(s => s.id === selectedSubject)?.name : '';
+    const facultyName = selectedFaculty ? faculty.find(f => f.id === selectedFaculty)?.name : '';
+    const context = subjectName && facultyName ? ` for ${subjectName} (${facultyName})` : subjectName ? ` for ${subjectName}` : '';
+    
+    toast.success(`Attendance for ${studentName}${context} marked as ${status}.`);
   };
 
   const handleBulkAttendance = () => {
@@ -60,7 +92,7 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
     filteredStudents.forEach(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
       if (!existingAttendance) {
-        onMarkAttendance(student.id, selectedDateStr, bulkStatus);
+        onMarkAttendance(student.id, selectedDateStr, bulkStatus, undefined, selectedSubject || undefined, selectedFaculty || undefined);
         markedCount++;
       }
     });
@@ -87,6 +119,12 @@ export function AttendanceTracker({ students, attendance, onMarkAttendance }: At
           onDateChange={setSelectedDate}
           selectedClass={selectedClass}
           onClassChange={setSelectedClass}
+          selectedSubject={selectedSubject}
+          onSubjectChange={setSelectedSubject}
+          selectedFaculty={selectedFaculty}
+          onFacultyChange={setSelectedFaculty}
+          availableSubjects={availableSubjects}
+          availableFaculty={availableFaculty}
           searchQuery={searchQuery}
           onSearchChange={(e) => setSearchQuery(e.target.value)}
           bulkStatus={bulkStatus}

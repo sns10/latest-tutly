@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Trophy, CalendarDays, DollarSign } from 'lucide-react';
+import { Home, Trophy, Clock, DollarSign } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { title: 'Home', url: '/', icon: Home },
   { title: 'Board', url: '/leaderboard', icon: Trophy },
-  { title: 'Attend', url: '/attendance', icon: CalendarDays },
+  { title: 'Schedule', url: '/timetable', icon: Clock },
   { title: 'Fees', url: '/fees', icon: DollarSign },
 ];
 

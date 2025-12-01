@@ -1,18 +1,25 @@
 
 import React from 'react';
+import { Subject, Faculty } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarDays, Search } from 'lucide-react';
+import { CalendarDays, Search, BookOpen, UserCircle } from 'lucide-react';
 
 interface AttendanceControlsProps {
   selectedDate: Date;
   onDateChange: (date: Date) => void;
   selectedClass: string;
   onClassChange: (value: string) => void;
+  selectedSubject: string;
+  onSubjectChange: (value: string) => void;
+  selectedFaculty: string;
+  onFacultyChange: (value: string) => void;
+  availableSubjects: Subject[];
+  availableFaculty: Faculty[];
   searchQuery: string;
   onSearchChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   bulkStatus: 'present' | 'absent' | 'late' | 'excused';
@@ -25,6 +32,12 @@ export function AttendanceControls({
   onDateChange,
   selectedClass,
   onClassChange,
+  selectedSubject,
+  onSubjectChange,
+  selectedFaculty,
+  onFacultyChange,
+  availableSubjects,
+  availableFaculty,
   searchQuery,
   onSearchChange,
   bulkStatus,
@@ -59,6 +72,46 @@ export function AttendanceControls({
               <SelectItem value="9th">9th Grade</SelectItem>
               <SelectItem value="10th">10th Grade</SelectItem>
               <SelectItem value="11th">11th Grade</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <BookOpen className="h-4 w-4" />
+            Subject (Optional)
+          </Label>
+          <Select value={selectedSubject} onValueChange={onSubjectChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="All subjects" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All subjects</SelectItem>
+              {availableSubjects.map(subject => (
+                <SelectItem key={subject.id} value={subject.id}>
+                  {subject.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="flex items-center gap-2">
+            <UserCircle className="h-4 w-4" />
+            Faculty (Optional)
+          </Label>
+          <Select value={selectedFaculty} onValueChange={onFacultyChange}>
+            <SelectTrigger>
+              <SelectValue placeholder="All faculty" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All faculty</SelectItem>
+              {availableFaculty.map(fac => (
+                <SelectItem key={fac.id} value={fac.id}>
+                  {fac.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee } from '@/types';
+import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee, Faculty, Subject, Timetable } from '@/types';
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 import { XP_STORE_ITEMS } from '@/config/rewards';
@@ -17,6 +17,9 @@ export function useSupabaseData() {
   const [attendance, setAttendance] = useState<StudentAttendance[]>([]);
   const [fees, setFees] = useState<StudentFee[]>([]);
   const [classFees, setClassFees] = useState<ClassFee[]>([]);
+  const [faculty, setFaculty] = useState<Faculty[]>([]);
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all data
@@ -36,7 +39,10 @@ export function useSupabaseData() {
         fetchAnnouncements(),
         fetchAttendance(),
         fetchFees(),
-        fetchClassFees()
+        fetchClassFees(),
+        fetchFaculty(),
+        fetchSubjects(),
+        fetchTimetable()
       ]);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -631,7 +637,7 @@ export function useSupabaseData() {
     toast.success('Announcement created successfully!');
   };
 
-  const markAttendance = async (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => {
+  const markAttendance = async (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => {
     const { error } = await supabase
       .from('student_attendance')
       .upsert({
@@ -639,7 +645,9 @@ export function useSupabaseData() {
         date,
         status,
         notes: notes || null,
-      }, { onConflict: 'student_id,date' });
+        subject_id: subjectId || null,
+        faculty_id: facultyId || null,
+      }, { onConflict: 'student_id,date,subject_id,faculty_id' });
 
     if (error) {
       console.error('Error marking attendance:', error);
@@ -706,6 +714,288 @@ export function useSupabaseData() {
     await fetchClassFees();
   };
 
+  // Fetch Faculty
+  const fetchFaculty = async () => {
+    const { data, error } = await supabase
+      .from('faculty')
+      .select(`
+        *,
+        faculty_subjects (
+          subject_id,
+          subjects (*)
+        )
+      `)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching faculty:', error);
+      return;
+    }
+
+    const formattedFaculty: Faculty[] = data.map((f: any) => ({
+      id: f.id,
+      name: f.name,
+      email: f.email,
+      phone: f.phone,
+      subjects: f.faculty_subjects?.map((fs: any) => ({
+        id: fs.subjects.id,
+        name: fs.subjects.name,
+        class: fs.subjects.class,
+        createdAt: fs.subjects.created_at,
+      })) || [],
+      createdAt: f.created_at,
+      updatedAt: f.updated_at,
+    }));
+
+    setFaculty(formattedFaculty);
+  };
+
+  // Fetch Subjects
+  const fetchSubjects = async () => {
+    const { data, error } = await supabase
+      .from('subjects')
+      .select('*')
+      .order('class, name');
+
+    if (error) {
+      console.error('Error fetching subjects:', error);
+      return;
+    }
+
+    const formattedSubjects: Subject[] = data.map((s: any) => ({
+      id: s.id,
+      name: s.name,
+      class: s.class,
+      createdAt: s.created_at,
+    }));
+
+    setSubjects(formattedSubjects);
+  };
+
+  // Fetch Timetable
+  const fetchTimetable = async () => {
+    const { data, error } = await supabase
+      .from('timetable')
+      .select(`
+        *,
+        subjects (*),
+        faculty (*)
+      `)
+      .order('day_of_week, start_time');
+
+    if (error) {
+      console.error('Error fetching timetable:', error);
+      return;
+    }
+
+    const formattedTimetable: Timetable[] = data.map((t: any) => ({
+      id: t.id,
+      class: t.class,
+      subjectId: t.subject_id,
+      facultyId: t.faculty_id,
+      dayOfWeek: t.day_of_week,
+      startTime: t.start_time,
+      endTime: t.end_time,
+      roomNumber: t.room_number,
+      subject: t.subjects ? {
+        id: t.subjects.id,
+        name: t.subjects.name,
+        class: t.subjects.class,
+        createdAt: t.subjects.created_at,
+      } : undefined,
+      faculty: t.faculty ? {
+        id: t.faculty.id,
+        name: t.faculty.name,
+        email: t.faculty.email,
+        phone: t.faculty.phone,
+        createdAt: t.faculty.created_at,
+        updatedAt: t.faculty.updated_at,
+      } : undefined,
+      createdAt: t.created_at,
+      updatedAt: t.updated_at,
+    }));
+
+    setTimetable(formattedTimetable);
+  };
+
+  // Add Faculty
+  const addFaculty = async (name: string, email: string, phone: string, subjectIds: string[]) => {
+    const { data: facultyData, error: facultyError } = await supabase
+      .from('faculty')
+      .insert({ name, email, phone })
+      .select()
+      .single();
+
+    if (facultyError) {
+      console.error('Error adding faculty:', facultyError);
+      toast.error('Failed to add faculty');
+      return;
+    }
+
+    // Add faculty-subject mappings
+    if (subjectIds.length > 0) {
+      const { error: mappingError } = await supabase
+        .from('faculty_subjects')
+        .insert(subjectIds.map(subjectId => ({
+          faculty_id: facultyData.id,
+          subject_id: subjectId,
+        })));
+
+      if (mappingError) {
+        console.error('Error adding faculty subjects:', mappingError);
+      }
+    }
+
+    toast.success('Faculty added successfully');
+    await fetchFaculty();
+  };
+
+  // Update Faculty
+  const updateFaculty = async (id: string, name: string, email: string, phone: string, subjectIds: string[]) => {
+    const { error: updateError } = await supabase
+      .from('faculty')
+      .update({ name, email, phone, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Error updating faculty:', updateError);
+      toast.error('Failed to update faculty');
+      return;
+    }
+
+    // Remove old subject mappings and add new ones
+    await supabase.from('faculty_subjects').delete().eq('faculty_id', id);
+    
+    if (subjectIds.length > 0) {
+      await supabase
+        .from('faculty_subjects')
+        .insert(subjectIds.map(subjectId => ({
+          faculty_id: id,
+          subject_id: subjectId,
+        })));
+    }
+
+    toast.success('Faculty updated successfully');
+    await fetchFaculty();
+  };
+
+  // Delete Faculty
+  const deleteFaculty = async (id: string) => {
+    const { error } = await supabase
+      .from('faculty')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting faculty:', error);
+      toast.error('Failed to delete faculty');
+      return;
+    }
+
+    toast.success('Faculty deleted successfully');
+    await fetchFaculty();
+  };
+
+  // Add Subject
+  const addSubject = async (name: string, classValue: ClassName) => {
+    const { error } = await supabase
+      .from('subjects')
+      .insert({ name, class: classValue });
+
+    if (error) {
+      console.error('Error adding subject:', error);
+      toast.error('Failed to add subject');
+      return;
+    }
+
+    toast.success('Subject added successfully');
+    await fetchSubjects();
+  };
+
+  // Add Timetable Entry
+  const addTimetableEntry = async (
+    classValue: ClassName,
+    subjectId: string,
+    facultyId: string,
+    dayOfWeek: number,
+    startTime: string,
+    endTime: string,
+    roomNumber?: string
+  ) => {
+    const { error } = await supabase
+      .from('timetable')
+      .insert({
+        class: classValue,
+        subject_id: subjectId,
+        faculty_id: facultyId,
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        end_time: endTime,
+        room_number: roomNumber,
+      });
+
+    if (error) {
+      console.error('Error adding timetable entry:', error);
+      toast.error('Failed to add timetable entry');
+      return;
+    }
+
+    toast.success('Timetable entry added successfully');
+    await fetchTimetable();
+  };
+
+  // Update Timetable Entry
+  const updateTimetableEntry = async (
+    id: string,
+    classValue: ClassName,
+    subjectId: string,
+    facultyId: string,
+    dayOfWeek: number,
+    startTime: string,
+    endTime: string,
+    roomNumber?: string
+  ) => {
+    const { error } = await supabase
+      .from('timetable')
+      .update({
+        class: classValue,
+        subject_id: subjectId,
+        faculty_id: facultyId,
+        day_of_week: dayOfWeek,
+        start_time: startTime,
+        end_time: endTime,
+        room_number: roomNumber,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating timetable entry:', error);
+      toast.error('Failed to update timetable entry');
+      return;
+    }
+
+    toast.success('Timetable entry updated successfully');
+    await fetchTimetable();
+  };
+
+  // Delete Timetable Entry
+  const deleteTimetableEntry = async (id: string) => {
+    const { error } = await supabase
+      .from('timetable')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting timetable entry:', error);
+      toast.error('Failed to delete timetable entry');
+      return;
+    }
+
+    toast.success('Timetable entry deleted successfully');
+    await fetchTimetable();
+  };
+
   return {
     students,
     weeklyTests,
@@ -716,6 +1006,9 @@ export function useSupabaseData() {
     attendance,
     fees,
     classFees,
+    faculty,
+    subjects,
+    timetable,
     loading,
     addStudent,
     addWeeklyTest,
@@ -734,5 +1027,12 @@ export function useSupabaseData() {
     addFee,
     updateFeeStatus,
     updateClassFee,
+    addFaculty,
+    updateFaculty,
+    deleteFaculty,
+    addSubject,
+    addTimetableEntry,
+    updateTimetableEntry,
+    deleteTimetableEntry,
   };
 }

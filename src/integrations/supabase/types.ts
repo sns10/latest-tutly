@@ -157,32 +157,101 @@ export type Database = {
         }
         Relationships: []
       }
+      faculty: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          name: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          name?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      faculty_subjects: {
+        Row: {
+          created_at: string
+          faculty_id: string
+          id: string
+          subject_id: string
+        }
+        Insert: {
+          created_at?: string
+          faculty_id: string
+          id?: string
+          subject_id: string
+        }
+        Update: {
+          created_at?: string
+          faculty_id?: string
+          id?: string
+          subject_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_subjects_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_attendance: {
         Row: {
           created_at: string
           date: string
+          faculty_id: string | null
           id: string
           notes: string | null
           status: string
           student_id: string | null
+          subject_id: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           date: string
+          faculty_id?: string | null
           id?: string
           notes?: string | null
           status: string
           student_id?: string | null
+          subject_id?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           date?: string
+          faculty_id?: string | null
           id?: string
           notes?: string | null
           status?: string
           student_id?: string | null
+          subject_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -191,6 +260,20 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_attendance_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
             referencedColumns: ["id"]
           },
         ]
@@ -466,6 +549,60 @@ export type Database = {
           name?: string
         }
         Relationships: []
+      }
+      timetable: {
+        Row: {
+          class: string
+          created_at: string
+          day_of_week: number
+          end_time: string
+          faculty_id: string
+          id: string
+          room_number: string | null
+          start_time: string
+          subject_id: string
+          updated_at: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          day_of_week: number
+          end_time: string
+          faculty_id: string
+          id?: string
+          room_number?: string | null
+          start_time: string
+          subject_id: string
+          updated_at?: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          day_of_week?: number
+          end_time?: string
+          faculty_id?: string
+          id?: string
+          room_number?: string | null
+          start_time?: string
+          subject_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "timetable_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetable_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_tests: {
         Row: {
