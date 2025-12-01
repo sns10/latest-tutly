@@ -148,6 +148,10 @@ export interface Timetable {
   startTime: string;
   endTime: string;
   roomNumber?: string;
+  type: 'regular' | 'special';
+  specificDate?: string; // ISO date string for one-time special classes
+  startDate?: string; // ISO date string for date range start
+  endDate?: string; // ISO date string for date range end
   subject?: Subject;
   faculty?: Faculty;
   createdAt: string;

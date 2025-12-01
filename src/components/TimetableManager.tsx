@@ -20,7 +20,11 @@ interface TimetableManagerProps {
     dayOfWeek: number,
     startTime: string,
     endTime: string,
-    roomNumber?: string
+    type: 'regular' | 'special',
+    roomNumber?: string,
+    specificDate?: string,
+    startDate?: string,
+    endDate?: string
   ) => Promise<void>;
   onUpdateEntry: (
     id: string,
@@ -30,7 +34,11 @@ interface TimetableManagerProps {
     dayOfWeek: number,
     startTime: string,
     endTime: string,
-    roomNumber?: string
+    type: 'regular' | 'special',
+    roomNumber?: string,
+    specificDate?: string,
+    startDate?: string,
+    endDate?: string
   ) => Promise<void>;
   onDeleteEntry: (id: string) => Promise<void>;
 }
@@ -56,7 +64,11 @@ export function TimetableManager({
     dayOfWeek: 1,
     startTime: '09:00',
     endTime: '10:00',
+    type: 'regular' as 'regular' | 'special',
     roomNumber: '',
+    specificDate: '',
+    startDate: '',
+    endDate: '',
   });
 
   const resetForm = () => {
@@ -67,7 +79,11 @@ export function TimetableManager({
       dayOfWeek: 1,
       startTime: '09:00',
       endTime: '10:00',
+      type: 'regular',
       roomNumber: '',
+      specificDate: '',
+      startDate: '',
+      endDate: '',
     });
     setEditingEntry(null);
   };
@@ -94,7 +110,11 @@ export function TimetableManager({
         formData.dayOfWeek,
         formData.startTime,
         formData.endTime,
-        formData.roomNumber
+        formData.type,
+        formData.roomNumber,
+        formData.specificDate,
+        formData.startDate,
+        formData.endDate
       );
     } else {
       await onAddEntry(
@@ -104,7 +124,11 @@ export function TimetableManager({
         formData.dayOfWeek,
         formData.startTime,
         formData.endTime,
-        formData.roomNumber
+        formData.type,
+        formData.roomNumber,
+        formData.specificDate,
+        formData.startDate,
+        formData.endDate
       );
     }
 
@@ -121,7 +145,11 @@ export function TimetableManager({
       dayOfWeek: entry.dayOfWeek,
       startTime: entry.startTime,
       endTime: entry.endTime,
+      type: entry.type,
       roomNumber: entry.roomNumber || '',
+      specificDate: entry.specificDate || '',
+      startDate: entry.startDate || '',
+      endDate: entry.endDate || '',
     });
     setIsDialogOpen(true);
   };
@@ -132,7 +160,8 @@ export function TimetableManager({
     }
   };
 
-  const filteredTimetable = timetable.filter((entry) => entry.class === selectedClass);
+  const regularTimetable = timetable.filter((entry) => entry.class === selectedClass && entry.type === 'regular');
+  const specialTimetable = timetable.filter((entry) => entry.class === selectedClass && entry.type === 'special');
   const classSubjects = subjects.filter((s) => s.class === selectedClass);
   
   // Get faculty that can teach the selected subject
@@ -182,23 +211,120 @@ export function TimetableManager({
               </div>
 
               <div>
-                <Label htmlFor="day">Day *</Label>
+                <Label htmlFor="type">Type *</Label>
                 <Select
-                  value={formData.dayOfWeek.toString()}
-                  onValueChange={(value) => setFormData({ ...formData, dayOfWeek: parseInt(value) })}
+                  value={formData.type}
+                  onValueChange={(value: 'regular' | 'special') => 
+                    setFormData({ 
+                      ...formData, 
+                      type: value,
+                      specificDate: '',
+                      startDate: '',
+                      endDate: ''
+                    })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {DAYS.map((day, index) => (
-                      <SelectItem key={index} value={index.toString()}>
-                        {day}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="regular">Regular (Weekly)</SelectItem>
+                    <SelectItem value="special">Special (Specific Date/Week)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
+
+              {formData.type === 'regular' && (
+                <div>
+                  <Label htmlFor="day">Day *</Label>
+                  <Select
+                    value={formData.dayOfWeek.toString()}
+                    onValueChange={(value) => setFormData({ ...formData, dayOfWeek: parseInt(value) })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DAYS.map((day, index) => (
+                        <SelectItem key={index} value={index.toString()}>
+                          {day}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {formData.type === 'special' && (
+                <>
+                  <div>
+                    <Label htmlFor="specificDate">Specific Date (One-time class)</Label>
+                    <Input
+                      id="specificDate"
+                      type="date"
+                      value={formData.specificDate}
+                      onChange={(e) => setFormData({ 
+                        ...formData, 
+                        specificDate: e.target.value,
+                        startDate: '',
+                        endDate: ''
+                      })}
+                    />
+                  </div>
+                  
+                  <div className="text-center text-sm text-muted-foreground">OR</div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="startDate">Start Date (Date Range)</Label>
+                      <Input
+                        id="startDate"
+                        type="date"
+                        value={formData.startDate}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          startDate: e.target.value,
+                          specificDate: ''
+                        })}
+                        disabled={!!formData.specificDate}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="endDate">End Date</Label>
+                      <Input
+                        id="endDate"
+                        type="date"
+                        value={formData.endDate}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          endDate: e.target.value,
+                          specificDate: ''
+                        })}
+                        disabled={!!formData.specificDate}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <Label htmlFor="day">Day of Week *</Label>
+                    <Select
+                      value={formData.dayOfWeek.toString()}
+                      onValueChange={(value) => setFormData({ ...formData, dayOfWeek: parseInt(value) })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DAYS.map((day, index) => (
+                          <SelectItem key={index} value={index.toString()}>
+                            {day}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
 
               <div>
                 <Label htmlFor="subject">Subject *</Label>
@@ -304,62 +430,135 @@ export function TimetableManager({
         ))}
       </div>
 
-      <div className="grid gap-4">
-        {DAYS.slice(1, 6).map((day, dayIndex) => {
-          const dayEntries = filteredTimetable.filter((entry) => entry.dayOfWeek === dayIndex + 1);
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-semibold mb-4">Regular Weekly Timetable</h3>
+          <div className="grid gap-4">
+            {DAYS.slice(1, 6).map((day, dayIndex) => {
+              const dayEntries = regularTimetable.filter((entry) => entry.dayOfWeek === dayIndex + 1);
 
-          return (
-            <Card key={day}>
-              <CardHeader>
-                <CardTitle className="text-lg">{day}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {dayEntries.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No classes scheduled</p>
-                ) : (
-                  <div className="space-y-2">
-                    {dayEntries
-                      .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                      .map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                        >
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium">
-                                {entry.startTime} - {entry.endTime}
-                              </span>
-                            </div>
-                            <p className="text-sm font-medium">{entry.subject?.name}</p>
-                            <p className="text-sm text-muted-foreground">{entry.faculty?.name}</p>
-                            {entry.roomNumber && (
-                              <p className="text-xs text-muted-foreground mt-1">
-                                📍 {entry.roomNumber}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex gap-1">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(entry)}>
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDelete(entry.id)}
+              return (
+                <Card key={day}>
+                  <CardHeader>
+                    <CardTitle className="text-lg">{day}</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {dayEntries.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No classes scheduled</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {dayEntries
+                          .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                          .map((entry) => (
+                            <div
+                              key={entry.id}
+                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <Clock className="h-4 w-4 text-muted-foreground" />
+                                  <span className="font-medium">
+                                    {entry.startTime} - {entry.endTime}
+                                  </span>
+                                </div>
+                                <p className="text-sm font-medium">{entry.subject?.name}</p>
+                                <p className="text-sm text-muted-foreground">{entry.faculty?.name}</p>
+                                {entry.roomNumber && (
+                                  <p className="text-xs text-muted-foreground mt-1">
+                                    📍 {entry.roomNumber}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="sm" onClick={() => handleEdit(entry)}>
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => handleDelete(entry.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+
+        {specialTimetable.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold mb-4">Special Classes</h3>
+            <div className="grid gap-4">
+              {specialTimetable
+                .sort((a, b) => {
+                  const dateA = a.specificDate || a.startDate || '';
+                  const dateB = b.specificDate || b.startDate || '';
+                  return dateA.localeCompare(dateB);
+                })
+                .map((entry) => (
+                  <Card key={entry.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {entry.specificDate ? (
+                              <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
+                                {new Date(entry.specificDate).toLocaleDateString('en-US', { 
+                                  weekday: 'short', 
+                                  year: 'numeric', 
+                                  month: 'short', 
+                                  day: 'numeric' 
+                                })}
+                              </span>
+                            ) : (
+                              <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
+                                {new Date(entry.startDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(entry.endDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                              </span>
+                            )}
+                            <span className="text-sm text-muted-foreground">
+                              {DAYS[entry.dayOfWeek]}
+                            </span>
                           </div>
+                          <div className="flex items-center gap-2 mb-1">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">
+                              {entry.startTime} - {entry.endTime}
+                            </span>
+                          </div>
+                          <p className="text-sm font-medium">{entry.subject?.name}</p>
+                          <p className="text-sm text-muted-foreground">{entry.faculty?.name}</p>
+                          {entry.roomNumber && (
+                            <p className="text-xs text-muted-foreground mt-1">
+                              📍 {entry.roomNumber}
+                            </p>
+                          )}
                         </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => handleEdit(entry)}>
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(entry.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

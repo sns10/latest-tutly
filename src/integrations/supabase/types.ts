@@ -555,36 +555,48 @@ export type Database = {
           class: string
           created_at: string
           day_of_week: number
+          end_date: string | null
           end_time: string
           faculty_id: string
           id: string
           room_number: string | null
+          specific_date: string | null
+          start_date: string | null
           start_time: string
           subject_id: string
+          type: string
           updated_at: string
         }
         Insert: {
           class: string
           created_at?: string
           day_of_week: number
+          end_date?: string | null
           end_time: string
           faculty_id: string
           id?: string
           room_number?: string | null
+          specific_date?: string | null
+          start_date?: string | null
           start_time: string
           subject_id: string
+          type?: string
           updated_at?: string
         }
         Update: {
           class?: string
           created_at?: string
           day_of_week?: number
+          end_date?: string | null
           end_time?: string
           faculty_id?: string
           id?: string
           room_number?: string | null
+          specific_date?: string | null
+          start_date?: string | null
           start_time?: string
           subject_id?: string
+          type?: string
           updated_at?: string
         }
         Relationships: [

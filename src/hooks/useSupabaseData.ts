@@ -797,6 +797,10 @@ export function useSupabaseData() {
       startTime: t.start_time,
       endTime: t.end_time,
       roomNumber: t.room_number,
+      type: t.type || 'regular',
+      specificDate: t.specific_date,
+      startDate: t.start_date,
+      endDate: t.end_date,
       subject: t.subjects ? {
         id: t.subjects.id,
         name: t.subjects.name,
@@ -920,7 +924,11 @@ export function useSupabaseData() {
     dayOfWeek: number,
     startTime: string,
     endTime: string,
-    roomNumber?: string
+    type: 'regular' | 'special',
+    roomNumber?: string,
+    specificDate?: string,
+    startDate?: string,
+    endDate?: string
   ) => {
     const { error } = await supabase
       .from('timetable')
@@ -931,7 +939,11 @@ export function useSupabaseData() {
         day_of_week: dayOfWeek,
         start_time: startTime,
         end_time: endTime,
+        type,
         room_number: roomNumber,
+        specific_date: specificDate,
+        start_date: startDate,
+        end_date: endDate,
       });
 
     if (error) {
@@ -953,7 +965,11 @@ export function useSupabaseData() {
     dayOfWeek: number,
     startTime: string,
     endTime: string,
-    roomNumber?: string
+    type: 'regular' | 'special',
+    roomNumber?: string,
+    specificDate?: string,
+    startDate?: string,
+    endDate?: string
   ) => {
     const { error } = await supabase
       .from('timetable')
@@ -964,7 +980,11 @@ export function useSupabaseData() {
         day_of_week: dayOfWeek,
         start_time: startTime,
         end_time: endTime,
+        type,
         room_number: roomNumber,
+        specific_date: specificDate,
+        start_date: startDate,
+        end_date: endDate,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
