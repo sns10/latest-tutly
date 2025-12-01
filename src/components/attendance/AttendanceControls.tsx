@@ -86,7 +86,7 @@ export function AttendanceControls({
               <SelectValue placeholder="All subjects" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All subjects</SelectItem>
+              <SelectItem value="all">All subjects</SelectItem>
               {availableSubjects.map(subject => (
                 <SelectItem key={subject.id} value={subject.id}>
                   {subject.name}
@@ -106,7 +106,7 @@ export function AttendanceControls({
               <SelectValue placeholder="All faculty" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All faculty</SelectItem>
+              <SelectItem value="all">All faculty</SelectItem>
               {availableFaculty.map(fac => (
                 <SelectItem key={fac.id} value={fac.id}>
                   {fac.name}
