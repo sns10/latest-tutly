@@ -247,23 +247,23 @@ export function EnterMarksDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="flex items-center gap-2">
-          <Edit className="h-4 w-4" />
-          Enter Marks
-          <Badge variant="secondary" className="ml-1">
+        <Button size="sm" className="flex items-center gap-2 text-xs sm:text-sm w-full sm:w-auto justify-center">
+          <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
+          <span className="whitespace-nowrap">Enter Marks</span>
+          <Badge variant="secondary" className="ml-1 text-[10px] sm:text-xs">
             {completedCount}/{totalCount}
           </Badge>
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
+      <DialogContent className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Enter Marks - {test.name}</DialogTitle>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <DialogTitle className="text-base sm:text-lg pr-6">Enter Marks - {test.name}</DialogTitle>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
             <span>{test.subject}</span>
-            <span>Max: {test.maxMarks} marks</span>
-            <span>{new Date(test.date).toLocaleDateString()}</span>
+            <span>Max: {test.maxMarks}</span>
+            <span className="hidden sm:inline">{new Date(test.date).toLocaleDateString()}</span>
             {test.class && test.class !== "All" && (
-              <Badge variant="outline">{test.class} Grade</Badge>
+              <Badge variant="outline" className="text-xs">{test.class} Grade</Badge>
             )}
           </div>
         </DialogHeader>
@@ -275,26 +275,26 @@ export function EnterMarksDialog({
           </TabsList>
           
           <TabsContent value="manual" className="space-y-4">
-            <ScrollArea className="h-96 pr-4">
-              <div className="space-y-4">
+            <ScrollArea className="h-[50vh] sm:h-96 pr-2 sm:pr-4">
+              <div className="space-y-3 sm:space-y-4">
                 {filteredStudents.map((student) => {
                   const existingMark = getExistingMark(student.id);
                   const currentMark = marks[student.id];
                   const hasResult = existingMark !== undefined;
                   
                   return (
-                    <div key={student.id} className="flex items-center gap-4 p-3 rounded-lg border">
-                      <div className="flex-1">
-                        <div className="font-semibold">{student.name}</div>
-                        <div className="text-sm text-muted-foreground">{student.class} Grade</div>
+                    <div key={student.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
                       </div>
                       
                       {hasResult && (
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50">
+                          <Badge variant="outline" className="bg-green-50 text-xs">
                             {existingMark}/{test.maxMarks}
                           </Badge>
-                          <span className="text-sm text-green-600">
+                          <span className="text-xs sm:text-sm text-green-600">
                             {Math.round((existingMark / test.maxMarks) * 100)}%
                           </span>
                         </div>
@@ -313,17 +313,17 @@ export function EnterMarksDialog({
                           placeholder={hasResult ? existingMark.toString() : "0"}
                           value={currentMark || ''}
                           onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                          className="w-20"
+                          className="w-16 sm:w-20 text-sm"
                         />
-                        <span className="text-sm text-muted-foreground">/{test.maxMarks}</span>
+                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
                       </div>
                       
                       {currentMark !== undefined && (
                         <div className="flex items-center gap-1">
                           {(currentMark / test.maxMarks) * 100 >= 80 && (
-                            <Trophy className="h-4 w-4 text-yellow-500" />
+                            <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
                           )}
-                          <TrendingUp className="h-4 w-4 text-green-500" />
+                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
                         </div>
                       )}
                     </div>
@@ -333,16 +333,16 @@ export function EnterMarksDialog({
             </ScrollArea>
 
             <DialogFooter>
-              <div className="flex justify-between items-center w-full">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 w-full">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {Object.keys(marks).length} students will receive marks
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setIsOpen(false)}>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
                     Cancel
                   </Button>
-                  <Button onClick={handleSubmit} disabled={Object.keys(marks).length === 0}>
-                    Save Marks & Award XP
+                  <Button onClick={handleSubmit} disabled={Object.keys(marks).length === 0} className="flex-1 sm:flex-none text-sm">
+                    Save Marks
                   </Button>
                 </div>
               </div>
@@ -350,18 +350,18 @@ export function EnterMarksDialog({
           </TabsContent>
 
           <TabsContent value="bulk" className="space-y-4">
-            <div className="space-y-6">
+            <div className="space-y-4 sm:space-y-6">
               {/* Template Download */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <Button
                   variant="outline"
                   onClick={downloadTemplate}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 text-sm"
                 >
                   <Download className="h-4 w-4" />
                   Download Template
                 </Button>
-                <span className="text-sm text-muted-foreground">
+                <span className="text-xs sm:text-sm text-muted-foreground">
                   Use this template with student names and IDs pre-filled
                 </span>
               </div>
@@ -396,14 +396,14 @@ export function EnterMarksDialog({
               {/* Preview */}
               {bulkPreviewData.length > 0 && (
                 <div className="space-y-2">
-                  <Label>Preview ({bulkPreviewData.length} records)</Label>
-                  <div className="border rounded-lg max-h-40 overflow-y-auto">
-                    <table className="w-full text-sm">
+                  <Label className="text-sm">Preview ({bulkPreviewData.length} records)</Label>
+                  <div className="border rounded-lg max-h-40 overflow-x-auto overflow-y-auto">
+                    <table className="w-full text-xs sm:text-sm">
                       <thead className="bg-muted">
                         <tr>
-                          <th className="p-2 text-left">Student Name</th>
-                          <th className="p-2 text-left">Marks</th>
-                          <th className="p-2 text-left">Percentage</th>
+                          <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Student Name</th>
+                          <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Marks</th>
+                          <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Percentage</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -412,15 +412,15 @@ export function EnterMarksDialog({
                           const percentage = !isNaN(markValue) ? (markValue / test.maxMarks) * 100 : 0;
                           return (
                             <tr key={index} className="border-t">
-                              <td className="p-2">{row["Student Name"]}</td>
-                              <td className="p-2">{row["Marks"]}/{test.maxMarks}</td>
-                              <td className="p-2">{Math.round(percentage)}%</td>
+                              <td className="p-1.5 sm:p-2 truncate max-w-[120px] sm:max-w-none">{row["Student Name"]}</td>
+                              <td className="p-1.5 sm:p-2 whitespace-nowrap">{row["Marks"]}/{test.maxMarks}</td>
+                              <td className="p-1.5 sm:p-2">{Math.round(percentage)}%</td>
                             </tr>
                           );
                         })}
                         {bulkPreviewData.length > 10 && (
                           <tr className="border-t">
-                            <td colSpan={3} className="p-2 text-center text-muted-foreground">
+                            <td colSpan={3} className="p-1.5 sm:p-2 text-center text-muted-foreground text-xs">
                               ... and {bulkPreviewData.length - 10} more
                             </td>
                           </tr>
@@ -433,21 +433,21 @@ export function EnterMarksDialog({
             </div>
 
             <DialogFooter>
-              <div className="flex justify-between items-center w-full">
-                <div className="text-sm text-muted-foreground">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 w-full">
+                <div className="text-xs sm:text-sm text-muted-foreground">
                   {bulkPreviewData.length} marks will be imported
                 </div>
-                <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => setIsOpen(false)}>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
                     Cancel
                   </Button>
                   <Button 
                     onClick={handleBulkSubmit}
                     disabled={!bulkFile || bulkPreviewData.length === 0 || bulkErrors.length > 0}
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 flex-1 sm:flex-none text-sm"
                   >
-                    <Upload className="h-4 w-4" />
-                    Import Marks
+                    <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                    Import
                   </Button>
                 </div>
               </div>

@@ -79,16 +79,15 @@ const Index = () => {
             activeChallenges={challenges.filter(c => c.isActive).length}
           />
 
-          <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
-            <QuickActions onAddTest={addWeeklyTest} />
-            <RecentTests 
-              tests={weeklyTests}
-              testResults={testResults}
-              students={students}
-              onAddTestResult={addTestResult}
-              onAwardXP={awardXP}
-            />
-          </div>
+          <QuickActions onAddTest={addWeeklyTest} />
+          
+          <RecentTests 
+            tests={weeklyTests}
+            testResults={testResults}
+            students={students}
+            onAddTestResult={addTestResult}
+            onAwardXP={awardXP}
+          />
 
           <Card className="bg-white border border-gray-100 shadow-sm">
             <CardHeader className="pb-2 sm:pb-3">
