@@ -1,24 +1,43 @@
 import { useState } from 'react';
-import { Division, ClassName } from '@/types';
+import { Division, ClassName, Subject, Faculty } from '@/types';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { PlusCircle, Edit, Trash2 } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PlusCircle, Edit, Trash2, GraduationCap } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { SubjectFacultyManager } from './SubjectFacultyManager';
 import { toast } from 'sonner';
 
 interface ClassManagementProps {
   divisions: Division[];
+  subjects: Subject[];
+  faculty: Faculty[];
   onAddDivision: (classValue: ClassName, name: string) => void;
   onUpdateDivision: (id: string, name: string) => void;
   onDeleteDivision: (id: string) => void;
+  onAddSubject: (name: string, className: ClassName) => void;
+  onAddFaculty: (name: string, email: string, phone: string, subjectIds: string[]) => void;
+  onUpdateFaculty: (id: string, name: string, email: string, phone: string, subjectIds: string[]) => void;
+  onDeleteFaculty: (id: string) => void;
 }
 
 const classNames: ClassName[] = ["8th", "9th", "10th", "11th"];
 
-export function ClassManagement({ divisions, onAddDivision, onUpdateDivision, onDeleteDivision }: ClassManagementProps) {
+export function ClassManagement({ 
+  divisions, 
+  subjects, 
+  faculty, 
+  onAddDivision, 
+  onUpdateDivision, 
+  onDeleteDivision,
+  onAddSubject,
+  onAddFaculty,
+  onUpdateFaculty,
+  onDeleteFaculty
+}: ClassManagementProps) {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<ClassName>("8th");
@@ -87,30 +106,43 @@ export function ClassManagement({ divisions, onAddDivision, onUpdateDivision, on
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold font-display text-primary">Class Management</h2>
-          <p className="text-muted-foreground">Manage classes and divisions</p>
+          <h2 className="text-2xl font-bold font-display text-primary flex items-center gap-2">
+            <GraduationCap className="h-6 w-6" />
+            Academic Management
+          </h2>
+          <p className="text-muted-foreground">Manage classes, divisions, subjects, and faculty</p>
         </div>
-        <Button onClick={() => setIsAddDialogOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
-          <PlusCircle className="mr-2 h-4 w-4" />
-          Add Division
-        </Button>
       </div>
 
-      <div className="flex items-center gap-4">
-        <Label>Filter by Class:</Label>
-        <Select value={selectedClassFilter} onValueChange={setSelectedClassFilter}>
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="All Classes" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="All">All Classes</SelectItem>
-            {classNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
+      <Tabs defaultValue="divisions" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="divisions">Classes & Divisions</TabsTrigger>
+          <TabsTrigger value="subjects">Subjects & Faculty</TabsTrigger>
+        </TabsList>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        {classNames.map(className => {
+        <TabsContent value="divisions" className="space-y-6">
+          <div className="flex justify-end">
+            <Button onClick={() => setIsAddDialogOpen(true)} className="bg-primary text-primary-foreground hover:bg-primary/90">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Division
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-4">
+            <Label>Filter by Class:</Label>
+            <Select value={selectedClassFilter} onValueChange={setSelectedClassFilter}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="All Classes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All">All Classes</SelectItem>
+                {classNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            {classNames.map(className => {
           const classDivisions = divisionsByClass[className];
           if (selectedClassFilter !== "All" && selectedClassFilter !== className) return null;
           
@@ -149,9 +181,22 @@ export function ClassManagement({ divisions, onAddDivision, onUpdateDivision, on
                 )}
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="subjects">
+          <SubjectFacultyManager
+            subjects={subjects}
+            faculty={faculty}
+            onAddSubject={onAddSubject}
+            onAddFaculty={onAddFaculty}
+            onUpdateFaculty={onUpdateFaculty}
+            onDeleteFaculty={onDeleteFaculty}
+          />
+        </TabsContent>
+      </Tabs>
 
       {/* Add Division Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>

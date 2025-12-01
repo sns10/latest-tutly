@@ -3,6 +3,7 @@ import { Student, StudentFee, ClassName } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, AlertTriangle, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,6 +28,8 @@ export function FeeManagement({
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
   const [selectedClass, setSelectedClass] = useState<string>('All');
+  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Generate monthly fees for all students
   useEffect(() => {
@@ -81,13 +84,15 @@ export function FeeManagement({
   // Get unique classes from students
   const uniqueClasses = Array.from(new Set(students.map(s => s.class))).sort();
 
-  // Filter fees by student, month, and class
+  // Filter fees by student, month, class, status, and search
   const filteredFees = fees.filter(fee => {
     const student = students.find(s => s.id === fee.studentId);
     const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
     const monthMatch = fee.feeType.includes(selectedMonth);
     const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
-    return studentMatch && monthMatch && classMatch;
+    const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
+    const searchMatch = searchQuery === '' || (student && student.name.toLowerCase().includes(searchQuery.toLowerCase()));
+    return studentMatch && monthMatch && classMatch && statusMatch && searchMatch;
   });
 
   // Get unpaid fees for current month
@@ -222,39 +227,34 @@ export function FeeManagement({
               </Select>
             </div>
           </div>
+          <div className="flex flex-wrap gap-4 items-center mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium">Status:</span>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All Status</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="unpaid">Unpaid</SelectItem>
+                  <SelectItem value="partial">Partial</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2 flex-1">
+              <span className="text-sm font-medium">Search:</span>
+              <Input
+                placeholder="Search by student name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="max-w-xs"
+              />
+            </div>
+          </div>
         </CardContent>
       </Card>
-
-      {/* Unpaid Fees Alert for Current Month */}
-      {unpaidFeesThisMonth.length > 0 && selectedMonth === getCurrentMonth() && <Card className="border-red-200 bg-red-50">
-          <CardHeader>
-            <CardTitle className="text-red-700 flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4" />
-              Students with Unpaid Fees This Month ({unpaidFeesThisMonth.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {unpaidFeesThisMonth.slice(0, 10).map(fee => <div key={fee.id} className="flex justify-between items-center p-2 bg-white rounded border">
-                  <div>
-                    <span className="font-medium text-zinc-600">{getStudentName(fee.studentId)}</span>
-                    <span className="text-sm text-muted-foreground ml-2">
-                      Due: {new Date(fee.dueDate).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-red-600">₹{fee.amount.toFixed(2)}</span>
-                    <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)}>
-                      Mark Paid
-                    </Button>
-                  </div>
-                </div>)}
-              {unpaidFeesThisMonth.length > 10 && <div className="text-sm text-muted-foreground">
-                  And {unpaidFeesThisMonth.length - 10} more...
-                </div>}
-            </div>
-          </CardContent>
-        </Card>}
 
       {/* Fee List */}
       <Card>
@@ -300,5 +300,36 @@ export function FeeManagement({
           </div>
         </CardContent>
       </Card>
+
+      {/* Unpaid Fees Alert for Current Month */}
+      {unpaidFeesThisMonth.length > 0 && selectedMonth === getCurrentMonth() && <Card className="border-red-200 bg-red-50">
+          <CardHeader>
+            <CardTitle className="text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4" />
+              Students with Unpaid Fees This Month ({unpaidFeesThisMonth.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {unpaidFeesThisMonth.slice(0, 10).map(fee => <div key={fee.id} className="flex justify-between items-center p-2 bg-white rounded border">
+                  <div>
+                    <span className="font-medium text-zinc-600">{getStudentName(fee.studentId)}</span>
+                    <span className="text-sm text-muted-foreground ml-2">
+                      Due: {new Date(fee.dueDate).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-red-600">₹{fee.amount.toFixed(2)}</span>
+                    <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)}>
+                      Mark Paid
+                    </Button>
+                  </div>
+                </div>)}
+              {unpaidFeesThisMonth.length > 10 && <div className="text-sm text-muted-foreground">
+                  And {unpaidFeesThisMonth.length - 10} more...
+                </div>}
+            </div>
+          </CardContent>
+        </Card>}
     </div>;
 }
