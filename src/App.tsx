@@ -7,7 +7,9 @@ import { AuthProvider } from "@/components/AuthProvider";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
+import SuperAdmin from "./pages/SuperAdmin";
 import { AuthPage } from "./components/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -31,7 +33,22 @@ const App = () => (
                 <div className="flex-1 pb-20 md:pb-0 bg-[#f8f9fa] w-full overflow-x-hidden">
                   <Routes>
                     <Route path="/auth" element={<AuthPage />} />
-                    <Route path="/*" element={<Index />} />
+                    <Route 
+                      path="/super-admin" 
+                      element={
+                        <ProtectedRoute allowedRoles={['super_admin']}>
+                          <SuperAdmin />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/*" 
+                      element={
+                        <ProtectedRoute allowedRoles={['tuition_admin']}>
+                          <Index />
+                        </ProtectedRoute>
+                      } 
+                    />
                   </Routes>
                 </div>
               </main>

@@ -8,10 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { Navigate } from 'react-router-dom';
+import { useUserRole } from '@/hooks/useUserRole';
+import { Loader2 } from 'lucide-react';
 
 export function AuthPage() {
   // All hooks must be called on every render
   const { user, signIn, signUp, loading } = useAuth();
+  const { role, loading: roleLoading } = useUserRole();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,15 +52,14 @@ export function AuthPage() {
   // Instead of returning early, use conditional rendering
   return (
     <div>
-      {user && <Navigate to="/" replace />}
+      {user && !roleLoading && role === 'super_admin' && <Navigate to="/super-admin" replace />}
+      {user && !roleLoading && role === 'tuition_admin' && <Navigate to="/" replace />}
+      {user && !roleLoading && (role === 'student' || role === 'parent') && <Navigate to="/student" replace />}
       {!user && (
         <div className="min-h-screen bg-background flex items-center justify-center p-4">
-          {loading ? (
+          {(loading || roleLoading) ? (
             <div className="min-h-screen flex items-center justify-center">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-                <p className="mt-2 text-muted-foreground">Loading...</p>
-              </div>
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : (
             <Card className="w-full max-w-md">
