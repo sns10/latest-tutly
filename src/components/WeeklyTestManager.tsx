@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee } from "@/types";
+import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee, Subject, Faculty } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +27,8 @@ interface WeeklyTestManagerProps {
   attendance: any[];
   fees: any[];
   classFees: ClassFee[];
+  subjects: Subject[];
+  faculty: Faculty[];
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onDeleteTest: (testId: string) => void;
   onAddTestResult: (result: StudentTestResult) => void;
@@ -50,6 +52,8 @@ export function WeeklyTestManager({
   attendance,
   fees,
   classFees,
+  subjects,
+  faculty,
   onAddTest,
   onDeleteTest,
   onAddTestResult,
@@ -97,6 +101,8 @@ export function WeeklyTestManager({
         tests={tests}
         attendance={attendance.filter(a => a.studentId === selectedStudent.id)}
         fees={fees.filter(f => f.studentId === selectedStudent.id)}
+        subjects={subjects}
+        faculty={faculty}
         onClose={() => setSelectedStudent(null)}
       />
     );

@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { Student, StudentTestResult, WeeklyTest, StudentAttendance, StudentFee } from '@/types';
+import { Student, StudentTestResult, WeeklyTest, StudentAttendance, StudentFee, Subject, Faculty } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { CalendarDays, TrendingUp, Award, DollarSign, BookOpen, Target } from 'lucide-react';
+import { CalendarDays, TrendingUp, Award } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
 
 interface StudentDashboardProps {
@@ -15,6 +14,8 @@ interface StudentDashboardProps {
   tests: WeeklyTest[];
   attendance: StudentAttendance[];
   fees: StudentFee[];
+  subjects: Subject[];
+  faculty: Faculty[];
   onClose: () => void;
 }
 
@@ -23,7 +24,9 @@ export function StudentDashboard({
   testResults, 
   tests, 
   attendance, 
-  fees, 
+  fees,
+  subjects,
+  faculty,
   onClose 
 }: StudentDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'academic' | 'attendance' | 'fees'>('overview');
@@ -43,12 +46,25 @@ export function StudentDashboard({
     ? studentTests.reduce((sum, r) => sum + r.percentage, 0) / studentTests.length 
     : 0;
 
-  const chartData = studentTests.map((result, index) => ({
-    test: result.test?.name.substring(0, 10) + '...',
-    marks: result.marks,
-    percentage: result.percentage,
-    maxMarks: result.test?.maxMarks
-  }));
+  // Group attendance by subject
+  const attendanceBySubject = attendance.reduce((acc, record) => {
+    const subjectId = record.subjectId || 'general';
+    if (!acc[subjectId]) {
+      acc[subjectId] = {
+        total: 0,
+        present: 0,
+        absent: 0,
+        late: 0,
+        excused: 0
+      };
+    }
+    acc[subjectId].total++;
+    if (record.status === 'present') acc[subjectId].present++;
+    if (record.status === 'absent') acc[subjectId].absent++;
+    if (record.status === 'late') acc[subjectId].late++;
+    if (record.status === 'excused') acc[subjectId].excused++;
+    return acc;
+  }, {} as Record<string, { total: number; present: number; absent: number; late: number; excused: number }>);
 
   // Attendance statistics
   const totalAttendanceDays = attendance.length;
@@ -99,18 +115,28 @@ export function StudentDashboard({
 
       <Card className="md:col-span-2 lg:col-span-3">
         <CardHeader>
-          <CardTitle>Recent Performance Trend</CardTitle>
+          <CardTitle>Recent Test Results</CardTitle>
         </CardHeader>
         <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="test" />
-              <YAxis />
-              <Tooltip />
-              <Line type="monotone" dataKey="percentage" stroke="#8884d8" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          <div className="space-y-2">
+            {studentTests.slice(0, 5).map((result) => (
+              <div key={result.testId} className="flex justify-between items-center p-3 border rounded">
+                <div>
+                  <div className="font-medium">{result.test?.name}</div>
+                  <div className="text-sm text-muted-foreground">{result.test?.subject}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-bold">{result.marks}/{result.test?.maxMarks}</div>
+                  <Badge variant={result.percentage >= 80 ? 'default' : result.percentage >= 60 ? 'secondary' : 'destructive'}>
+                    {result.percentage.toFixed(1)}%
+                  </Badge>
+                </div>
+              </div>
+            ))}
+            {studentTests.length === 0 && (
+              <div className="text-center text-muted-foreground py-8">No test results yet</div>
+            )}
+          </div>
         </CardContent>
       </Card>
     </div>
@@ -140,24 +166,6 @@ export function StudentDashboard({
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Test Results</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={400}>
-            <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="test" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="marks" fill="#8884d8" />
-              <Bar dataKey="maxMarks" fill="#e0e0e0" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
 
       <Card>
         <CardHeader>
@@ -268,25 +276,46 @@ export function StudentDashboard({
 
         <Card>
           <CardHeader>
-            <CardTitle>Recent Attendance</CardTitle>
+            <CardTitle>Subject-wise Attendance</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
-              {attendance.slice(0, 10).map((record) => (
-                <div key={record.id} className="flex justify-between items-center p-3 border rounded">
-                  <div>
-                    <div className="font-medium">{new Date(record.date).toLocaleDateString()}</div>
-                    {record.notes && <div className="text-sm text-muted-foreground">{record.notes}</div>}
+            <div className="space-y-3">
+              {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
+                const subject = subjects.find(s => s.id === subjectId);
+                const attendanceRate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                return (
+                  <div key={subjectId} className="p-3 border rounded space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="font-medium">{subject?.name || 'General'}</div>
+                      <Badge variant={attendanceRate >= 75 ? 'default' : attendanceRate >= 60 ? 'secondary' : 'destructive'}>
+                        {attendanceRate.toFixed(1)}%
+                      </Badge>
+                    </div>
+                    <div className="grid grid-cols-4 gap-2 text-sm">
+                      <div className="text-center">
+                        <div className="text-green-600 font-bold">{stats.present}</div>
+                        <div className="text-xs text-muted-foreground">Present</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-red-600 font-bold">{stats.absent}</div>
+                        <div className="text-xs text-muted-foreground">Absent</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-yellow-600 font-bold">{stats.late}</div>
+                        <div className="text-xs text-muted-foreground">Late</div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-blue-600 font-bold">{stats.excused}</div>
+                        <div className="text-xs text-muted-foreground">Excused</div>
+                      </div>
+                    </div>
+                    <Progress value={attendanceRate} className="h-2" />
                   </div>
-                  <Badge variant={
-                    record.status === 'present' ? 'default' :
-                    record.status === 'late' ? 'secondary' :
-                    record.status === 'excused' ? 'outline' : 'destructive'
-                  }>
-                    {record.status}
-                  </Badge>
-                </div>
-              ))}
+                );
+              })}
+              {Object.keys(attendanceBySubject).length === 0 && (
+                <div className="text-center text-muted-foreground py-8">No attendance records yet</div>
+              )}
             </div>
           </CardContent>
         </Card>
