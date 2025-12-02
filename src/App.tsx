@@ -26,7 +26,6 @@ const App = () => (
                 <div className="border-b bg-white sticky top-0 z-40 shadow-sm">
                   <div className="flex h-14 items-center px-3 sm:px-4">
                     <SidebarTrigger className="md:hidden" />
-                    <h1 className="text-base sm:text-lg font-bold ml-2 text-gray-900 truncate">Gamify Pallikoodam</h1>
                   </div>
                 </div>
                 <div className="flex-1 pb-20 md:pb-0 bg-[#f8f9fa] w-full overflow-x-hidden">
