@@ -10,6 +10,7 @@ import { BottomNav } from "@/components/BottomNav";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import SuperAdmin from "./pages/SuperAdmin";
+import Student from "./pages/Student";
 import { AuthPage } from "./components/AuthPage";
 import NotFound from "./pages/NotFound";
 
@@ -38,6 +39,14 @@ const App = () => (
                       element={
                         <ProtectedRoute allowedRoles={['super_admin']}>
                           <SuperAdmin />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/student" 
+                      element={
+                        <ProtectedRoute allowedRoles={['student', 'parent']}>
+                          <Student />
                         </ProtectedRoute>
                       } 
                     />

@@ -1,0 +1,286 @@
+import { useState } from 'react';
+import { useStudentData } from '@/hooks/useStudentData';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Progress } from '@/components/ui/progress';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell } from 'lucide-react';
+
+export default function Student() {
+  const { student, attendance, testResults, tests, fees, subjects, announcements, loading } = useStudentData();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!student) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Student Not Found</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-muted-foreground">Your account is not linked to a student profile. Please contact your tuition administrator.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Calculate statistics
+  const studentResults = testResults.map(result => {
+    const test = tests.find(t => t.id === result.test_id);
+    return {
+      ...result,
+      test,
+      percentage: test ? (result.marks / test.max_marks) * 100 : 0
+    };
+  }).filter(r => r.test);
+
+  const recentTests = studentResults.slice(0, 5);
+  const averageScore = studentResults.length > 0 
+    ? studentResults.reduce((sum, r) => sum + r.percentage, 0) / studentResults.length 
+    : 0;
+
+  const totalAttendanceDays = attendance.length;
+  const presentDays = attendance.filter(a => a.status === 'present').length;
+  const attendanceRate = totalAttendanceDays > 0 ? (presentDays / totalAttendanceDays) * 100 : 0;
+
+  // Group attendance by subject
+  const attendanceBySubject = attendance.reduce((acc, record) => {
+    const subjectId = record.subject_id || 'general';
+    if (!acc[subjectId]) {
+      acc[subjectId] = { total: 0, present: 0 };
+    }
+    acc[subjectId].total++;
+    if (record.status === 'present') acc[subjectId].present++;
+    return acc;
+  }, {} as Record<string, { total: number; present: number }>);
+
+  const totalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
+  const paidFees = fees.filter(f => f.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
+  const pendingFees = fees.filter(f => f.status === 'unpaid' || f.status === 'overdue');
+
+  return (
+    <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+      {/* Student Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <Avatar className="h-16 w-16">
+          <AvatarImage src={student.avatar || undefined} />
+          <AvatarFallback>{student.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+        </Avatar>
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold">{student.name}</h1>
+          <p className="text-muted-foreground">Class: {student.class}</p>
+        </div>
+      </div>
+
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Attendance</CardTitle>
+            <CalendarDays className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{attendanceRate.toFixed(1)}%</div>
+            <Progress value={attendanceRate} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Average Score</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{averageScore.toFixed(1)}%</div>
+            <Progress value={averageScore} className="mt-2" />
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{student.total_xp}</div>
+            <p className="text-xs text-muted-foreground mt-1">Gamification points</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${(totalFees - paidFees).toFixed(2)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{pendingFees.length} pending</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="tests" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="tests">Tests</TabsTrigger>
+          <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="fees">Fees</TabsTrigger>
+          <TabsTrigger value="announcements">News</TabsTrigger>
+        </TabsList>
+
+        {/* Tests Tab */}
+        <TabsContent value="tests">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Test Results</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {recentTests.length > 0 ? (
+                <div className="space-y-3">
+                  {recentTests.map((result) => (
+                    <div key={result.id} className="flex justify-between items-center p-3 border rounded">
+                      <div>
+                        <div className="font-medium">{result.test?.name}</div>
+                        <div className="text-sm text-muted-foreground">{result.test?.subject}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold">{result.marks}/{result.test?.max_marks}</div>
+                        <Badge variant={result.percentage >= 80 ? 'default' : result.percentage >= 60 ? 'secondary' : 'destructive'}>
+                          {result.percentage.toFixed(1)}%
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No test results yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Attendance Tab */}
+        <TabsContent value="attendance">
+          <Card>
+            <CardHeader>
+              <CardTitle>Subject-wise Attendance</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {Object.keys(attendanceBySubject).length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
+                    const subject = subjects.find(s => s.id === subjectId);
+                    const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                    return (
+                      <div key={subjectId} className="p-3 border rounded">
+                        <div className="flex justify-between items-center mb-2">
+                          <div className="font-medium">{subject?.name || 'General'}</div>
+                          <Badge variant={rate >= 75 ? 'default' : rate >= 60 ? 'secondary' : 'destructive'}>
+                            {rate.toFixed(1)}%
+                          </Badge>
+                        </div>
+                        <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                          <span>Present: {stats.present}</span>
+                          <span>Total: {stats.total}</span>
+                        </div>
+                        <Progress value={rate} className="h-2" />
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No attendance records yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Fees Tab */}
+        <TabsContent value="fees">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fee Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {fees.length > 0 ? (
+                <div className="space-y-3">
+                  {fees.map((fee) => (
+                    <div key={fee.id} className="flex justify-between items-center p-3 border rounded">
+                      <div>
+                        <div className="font-medium">{fee.fee_type || 'Tuition Fee'}</div>
+                        <div className="text-sm text-muted-foreground">
+                          Due: {new Date(fee.due_date).toLocaleDateString()}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-bold">${fee.amount.toFixed(2)}</div>
+                        <Badge variant={
+                          fee.status === 'paid' ? 'default' :
+                          fee.status === 'overdue' ? 'destructive' : 'secondary'
+                        }>
+                          {fee.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No fee records yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Announcements Tab */}
+        <TabsContent value="announcements">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Announcements
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {announcements.length > 0 ? (
+                <div className="space-y-4">
+                  {announcements.map((announcement) => (
+                    <div key={announcement.id} className="p-4 border rounded">
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-semibold">{announcement.title}</h3>
+                        <Badge variant="outline">
+                          {new Date(announcement.published_at).toLocaleDateString()}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {announcement.body}
+                      </p>
+                      {announcement.xp_bonus && announcement.xp_bonus > 0 && (
+                        <div className="mt-2">
+                          <Badge variant="default" className="gap-1">
+                            <Award className="h-3 w-3" />
+                            +{announcement.xp_bonus} XP Bonus
+                          </Badge>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">No announcements yet</p>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

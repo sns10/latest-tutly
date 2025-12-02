@@ -634,6 +634,7 @@ export type Database = {
           team: string | null
           total_xp: number
           tuition_id: string
+          user_id: string | null
         }
         Insert: {
           avatar?: string | null
@@ -645,6 +646,7 @@ export type Database = {
           team?: string | null
           total_xp?: number
           tuition_id: string
+          user_id?: string | null
         }
         Update: {
           avatar?: string | null
@@ -656,6 +658,7 @@ export type Database = {
           team?: string | null
           total_xp?: number
           tuition_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
