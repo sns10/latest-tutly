@@ -65,8 +65,8 @@ export function ReportExporter({
 
   return (
     <Button variant={variant} size={size} onClick={handleExport}>
-      <Download className="h-4 w-4 mr-2" />
-      {label || 'Export PDF'}
+      <Download className={size === 'icon' ? 'h-4 w-4' : 'h-4 w-4 mr-2'} />
+      {size !== 'icon' && (label || 'Export PDF')}
     </Button>
   );
 }

@@ -35,8 +35,7 @@ export function AppSidebar() {
     <Sidebar collapsible="icon" className="hidden md:flex bg-white border-r border-gray-200">
       <SidebarContent className="bg-white">
         <SidebarGroup>
-          <SidebarGroupLabel className="text-gray-900 font-semibold">Gamify Pallikoodam</SidebarGroupLabel>
-          <SidebarGroupContent>
+          <SidebarGroupContent className="mt-4">
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
