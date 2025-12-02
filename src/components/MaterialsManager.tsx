@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, FileText, Trash2, Download } from 'lucide-react';
 import { toast } from 'sonner';
+import { useUserTuition } from '@/hooks/useUserTuition';
 
 interface Subject {
   id: string;
@@ -33,6 +34,7 @@ interface MaterialsManagerProps {
 }
 
 export default function MaterialsManager({ currentClass }: MaterialsManagerProps) {
+  const { tuitionId } = useUserTuition();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [materials, setMaterials] = useState<Material[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -115,6 +117,7 @@ export default function MaterialsManager({ currentClass }: MaterialsManagerProps
           file_name: file.name,
           file_size: file.size,
           uploaded_by: user.id,
+          tuition_id: tuitionId!,
         });
 
       if (dbError) throw dbError;
