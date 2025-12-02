@@ -4,10 +4,12 @@ import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassNa
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 import { XP_STORE_ITEMS } from '@/config/rewards';
+import { useUserTuition } from './useUserTuition';
 
 // The ClassFee interface has been moved to src/types.ts to be shared across the application.
 
 export function useSupabaseData() {
+  const { tuitionId } = useUserTuition();
   const [students, setStudents] = useState<Student[]>([]);
   const [weeklyTests, setWeeklyTests] = useState<WeeklyTest[]>([]);
   const [testResults, setTestResults] = useState<StudentTestResult[]>([]);
@@ -332,6 +334,7 @@ export function useSupabaseData() {
           .insert({
             class: newStudent.class,
             name: 'A',
+            tuition_id: tuitionId!,
           })
           .select()
           .single();
@@ -352,6 +355,7 @@ export function useSupabaseData() {
         class: newStudent.class,
         division_id: divisionIdToUse,
         avatar: newStudent.avatar,
+        tuition_id: tuitionId!,
       })
       .select()
       .single();
@@ -382,6 +386,7 @@ export function useSupabaseData() {
         max_marks: newTest.maxMarks,
         test_date: newTest.date,
         class: newTest.class,
+        tuition_id: tuitionId!,
       })
       .select()
       .single();
@@ -643,6 +648,7 @@ export function useSupabaseData() {
         start_date: newChallenge.startDate,
         end_date: newChallenge.endDate,
         is_active: newChallenge.isActive,
+        tuition_id: tuitionId!,
       }]);
 
     if (error) {
@@ -688,6 +694,7 @@ export function useSupabaseData() {
         created_by: newAnnouncement.createdBy,
         target_class: newAnnouncement.targetClass,
         xp_bonus: newAnnouncement.xpBonus,
+        tuition_id: tuitionId!,
       });
 
     if (error) {
@@ -889,7 +896,7 @@ export function useSupabaseData() {
   const addFaculty = async (name: string, email: string, phone: string, subjectIds: string[]) => {
     const { data: facultyData, error: facultyError } = await supabase
       .from('faculty')
-      .insert({ name, email, phone })
+      .insert({ name, email, phone, tuition_id: tuitionId! })
       .select()
       .single();
 
@@ -967,7 +974,7 @@ export function useSupabaseData() {
   const addSubject = async (name: string, classValue: ClassName) => {
     const { error } = await supabase
       .from('subjects')
-      .insert({ name, class: classValue });
+      .insert({ name, class: classValue, tuition_id: tuitionId! });
 
     if (error) {
       console.error('Error adding subject:', error);
@@ -1007,6 +1014,7 @@ export function useSupabaseData() {
         specific_date: specificDate,
         start_date: startDate,
         end_date: endDate,
+        tuition_id: tuitionId!,
       });
 
     if (error) {
@@ -1086,6 +1094,7 @@ export function useSupabaseData() {
       .insert({
         class: classValue,
         name: name.trim(),
+        tuition_id: tuitionId!,
       });
 
     if (error) {
