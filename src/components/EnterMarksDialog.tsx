@@ -114,9 +114,10 @@ export function EnterMarksDialog({
   // Bulk upload functions
   const downloadTemplate = () => {
     const templateData = filteredStudents.map(student => ({
-      "Student Name": student.name,
       "Student ID": student.id,
-      "Marks": ""
+      "Student Name": student.name,
+      "Marks/Grade": "",
+      "Note": "Enter marks (e.g., 85) OR grade (e.g., A+, A, B+, B, C+, C, D, F)"
     }));
 
     const ws = XLSX.utils.json_to_sheet(templateData);
@@ -124,6 +125,50 @@ export function EnterMarksDialog({
     XLSX.utils.book_append_sheet(wb, ws, "Test Marks");
     XLSX.writeFile(wb, `${test.name}_marks_template.xlsx`);
     toast.success("Template downloaded successfully!");
+  };
+
+  // Convert grade to marks based on percentage
+  const gradeToMarks = (grade: string): number => {
+    const gradeMap: { [key: string]: number } = {
+      'A+': 0.95,
+      'A': 0.90,
+      'A-': 0.85,
+      'B+': 0.80,
+      'B': 0.75,
+      'B-': 0.70,
+      'C+': 0.65,
+      'C': 0.60,
+      'C-': 0.55,
+      'D': 0.50,
+      'F': 0.40
+    };
+    
+    const normalizedGrade = grade.trim().toUpperCase();
+    const percentage = gradeMap[normalizedGrade];
+    
+    if (percentage !== undefined) {
+      return Math.round(test.maxMarks * percentage);
+    }
+    
+    return -1; // Invalid grade
+  };
+
+  // Parse marks or grade from input
+  const parseMarksOrGrade = (input: string | number): number => {
+    if (typeof input === 'number') {
+      return input;
+    }
+    
+    const trimmedInput = String(input).trim();
+    
+    // Try parsing as number first
+    const numValue = parseFloat(trimmedInput);
+    if (!isNaN(numValue)) {
+      return numValue;
+    }
+    
+    // Try parsing as grade
+    return gradeToMarks(trimmedInput);
   };
 
   const handleBulkFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -172,16 +217,17 @@ export function EnterMarksDialog({
     data.forEach((row, index) => {
       const rowNum = index + 1;
       
-      if (!row["Student Name"] && !row["Student ID"]) {
-        newErrors.push(`Row ${rowNum}: Student Name or Student ID is required`);
+      if (!row["Student ID"]) {
+        newErrors.push(`Row ${rowNum}: Student ID is required`);
       }
       
-      if (row["Marks"] === undefined || row["Marks"] === null || row["Marks"] === "") {
-        newErrors.push(`Row ${rowNum}: Marks field is required`);
+      const marksOrGrade = row["Marks/Grade"] || row["Marks"] || row["Grade"];
+      if (marksOrGrade === undefined || marksOrGrade === null || marksOrGrade === "") {
+        newErrors.push(`Row ${rowNum}: Marks/Grade field is required`);
       } else {
-        const markValue = parseFloat(row["Marks"]);
-        if (isNaN(markValue) || markValue < 0 || markValue > test.maxMarks) {
-          newErrors.push(`Row ${rowNum}: Marks must be a number between 0 and ${test.maxMarks}`);
+        const markValue = parseMarksOrGrade(marksOrGrade);
+        if (markValue < 0 || markValue > test.maxMarks) {
+          newErrors.push(`Row ${rowNum}: Invalid marks/grade - must be a number between 0 and ${test.maxMarks} or a valid grade (A+, A, B+, B, C+, C, D, F)`);
         }
       }
     });
@@ -198,14 +244,15 @@ export function EnterMarksDialog({
     let resultsAdded = 0;
 
     bulkPreviewData.forEach(row => {
-      // Find student by name or ID
+      // Find student by ID (primary) or name (fallback)
       const student = filteredStudents.find(s => 
-        s.name === row["Student Name"] || s.id === row["Student ID"]
+        s.id === row["Student ID"] || s.name === row["Student Name"]
       );
 
-      if (student && row["Marks"] !== undefined && row["Marks"] !== "") {
-        const markValue = parseFloat(row["Marks"]);
-        if (!isNaN(markValue) && markValue >= 0 && markValue <= test.maxMarks) {
+      const marksOrGrade = row["Marks/Grade"] || row["Marks"] || row["Grade"];
+      if (student && marksOrGrade !== undefined && marksOrGrade !== "") {
+        const markValue = parseMarksOrGrade(marksOrGrade);
+        if (markValue >= 0 && markValue <= test.maxMarks) {
           const result: StudentTestResult = {
             testId: test.id,
             studentId: student.id,
@@ -362,7 +409,7 @@ export function EnterMarksDialog({
                   Download Template
                 </Button>
                 <span className="text-xs sm:text-sm text-muted-foreground">
-                  Use this template with student names and IDs pre-filled
+                  Student IDs pre-filled. Enter marks (e.g., 85) OR grades (A+, A, B+, B, C+, C, D, F)
                 </span>
               </div>
 
@@ -401,26 +448,31 @@ export function EnterMarksDialog({
                     <table className="w-full text-xs sm:text-sm">
                       <thead className="bg-muted">
                         <tr>
+                          <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Student ID</th>
                           <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Student Name</th>
+                          <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Input</th>
                           <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Marks</th>
-                          <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">Percentage</th>
+                          <th className="p-1.5 sm:p-2 text-left whitespace-nowrap">%</th>
                         </tr>
                       </thead>
                       <tbody>
                         {bulkPreviewData.slice(0, 10).map((row, index) => {
-                          const markValue = parseFloat(row["Marks"]);
-                          const percentage = !isNaN(markValue) ? (markValue / test.maxMarks) * 100 : 0;
+                          const marksOrGrade = row["Marks/Grade"] || row["Marks"] || row["Grade"];
+                          const markValue = parseMarksOrGrade(marksOrGrade);
+                          const percentage = markValue >= 0 ? (markValue / test.maxMarks) * 100 : 0;
                           return (
                             <tr key={index} className="border-t">
+                              <td className="p-1.5 sm:p-2 font-mono text-xs">{row["Student ID"]}</td>
                               <td className="p-1.5 sm:p-2 truncate max-w-[120px] sm:max-w-none">{row["Student Name"]}</td>
-                              <td className="p-1.5 sm:p-2 whitespace-nowrap">{row["Marks"]}/{test.maxMarks}</td>
-                              <td className="p-1.5 sm:p-2">{Math.round(percentage)}%</td>
+                              <td className="p-1.5 sm:p-2">{marksOrGrade}</td>
+                              <td className="p-1.5 sm:p-2 whitespace-nowrap">{markValue >= 0 ? `${markValue}/${test.maxMarks}` : 'Invalid'}</td>
+                              <td className="p-1.5 sm:p-2">{markValue >= 0 ? `${Math.round(percentage)}%` : '-'}</td>
                             </tr>
                           );
                         })}
                         {bulkPreviewData.length > 10 && (
                           <tr className="border-t">
-                            <td colSpan={3} className="p-1.5 sm:p-2 text-center text-muted-foreground text-xs">
+                            <td colSpan={5} className="p-1.5 sm:p-2 text-center text-muted-foreground text-xs">
                               ... and {bulkPreviewData.length - 10} more
                             </td>
                           </tr>
