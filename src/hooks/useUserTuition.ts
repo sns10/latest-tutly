@@ -20,7 +20,7 @@ export function useUserTuition() {
           .from('profiles')
           .select('tuition_id')
           .eq('id', user.id)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
         setTuitionId(data?.tuition_id || null);
