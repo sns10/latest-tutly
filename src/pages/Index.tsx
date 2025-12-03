@@ -86,8 +86,13 @@ const Index = () => {
           <ManagementCards 
             testsCount={weeklyTests.length}
             studentsCount={students.length}
-            attendanceToday={75}
-            pendingFees={12}
+            attendanceToday={
+              attendance.length > 0 
+                ? Math.round((attendance.filter(a => a.status === 'present' && a.date === new Date().toISOString().split('T')[0]).length / 
+                    attendance.filter(a => a.date === new Date().toISOString().split('T')[0]).length) * 100) || 0
+                : 0
+            }
+            pendingFees={fees.filter(f => f.status === 'unpaid' || f.status === 'overdue').length}
             activeChallenges={challenges.filter(c => c.isActive).length}
           />
 
