@@ -1,11 +1,33 @@
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building2, Users, TrendingUp, DollarSign } from 'lucide-react';
+import { Building2, Users, GraduationCap, DollarSign } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SuperAdminStatsProps {
   tuitions: any[];
 }
 
 export function SuperAdminStats({ tuitions }: SuperAdminStatsProps) {
+  const [totalStudents, setTotalStudents] = useState<number | null>(null);
+  const [totalFaculty, setTotalFaculty] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchGlobalStats();
+  }, []);
+
+  const fetchGlobalStats = async () => {
+    try {
+      const [studentsRes, facultyRes] = await Promise.all([
+        supabase.from('students').select('id', { count: 'exact', head: true }),
+        supabase.from('faculty').select('id', { count: 'exact', head: true }),
+      ]);
+      setTotalStudents(studentsRes.count || 0);
+      setTotalFaculty(facultyRes.count || 0);
+    } catch (error) {
+      console.error('Error fetching global stats:', error);
+    }
+  };
+
   const activeTuitions = tuitions.filter(t => t.is_active).length;
   const inactiveTuitions = tuitions.filter(t => !t.is_active).length;
   const activeSubscriptions = tuitions.filter(t => t.subscription_status === 'active').length;
@@ -28,17 +50,17 @@ export function SuperAdminStats({ tuitions }: SuperAdminStatsProps) {
       bg: 'bg-green-50',
     },
     {
-      title: 'Growth Rate',
-      value: '+12%',
-      icon: TrendingUp,
-      description: 'vs last month',
+      title: 'Total Students',
+      value: totalStudents ?? '—',
+      icon: Users,
+      description: 'Across all tuitions',
       color: 'text-purple-600',
       bg: 'bg-purple-50',
     },
     {
-      title: 'Total Students',
-      value: '—',
-      icon: Users,
+      title: 'Total Faculty',
+      value: totalFaculty ?? '—',
+      icon: GraduationCap,
       description: 'Across all tuitions',
       color: 'text-orange-600',
       bg: 'bg-orange-50',

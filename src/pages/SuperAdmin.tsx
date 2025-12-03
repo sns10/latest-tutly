@@ -60,12 +60,12 @@ export default function SuperAdmin() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-lg flex items-center justify-center shadow-md">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
                 <Building2 className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-900">Platform Admin</h1>
-                <p className="text-xs text-slate-500">Multi-Tenant Management</p>
+                <h1 className="text-xl font-bold text-slate-900">Upskillr Tutly</h1>
+                <p className="text-xs text-slate-500">Super Admin Dashboard</p>
               </div>
             </div>
             <Button variant="outline" size="sm" onClick={handleSignOut}>
