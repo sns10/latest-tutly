@@ -45,7 +45,7 @@ export function ManagementCards({
       description: 'Total enrolled',
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
-      route: '/classes',
+      route: '/students',
     },
     {
       title: 'Attendance',

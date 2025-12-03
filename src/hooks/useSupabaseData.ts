@@ -708,21 +708,61 @@ export function useSupabaseData() {
   };
 
   const markAttendance = async (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => {
-    const { error } = await supabase
+    // Build query to check if attendance already exists for this combination
+    let query = supabase
       .from('student_attendance')
-      .upsert({
-        student_id: studentId,
-        date,
-        status,
-        notes: notes || null,
-        subject_id: subjectId || null,
-        faculty_id: facultyId || null,
-      }, { onConflict: 'student_id,date,subject_id,faculty_id' });
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('date', date);
+    
+    // Handle null checks for subject_id and faculty_id
+    if (subjectId) {
+      query = query.eq('subject_id', subjectId);
+    } else {
+      query = query.is('subject_id', null);
+    }
+    
+    if (facultyId) {
+      query = query.eq('faculty_id', facultyId);
+    } else {
+      query = query.is('faculty_id', null);
+    }
+    
+    const { data: existingAttendance } = await query.maybeSingle();
 
-    if (error) {
-      console.error('Error marking attendance:', error);
-      toast.error('Failed to mark attendance');
-      return;
+    if (existingAttendance) {
+      // Update existing record
+      const { error } = await supabase
+        .from('student_attendance')
+        .update({
+          status,
+          notes: notes || null,
+        })
+        .eq('id', existingAttendance.id);
+
+      if (error) {
+        console.error('Error updating attendance:', error);
+        toast.error('Failed to mark attendance');
+        return;
+      }
+    } else {
+      // Insert new record
+      const { error } = await supabase
+        .from('student_attendance')
+        .insert({
+          student_id: studentId,
+          date,
+          status,
+          notes: notes || null,
+          subject_id: subjectId || null,
+          faculty_id: facultyId || null,
+        });
+
+      if (error) {
+        console.error('Error marking attendance:', error);
+        toast.error('Failed to mark attendance');
+        return;
+      }
     }
 
     await fetchAttendance();

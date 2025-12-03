@@ -23,6 +23,7 @@ interface StudentRowProps {
   onBuyReward: (studentId: string, reward: Reward) => void;
   onUseReward: (studentId: string, rewardInstanceId: string) => void;
   onAssignTeam: (studentId: string, team: TeamName | null) => void;
+  onViewDetails?: () => void;
 }
 
 const rankColor = (rank: number) => {
@@ -40,9 +41,12 @@ const xpCategoryDetails = {
 
 const teamNames: TeamName[] = ["Alpha", "Bravo", "Charlie"];
 
-export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyReward, onUseReward, onAssignTeam }: StudentRowProps) {
+export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyReward, onUseReward, onAssignTeam, onViewDetails }: StudentRowProps) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-all border border-transparent hover:border-primary/50">
+    <div 
+      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-all border border-transparent hover:border-primary/50 cursor-pointer"
+      onClick={onViewDetails}
+    >
       {/* Top row on mobile: rank + avatar + name + XP */}
       <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
         <div className={`w-8 sm:w-10 text-lg sm:text-xl font-bold font-display text-center flex-shrink-0 ${rankColor(rank)}`}>
@@ -150,7 +154,7 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
       </div>
       
       {/* Action buttons row on mobile */}
-      <div className="flex gap-1 sm:gap-1 justify-end sm:justify-start flex-shrink-0">
+      <div className="flex gap-1 sm:gap-1 justify-end sm:justify-start flex-shrink-0" onClick={(e) => e.stopPropagation()}>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 text-primary hover:bg-primary/10 hover:text-primary">
