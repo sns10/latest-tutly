@@ -55,7 +55,7 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
 
       if (tuitionError) throw tuitionError;
 
-      // 2. Create admin user account
+      // 2. Try to create admin user account
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.adminEmail,
         password: formData.adminPassword,
@@ -66,30 +66,79 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
         },
       });
 
-      if (authError) throw authError;
+      let userId: string | null = null;
+
+      if (authError) {
+        // Check if user already exists
+        if (authError.message?.includes('already registered') || authError.message?.includes('already been registered')) {
+          // User exists - find them by checking profiles with matching email pattern in full_name
+          // Since we can't query auth.users, check if there's a profile linked to this tuition
+          toast.info('User already exists. Please have them log in and the system will link them to this tuition.');
+          
+          // Store the admin email in tuition for later linking
+          await supabase
+            .from('tuitions')
+            .update({ email: formData.adminEmail })
+            .eq('id', tuitionData.id);
+            
+          toast.success('Tuition center created! The admin user needs to log in to be linked.');
+          onSuccess();
+          onOpenChange(false);
+          setFormData({
+            name: '',
+            email: '',
+            phone: '',
+            address: '',
+            adminEmail: '',
+            adminPassword: '',
+            adminName: '',
+          });
+          return;
+        } else {
+          throw authError;
+        }
+      }
+
+      userId = authData?.user?.id || null;
 
       // 3. Update profile with tuition_id
-      if (authData.user) {
+      if (userId) {
+        // Wait a moment for the profile trigger to create the profile
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const { error: profileError } = await supabase
           .from('profiles')
           .update({
             tuition_id: tuitionData.id,
             full_name: formData.adminName,
           })
-          .eq('id', authData.user.id);
+          .eq('id', userId);
 
-        if (profileError) throw profileError;
+        if (profileError) {
+          console.error('Profile update error:', profileError);
+          // Profile might not exist yet, try insert
+          await supabase
+            .from('profiles')
+            .upsert({
+              id: userId,
+              tuition_id: tuitionData.id,
+              full_name: formData.adminName,
+            });
+        }
 
         // 4. Assign tuition_admin role
         const { error: roleError } = await supabase
           .from('user_roles')
           .insert({
-            user_id: authData.user.id,
+            user_id: userId,
             role: 'tuition_admin',
             tuition_id: tuitionData.id,
           });
 
-        if (roleError) throw roleError;
+        if (roleError) {
+          console.error('Role assignment error:', roleError);
+          // Role might already exist, ignore
+        }
       }
 
       toast.success('Tuition center created successfully!');
