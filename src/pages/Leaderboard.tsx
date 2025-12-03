@@ -6,6 +6,12 @@ export default function LeaderboardPage() {
   const {
     students,
     divisions,
+    attendance,
+    testResults,
+    weeklyTests,
+    fees,
+    subjects,
+    faculty,
     loading,
     addStudent,
     addXp,
@@ -28,6 +34,12 @@ export default function LeaderboardPage() {
       <LeaderboardComponent
         students={students}
         divisions={divisions}
+        attendance={attendance}
+        testResults={testResults}
+        weeklyTests={weeklyTests}
+        fees={fees}
+        subjects={subjects}
+        faculty={faculty}
         onAddStudent={addStudent}
         onAddXp={addXp}
         onRemoveStudent={removeStudent}

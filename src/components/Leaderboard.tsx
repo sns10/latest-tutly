@@ -1,9 +1,10 @@
 
 import { useState } from "react";
-import { Student, XPCategory, TeamName, Division } from "@/types";
+import { Student, XPCategory, TeamName, Division, StudentAttendance, StudentTestResult, WeeklyTest, StudentFee, Subject, Faculty } from "@/types";
 import { StudentRow } from "./StudentRow";
 import { AddStudentDialog } from "./AddStudentDialog";
 import { BulkImportStudentsDialog } from "./BulkImportStudentsDialog";
+import { StudentDetailsDialog } from "./StudentDetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +13,12 @@ import { Users, Trophy, Star, Plus } from "lucide-react";
 interface LeaderboardProps {
   students: Student[];
   divisions: Division[];
+  attendance?: StudentAttendance[];
+  testResults?: StudentTestResult[];
+  weeklyTests?: WeeklyTest[];
+  fees?: StudentFee[];
+  subjects?: Subject[];
+  faculty?: Faculty[];
   onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => void;
   onAddXp: (studentId: string, category: XPCategory, amount: number) => void;
   onRemoveStudent: (studentId: string) => void;
@@ -23,6 +30,12 @@ interface LeaderboardProps {
 export function Leaderboard({ 
   students,
   divisions,
+  attendance = [],
+  testResults = [],
+  weeklyTests = [],
+  fees = [],
+  subjects = [],
+  faculty = [],
   onAddStudent,
   onAddXp, 
   onRemoveStudent, 
@@ -33,6 +46,7 @@ export function Leaderboard({
   const [classFilter, setClassFilter] = useState("All");
   const [divisionFilter, setDivisionFilter] = useState("All");
   const [teamFilter, setTeamFilter] = useState("All");
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   // Get divisions for selected class
   const availableDivisions = classFilter === "All" 
@@ -182,12 +196,29 @@ export function Leaderboard({
                   onBuyReward={onBuyReward}
                   onUseReward={onUseReward}
                   onAssignTeam={onAssignTeam}
+                  onViewDetails={() => setSelectedStudent(student)}
                 />
               ))}
             </div>
           )}
         </CardContent>
       </Card>
+
+      {/* Student Details Dialog */}
+      {selectedStudent && (
+        <StudentDetailsDialog
+          student={selectedStudent}
+          attendance={attendance.filter(a => a.studentId === selectedStudent.id)}
+          testResults={testResults.filter(r => r.studentId === selectedStudent.id)}
+          tests={weeklyTests}
+          fees={fees.filter(f => f.studentId === selectedStudent.id)}
+          subjects={subjects}
+          faculty={faculty}
+          open={!!selectedStudent}
+          onOpenChange={(open) => !open && setSelectedStudent(null)}
+          onRemoveStudent={onRemoveStudent}
+        />
+      )}
     </div>
   );
 }

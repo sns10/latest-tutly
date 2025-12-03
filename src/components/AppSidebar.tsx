@@ -1,4 +1,4 @@
-import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users } from 'lucide-react';
+import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -14,6 +14,7 @@ import {
 
 const menuItems = [
   { title: 'Management', url: '/', icon: BookOpen },
+  { title: 'Students', url: '/students', icon: GraduationCap },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
   { title: 'Materials', url: '/materials', icon: FolderOpen },
   { title: 'Timetable', url: '/timetable', icon: Clock },
