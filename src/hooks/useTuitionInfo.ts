@@ -28,7 +28,7 @@ export function useTuitionInfo() {
           .from('tuitions')
           .select('id, name, email, phone, logo_url')
           .eq('id', tuitionId)
-          .single();
+          .maybeSingle();
 
         if (error) throw error;
         setTuition(data);
