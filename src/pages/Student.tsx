@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useStudentData } from '@/hooks/useStudentData';
+import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell } from 'lucide-react';
+import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2 } from 'lucide-react';
 
 export default function Student() {
   const { student, attendance, testResults, tests, fees, subjects, announcements, loading } = useStudentData();
+  const { tuition } = useTuitionInfo();
 
   if (loading) {
     return (
@@ -69,6 +71,19 @@ export default function Student() {
 
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+      {/* Platform Header */}
+      <div className="flex items-center gap-3 mb-6 pb-4 border-b">
+        <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+          <Building2 className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">{tuition?.name || 'Student Portal'}</h2>
+          <p className="text-xs text-gray-500">
+            Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
+          </p>
+        </div>
+      </div>
+
       {/* Student Header */}
       <div className="flex items-center gap-4 mb-6">
         <Avatar className="h-16 w-16">

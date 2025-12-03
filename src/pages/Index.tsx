@@ -1,13 +1,13 @@
-
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useTuitionInfo } from "@/hooks/useTuitionInfo";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentTests } from "@/components/RecentTests";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Loader2, Building2 } from "lucide-react";
 import LeaderboardPage from './Leaderboard';
 import MaterialsPage from './Materials';
 import FeesPage from './Fees';
@@ -17,6 +17,7 @@ import ClassesPage from './Classes';
 
 const Index = () => {
   const { user, loading: authLoading } = useAuth();
+  const { tuition } = useTuitionInfo();
   const {
     students,
     weeklyTests,
@@ -68,9 +69,18 @@ const Index = () => {
     <Routes>
       <Route path="/" element={
         <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold mb-1 text-gray-900">Dashboard</h2>
-            <p className="text-xs sm:text-sm text-gray-600">Welcome back! Here's your overview</p>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                {tuition?.name || 'Dashboard'}
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500">
+                Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
+              </p>
+            </div>
           </div>
           
           <ManagementCards 
