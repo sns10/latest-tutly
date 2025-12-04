@@ -25,7 +25,12 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
     return <Navigate to="/auth" replace />;
   }
 
-  if (allowedRoles && role && !allowedRoles.includes(role)) {
+  // If no role yet (still loading or no role assigned), redirect to auth
+  if (!role) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  if (allowedRoles && !allowedRoles.includes(role)) {
     // Redirect to appropriate dashboard based on role
     if (role === 'super_admin') return <Navigate to="/super-admin" replace />;
     if (role === 'tuition_admin') return <Navigate to="/" replace />;

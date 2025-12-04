@@ -30,15 +30,20 @@ export function useStudentData() {
       }
 
       try {
-        // Fetch student record
+        // Fetch student record - use maybeSingle to avoid error when no record exists
         const { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('*')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
 
-        if (studentError) throw studentError;
+        if (studentError) {
+          console.error('Error fetching student:', studentError);
+          setLoading(false);
+          return;
+        }
         if (!studentData) {
+          // No student record for this user - this is normal for non-student users
           setLoading(false);
           return;
         }
