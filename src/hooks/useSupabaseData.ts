@@ -269,6 +269,8 @@ export function useSupabaseData() {
       date: attendance.date,
       status: attendance.status as 'present' | 'absent' | 'late' | 'excused',
       notes: attendance.notes || undefined,
+      subjectId: attendance.subject_id || undefined,
+      facultyId: attendance.faculty_id || undefined,
       createdAt: attendance.created_at,
       updatedAt: attendance.updated_at,
     }));

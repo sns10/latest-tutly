@@ -29,7 +29,10 @@ export function StudentAttendanceRow({ student, studentAttendance, onMarkAttenda
           size="sm" 
           variant={studentAttendance?.status === 'present' ? 'default' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'present')}
-          className="h-8 w-8 sm:h-9 sm:w-9 p-0"
+          className={cn(
+            "h-8 w-8 sm:h-9 sm:w-9 p-0",
+            studentAttendance?.status === 'present' && "bg-green-600 hover:bg-green-700 text-white"
+          )}
         >
           <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </Button>
