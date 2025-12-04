@@ -319,14 +319,14 @@ export function WeeklyTimetable({
               <div>
                 <Label>Room</Label>
                 <Select
-                  value={formData.roomId}
-                  onValueChange={(value) => setFormData({ ...formData, roomId: value })}
+                  value={formData.roomId || "none"}
+                  onValueChange={(value) => setFormData({ ...formData, roomId: value === "none" ? "" : value })}
                 >
                   <SelectTrigger className="bg-white">
                     <SelectValue placeholder="Select room (optional)" />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
-                    <SelectItem value="">No room</SelectItem>
+                    <SelectItem value="none">No room</SelectItem>
                     {getAvailableRooms().map((room) => (
                       <SelectItem key={room.id} value={room.id}>
                         <div className="flex items-center gap-2">
