@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Building2, Mail, Phone, MapPin, Calendar, Settings, Users, Trash2, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -40,6 +41,22 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
       toast.error(error.message || 'Failed to update tuition status');
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const handleSubscriptionChange = async (tuitionId: string, newStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('tuitions')
+        .update({ subscription_status: newStatus, updated_at: new Date().toISOString() })
+        .eq('id', tuitionId);
+
+      if (error) throw error;
+      toast.success(`Subscription updated to ${newStatus}`);
+      onRefresh();
+    } catch (error: any) {
+      console.error('Error updating subscription:', error);
+      toast.error(error.message || 'Failed to update subscription');
     }
   };
 
@@ -122,16 +139,20 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
                   >
                     {tuition.is_active ? 'Active' : 'Inactive'}
                   </Badge>
-                  <Badge 
-                    variant="outline"
-                    className={
-                      tuition.subscription_status === 'active' 
-                        ? 'border-green-500 text-green-700' 
-                        : 'border-orange-500 text-orange-700'
-                    }
+                  <Select
+                    value={tuition.subscription_status}
+                    onValueChange={(value) => handleSubscriptionChange(tuition.id, value)}
                   >
-                    {tuition.subscription_status}
-                  </Badge>
+                    <SelectTrigger className="h-6 w-24 text-xs">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="trial">Trial</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                      <SelectItem value="suspended">Suspended</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <Switch
                   checked={tuition.is_active}

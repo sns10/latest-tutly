@@ -31,6 +31,9 @@ export function SuperAdminStats({ tuitions }: SuperAdminStatsProps) {
   const activeTuitions = tuitions.filter(t => t.is_active).length;
   const inactiveTuitions = tuitions.filter(t => !t.is_active).length;
   const activeSubscriptions = tuitions.filter(t => t.subscription_status === 'active').length;
+  const expiredSubscriptions = tuitions.filter(t => t.subscription_status === 'expired').length;
+  const suspendedSubscriptions = tuitions.filter(t => t.subscription_status === 'suspended').length;
+  const trialSubscriptions = tuitions.filter(t => t.subscription_status === 'trial').length;
 
   const stats = [
     {
@@ -42,10 +45,10 @@ export function SuperAdminStats({ tuitions }: SuperAdminStatsProps) {
       bg: 'bg-blue-50',
     },
     {
-      title: 'Active Subscriptions',
+      title: 'Subscriptions',
       value: activeSubscriptions,
       icon: DollarSign,
-      description: 'Paying customers',
+      description: `${trialSubscriptions} trial, ${expiredSubscriptions} expired, ${suspendedSubscriptions} suspended`,
       color: 'text-green-600',
       bg: 'bg-green-50',
     },
