@@ -97,18 +97,23 @@ export function AttendanceTracker({
       .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [students, selectedClass, searchQuery]);
 
-  // Get attendance for selected date
+  // Get attendance for selected date - must match exact subject/faculty context
   const getAttendanceForStudent = (studentId: string) => {
-    let matchingAttendance = attendance.filter(a => a.studentId === studentId && a.date === selectedDateStr);
-    
-    if (selectedSubject) {
-      matchingAttendance = matchingAttendance.filter(a => a.subjectId === selectedSubject);
-    }
-    if (selectedFaculty) {
-      matchingAttendance = matchingAttendance.filter(a => a.facultyId === selectedFaculty);
-    }
-    
-    return matchingAttendance[0];
+    return attendance.find(a => {
+      if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
+      
+      // Match subject: if selectedSubject is set, must match; if not set, attendance must have no subject
+      const subjectMatches = selectedSubject 
+        ? a.subjectId === selectedSubject 
+        : !a.subjectId;
+      
+      // Match faculty: if selectedFaculty is set, must match; if not set, attendance must have no faculty
+      const facultyMatches = selectedFaculty 
+        ? a.facultyId === selectedFaculty 
+        : !a.facultyId;
+      
+      return subjectMatches && facultyMatches;
+    });
   };
 
   // Get available subjects for selected class
@@ -123,15 +128,23 @@ export function AttendanceTracker({
     return faculty.filter(f => f.subjects?.some(s => s.id === selectedSubject));
   }, [faculty, selectedSubject]);
 
-  // Calculate attendance statistics
+  // Calculate attendance statistics - must match exact subject/faculty context
   const stats = useMemo(() => {
     const totalStudents = filteredStudents.length;
-    const dateAttendance = attendance.filter(a => 
-      a.date === selectedDateStr && 
-      filteredStudents.some(s => s.id === a.studentId) &&
-      (!selectedSubject || a.subjectId === selectedSubject) &&
-      (!selectedFaculty || a.facultyId === selectedFaculty)
-    );
+    const dateAttendance = attendance.filter(a => {
+      if (a.date !== selectedDateStr) return false;
+      if (!filteredStudents.some(s => s.id === a.studentId)) return false;
+      
+      // Match exact subject/faculty context
+      const subjectMatches = selectedSubject 
+        ? a.subjectId === selectedSubject 
+        : !a.subjectId;
+      const facultyMatches = selectedFaculty 
+        ? a.facultyId === selectedFaculty 
+        : !a.facultyId;
+      
+      return subjectMatches && facultyMatches;
+    });
     
     return {
       totalStudents,
