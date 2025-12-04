@@ -13,7 +13,7 @@ interface StudentAttendanceListProps {
 
 export function StudentAttendanceList({ students, selectedDate, getAttendanceForStudent, onMarkAttendance }: StudentAttendanceListProps) {
   return (
-    <Card>
+    <Card className="bg-white shadow-sm border-slate-200">
       <CardHeader>
         <CardTitle>
           Attendance for {selectedDate.toLocaleDateString()}
