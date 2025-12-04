@@ -51,17 +51,35 @@ export function AttendanceTracker({
   const formatDate = (date: Date) => date.toISOString().split('T')[0];
   const selectedDateStr = formatDate(selectedDate);
 
-  // Smart Check: Detect ongoing class from timetable
+  // Smart Check: Detect ongoing class from timetable (regular + special)
   useEffect(() => {
     if (isManualMode) return;
 
     const now = new Date();
     const currentDay = now.getDay();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+    const today = now.toISOString().split('T')[0];
 
-    // Find matching timetable entry for current day and time
-    const ongoingEntry = timetable.find(entry => {
+    // First check for special classes on today's date
+    const specialClassEntry = timetable.find(entry => {
+      if (entry.type !== 'special' || entry.specificDate !== today) return false;
+      return currentTime >= entry.startTime && currentTime <= entry.endTime;
+    });
+
+    // If no special class, check regular timetable
+    const ongoingEntry = specialClassEntry || timetable.find(entry => {
       if (entry.type !== 'regular' || entry.dayOfWeek !== currentDay) return false;
+      
+      // Check if there's a special class override for today
+      const hasOverride = timetable.some(
+        t => t.type === 'special' && 
+        t.specificDate === today && 
+        t.class === entry.class &&
+        t.startTime < entry.endTime && 
+        t.endTime > entry.startTime
+      );
+      if (hasOverride) return false;
+      
       return currentTime >= entry.startTime && currentTime <= entry.endTime;
     });
 
@@ -115,6 +133,39 @@ export function AttendanceTracker({
       return subjectMatches && facultyMatches;
     });
   };
+
+  // Get today's scheduled classes from timetable
+  const todaysClasses = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const currentDay = now.getDay();
+
+    // Get special classes for today
+    const specialClasses = timetable.filter(
+      entry => entry.type === 'special' && entry.specificDate === today
+    );
+
+    // Get regular classes for today's day of week (not overridden by special)
+    const regularClasses = timetable.filter(entry => {
+      if (entry.type !== 'regular' || entry.dayOfWeek !== currentDay) return false;
+      
+      // Check if overridden by special class
+      const isOverridden = specialClasses.some(
+        s => s.class === entry.class &&
+        s.startTime < entry.endTime && 
+        s.endTime > entry.startTime
+      );
+      return !isOverridden;
+    });
+
+    return [...specialClasses, ...regularClasses]
+      .sort((a, b) => a.startTime.localeCompare(b.startTime))
+      .map(entry => ({
+        ...entry,
+        subject: subjects.find(s => s.id === entry.subjectId),
+        faculty: faculty.find(f => f.id === entry.facultyId),
+      }));
+  }, [timetable, subjects, faculty]);
 
   // Get available subjects for selected class
   const availableSubjects = useMemo(() => {
@@ -373,6 +424,43 @@ export function AttendanceTracker({
                 </div>
               </CardContent>
             </Card>
+
+            {/* Today's Classes Quick Access */}
+            {todaysClasses.length > 0 && (
+              <Card className="bg-white shadow-sm border-slate-200">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <Label className="font-medium">Today's Classes</Label>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {todaysClasses.slice(0, 6).map((entry, idx) => (
+                      <button
+                        key={`${entry.id}-${idx}`}
+                        onClick={() => {
+                          setSelectedClass(entry.class);
+                          setSelectedSubject(entry.subjectId);
+                          setSelectedFaculty(entry.facultyId);
+                          setIsManualMode(true);
+                        }}
+                        className="w-full text-left p-2 rounded-md hover:bg-slate-50 border border-slate-100 transition-colors"
+                      >
+                        <div className="flex justify-between items-center">
+                          <span className="text-xs text-blue-600 font-medium">
+                            {entry.startTime} - {entry.endTime}
+                          </span>
+                          <span className="text-xs bg-slate-100 px-2 py-0.5 rounded">
+                            {entry.class}
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium truncate">{entry.subject?.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{entry.faculty?.name}</p>
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Right Panel - Student List */}
