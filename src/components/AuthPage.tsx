@@ -11,7 +11,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Loader2, Building2 } from 'lucide-react';
 
 export function AuthPage() {
-  const { user, signIn, signUp, loading } = useAuth();
+  const { user, signIn, signUp, signOut, loading } = useAuth();
   const { role, loading: roleLoading } = useUserRole();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -47,6 +47,11 @@ export function AuthPage() {
     setIsSubmitting(false);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success('Signed out successfully');
+  };
+
   // Show loading while checking auth state
   if (loading) {
     return (
@@ -71,19 +76,22 @@ export function AuthPage() {
     if (role === 'tuition_admin') return <Navigate to="/" replace />;
     if (role === 'student' || role === 'parent') return <Navigate to="/student" replace />;
     
-    // No role assigned - show error
+    // No role assigned - show error with sign out option
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-xl text-destructive">No Role Assigned</CardTitle>
           </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-4">
+          <CardContent className="text-center space-y-4">
+            <p className="text-muted-foreground">
               Your account doesn't have a role assigned. Please contact the administrator.
             </p>
-            <Button onClick={() => signIn('', '')} variant="outline">
-              Try Again
+            <p className="text-sm text-muted-foreground">
+              Logged in as: {user.email}
+            </p>
+            <Button onClick={handleSignOut} variant="outline">
+              Sign Out
             </Button>
           </CardContent>
         </Card>
