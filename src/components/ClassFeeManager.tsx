@@ -18,19 +18,14 @@ export function ClassFeeManager({ classFees, students = [], onUpdateClassFee }: 
   const [fees, setFees] = useState<ClassFee[]>([]);
 
   useEffect(() => {
-    // Get unique classes from students or use default all classes
-    const studentClasses = students.length > 0 
-      ? [...new Set(students.map(s => s.class))] as ClassName[]
-      : ALL_CLASSES;
-    
-    // Merge existing classFees with student classes (ensure all have entries)
-    const mergedFees: ClassFee[] = studentClasses.map(className => {
+    // Always show all classes for fee configuration, regardless of whether students exist
+    const mergedFees: ClassFee[] = ALL_CLASSES.map(className => {
       const existingFee = classFees.find(f => f.class === className);
       return existingFee || { class: className, amount: 0 };
     });
     
     setFees(mergedFees.sort((a, b) => a.class.localeCompare(b.class)));
-  }, [classFees, students]);
+  }, [classFees]);
 
   const handleAmountChange = (className: string, newAmount: string) => {
     const amount = newAmount === '' ? 0 : parseFloat(newAmount);
