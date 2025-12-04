@@ -1117,10 +1117,13 @@ export function useSupabaseData() {
     startTime: string,
     endTime: string,
     type: 'regular' | 'special',
+    roomId?: string,
     roomNumber?: string,
     specificDate?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    eventType?: string,
+    notes?: string
   ) => {
     const { error } = await supabase
       .from('timetable')
@@ -1132,10 +1135,13 @@ export function useSupabaseData() {
         start_time: startTime,
         end_time: endTime,
         type,
+        room_id: roomId,
         room_number: roomNumber,
         specific_date: specificDate,
         start_date: startDate,
         end_date: endDate,
+        event_type: eventType,
+        notes,
         tuition_id: tuitionId!,
       });
 
@@ -1159,10 +1165,13 @@ export function useSupabaseData() {
     startTime: string,
     endTime: string,
     type: 'regular' | 'special',
+    roomId?: string,
     roomNumber?: string,
     specificDate?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    eventType?: string,
+    notes?: string
   ) => {
     const { error } = await supabase
       .from('timetable')
@@ -1174,10 +1183,13 @@ export function useSupabaseData() {
         start_time: startTime,
         end_time: endTime,
         type,
+        room_id: roomId,
         room_number: roomNumber,
         specific_date: specificDate,
         start_date: startDate,
         end_date: endDate,
+        event_type: eventType,
+        notes,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);
