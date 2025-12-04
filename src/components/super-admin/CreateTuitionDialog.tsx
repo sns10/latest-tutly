@@ -101,43 +101,20 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
 
       userId = authData?.user?.id || null;
 
-      // 3. Update profile with tuition_id
+      // 3. Use RPC function to set up tuition admin (bypasses RLS)
       if (userId) {
-        // Wait a moment for the profile trigger to create the profile
+        // Wait a moment for the profile trigger to potentially create the profile
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({
-            tuition_id: tuitionData.id,
-            full_name: formData.adminName,
-          })
-          .eq('id', userId);
+        const { error: setupError } = await supabase.rpc('setup_tuition_admin', {
+          _user_id: userId,
+          _tuition_id: tuitionData.id,
+          _full_name: formData.adminName,
+        });
 
-        if (profileError) {
-          console.error('Profile update error:', profileError);
-          // Profile might not exist yet, try insert
-          await supabase
-            .from('profiles')
-            .upsert({
-              id: userId,
-              tuition_id: tuitionData.id,
-              full_name: formData.adminName,
-            });
-        }
-
-        // 4. Assign tuition_admin role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: userId,
-            role: 'tuition_admin',
-            tuition_id: tuitionData.id,
-          });
-
-        if (roleError) {
-          console.error('Role assignment error:', roleError);
-          // Role might already exist, ignore
+        if (setupError) {
+          console.error('Setup tuition admin error:', setupError);
+          toast.error('Tuition created but admin setup failed. Please try again.');
         }
       }
 
