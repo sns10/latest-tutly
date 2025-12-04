@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Timetable, Faculty, Subject, ClassName } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -73,7 +73,7 @@ export function TimetableManager({
 
   const resetForm = () => {
     setFormData({
-      class: '8th',
+      class: selectedClass,
       subjectId: '',
       facultyId: '',
       dayOfWeek: 1,
@@ -155,14 +155,13 @@ export function TimetableManager({
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this timetable entry?')) {
+    if (window.confirm('Are you sure you want to delete this schedule?')) {
       await onDeleteEntry(id);
     }
   };
 
   const regularTimetable = timetable.filter((entry) => entry.class === selectedClass && entry.type === 'regular');
-  const specialTimetable = timetable.filter((entry) => entry.class === selectedClass && entry.type === 'special');
-  const classSubjects = subjects.filter((s) => s.class === selectedClass);
+  const classSubjects = subjects.filter((s) => s.class === formData.class);
   
   // Get faculty that can teach the selected subject
   const availableFaculty = formData.subjectId
@@ -170,9 +169,13 @@ export function TimetableManager({
     : faculty;
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Timetable Management</h2>
+    <div className="min-h-screen bg-slate-50 p-4 sm:p-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground">Timetable Management</h1>
+          <p className="text-muted-foreground text-sm">Manage class schedules and timings</p>
+        </div>
         <Dialog
           open={isDialogOpen}
           onOpenChange={(open) => {
@@ -181,12 +184,12 @@ export function TimetableManager({
           }}
         >
           <DialogTrigger asChild>
-            <Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
               <Plus className="h-4 w-4 mr-2" />
               Add Schedule
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-md bg-white">
             <DialogHeader>
               <DialogTitle>{editingEntry ? 'Edit Schedule' : 'Add New Schedule'}</DialogTitle>
             </DialogHeader>
@@ -197,10 +200,10 @@ export function TimetableManager({
                   value={formData.class}
                   onValueChange={(value) => setFormData({ ...formData, class: value as ClassName, subjectId: '', facultyId: '' })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
                     {CLASSES.map((cls) => (
                       <SelectItem key={cls} value={cls}>
                         {cls}
@@ -211,120 +214,48 @@ export function TimetableManager({
               </div>
 
               <div>
-                <Label htmlFor="type">Type *</Label>
+                <Label htmlFor="day">Day of Week *</Label>
                 <Select
-                  value={formData.type}
-                  onValueChange={(value: 'regular' | 'special') => 
-                    setFormData({ 
-                      ...formData, 
-                      type: value,
-                      specificDate: '',
-                      startDate: '',
-                      endDate: ''
-                    })
-                  }
+                  value={formData.dayOfWeek.toString()}
+                  onValueChange={(value) => setFormData({ ...formData, dayOfWeek: parseInt(value) })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="regular">Regular (Weekly)</SelectItem>
-                    <SelectItem value="special">Special (Specific Date/Week)</SelectItem>
+                  <SelectContent className="bg-white">
+                    {DAYS.slice(1, 6).map((day, index) => (
+                      <SelectItem key={index + 1} value={(index + 1).toString()}>
+                        {day}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {formData.type === 'regular' && (
+              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="day">Day *</Label>
-                  <Select
-                    value={formData.dayOfWeek.toString()}
-                    onValueChange={(value) => setFormData({ ...formData, dayOfWeek: parseInt(value) })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DAYS.map((day, index) => (
-                        <SelectItem key={index} value={index.toString()}>
-                          {day}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="startTime">Start Time *</Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    value={formData.startTime}
+                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                    required
+                    className="bg-white"
+                  />
                 </div>
-              )}
-
-              {formData.type === 'special' && (
-                <>
-                  <div>
-                    <Label htmlFor="specificDate">Specific Date (One-time class)</Label>
-                    <Input
-                      id="specificDate"
-                      type="date"
-                      value={formData.specificDate}
-                      onChange={(e) => setFormData({ 
-                        ...formData, 
-                        specificDate: e.target.value,
-                        startDate: '',
-                        endDate: ''
-                      })}
-                    />
-                  </div>
-                  
-                  <div className="text-center text-sm text-muted-foreground">OR</div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <Label htmlFor="startDate">Start Date (Date Range)</Label>
-                      <Input
-                        id="startDate"
-                        type="date"
-                        value={formData.startDate}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          startDate: e.target.value,
-                          specificDate: ''
-                        })}
-                        disabled={!!formData.specificDate}
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="endDate">End Date</Label>
-                      <Input
-                        id="endDate"
-                        type="date"
-                        value={formData.endDate}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          endDate: e.target.value,
-                          specificDate: ''
-                        })}
-                        disabled={!!formData.specificDate}
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="day">Day of Week *</Label>
-                    <Select
-                      value={formData.dayOfWeek.toString()}
-                      onValueChange={(value) => setFormData({ ...formData, dayOfWeek: parseInt(value) })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {DAYS.map((day, index) => (
-                          <SelectItem key={index} value={index.toString()}>
-                            {day}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </>
-              )}
+                <div>
+                  <Label htmlFor="endTime">End Time *</Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    value={formData.endTime}
+                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                    required
+                    className="bg-white"
+                  />
+                </div>
+              </div>
 
               <div>
                 <Label htmlFor="subject">Subject *</Label>
@@ -332,10 +263,10 @@ export function TimetableManager({
                   value={formData.subjectId}
                   onValueChange={(value) => setFormData({ ...formData, subjectId: value, facultyId: '' })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
                     {subjects.filter(s => s.class === formData.class).map((subject) => (
                       <SelectItem key={subject.id} value={subject.id}>
                         {subject.name}
@@ -352,10 +283,10 @@ export function TimetableManager({
                   onValueChange={(value) => setFormData({ ...formData, facultyId: value })}
                   disabled={!formData.subjectId}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="bg-white">
                     <SelectValue placeholder={formData.subjectId ? "Select faculty" : "Select subject first"} />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="bg-white">
                     {availableFaculty.map((f) => (
                       <SelectItem key={f.id} value={f.id}>
                         {f.name}
@@ -365,41 +296,19 @@ export function TimetableManager({
                 </Select>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startTime">Start Time *</Label>
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={formData.startTime}
-                    onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="endTime">End Time *</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={formData.endTime}
-                    onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
-                    required
-                  />
-                </div>
-              </div>
-
               <div>
-                <Label htmlFor="roomNumber">Room Number</Label>
+                <Label htmlFor="roomNumber">Room Number (Optional)</Label>
                 <Input
                   id="roomNumber"
                   value={formData.roomNumber}
                   onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
                   placeholder="e.g., Room 101"
+                  className="bg-white"
                 />
               </div>
 
-              <div className="flex gap-2">
-                <Button type="submit" className="flex-1">
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
                   {editingEntry ? 'Update' : 'Add'} Schedule
                 </Button>
                 <Button
@@ -418,147 +327,89 @@ export function TimetableManager({
         </Dialog>
       </div>
 
-      <div className="flex gap-2 flex-wrap">
+      {/* Class Tabs - Pill shaped */}
+      <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
         {CLASSES.map((cls) => (
-          <Button
+          <button
             key={cls}
-            variant={selectedClass === cls ? 'default' : 'outline'}
             onClick={() => setSelectedClass(cls)}
+            className={`px-6 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+              selectedClass === cls
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'bg-white text-muted-foreground hover:bg-slate-100 border border-slate-200'
+            }`}
           >
-            {cls}
-          </Button>
+            {cls} Class
+          </button>
         ))}
       </div>
 
+      {/* Schedule List - Grouped by Day */}
       <div className="space-y-6">
-        <div>
-          <h3 className="text-lg font-semibold mb-4">Regular Weekly Timetable</h3>
-          <div className="grid gap-4">
-            {DAYS.slice(1, 6).map((day, dayIndex) => {
-              const dayEntries = regularTimetable.filter((entry) => entry.dayOfWeek === dayIndex + 1);
+        {DAYS.slice(1, 6).map((day, dayIndex) => {
+          const dayEntries = regularTimetable
+            .filter((entry) => entry.dayOfWeek === dayIndex + 1)
+            .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
-              return (
-                <Card key={day}>
-                  <CardHeader>
-                    <CardTitle className="text-lg">{day}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {dayEntries.length === 0 ? (
-                      <p className="text-muted-foreground text-sm">No classes scheduled</p>
-                    ) : (
-                      <div className="space-y-2">
-                        {dayEntries
-                          .sort((a, b) => a.startTime.localeCompare(b.startTime))
-                          .map((entry) => (
-                            <div
-                              key={entry.id}
-                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                            >
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <Clock className="h-4 w-4 text-muted-foreground" />
-                                  <span className="font-medium">
-                                    {entry.startTime} - {entry.endTime}
-                                  </span>
-                                </div>
-                                <p className="text-sm font-medium">{entry.subject?.name}</p>
-                                <p className="text-sm text-muted-foreground">{entry.faculty?.name}</p>
-                                {entry.roomNumber && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    📍 {entry.roomNumber}
-                                  </p>
-                                )}
-                              </div>
-                              <div className="flex gap-1">
-                                <Button variant="ghost" size="sm" onClick={() => handleEdit(entry)}>
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => handleDelete(entry.id)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                      </div>
-                    )}
+          return (
+            <div key={day}>
+              <h3 className="text-lg font-semibold text-foreground mb-3">{day}</h3>
+              {dayEntries.length === 0 ? (
+                <Card className="bg-white shadow-sm border-slate-200">
+                  <CardContent className="py-6 text-center text-muted-foreground">
+                    No classes scheduled
                   </CardContent>
                 </Card>
-              );
-            })}
-          </div>
-        </div>
-
-        {specialTimetable.length > 0 && (
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Special Classes</h3>
-            <div className="grid gap-4">
-              {specialTimetable
-                .sort((a, b) => {
-                  const dateA = a.specificDate || a.startDate || '';
-                  const dateB = b.specificDate || b.startDate || '';
-                  return dateA.localeCompare(dateB);
-                })
-                .map((entry) => (
-                  <Card key={entry.id}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            {entry.specificDate ? (
-                              <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-                                {new Date(entry.specificDate).toLocaleDateString('en-US', { 
-                                  weekday: 'short', 
-                                  year: 'numeric', 
-                                  month: 'short', 
-                                  day: 'numeric' 
-                                })}
+              ) : (
+                <div className="space-y-3">
+                  {dayEntries.map((entry) => (
+                    <Card key={entry.id} className="bg-white shadow-sm border-slate-200 hover:shadow-md transition-shadow">
+                      <CardContent className="py-4 px-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2 text-blue-600">
+                              <Clock className="h-4 w-4" />
+                              <span className="font-medium text-sm">
+                                {entry.startTime} - {entry.endTime}
                               </span>
-                            ) : (
-                              <span className="text-sm font-medium bg-primary/10 text-primary px-2 py-1 rounded">
-                                {new Date(entry.startDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(entry.endDate!).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                              </span>
-                            )}
-                            <span className="text-sm text-muted-foreground">
-                              {DAYS[entry.dayOfWeek]}
-                            </span>
+                            </div>
+                            <div className="border-l border-slate-200 pl-4">
+                              <p className="font-medium text-foreground">{entry.subject?.name || 'Unknown Subject'}</p>
+                              <p className="text-sm text-muted-foreground">{entry.faculty?.name || 'Unknown Faculty'}</p>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">
-                              {entry.startTime} - {entry.endTime}
-                            </span>
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                              onClick={() => handleEdit(entry)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              onClick={() => handleDelete(entry.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
-                          <p className="text-sm font-medium">{entry.subject?.name}</p>
-                          <p className="text-sm text-muted-foreground">{entry.faculty?.name}</p>
-                          {entry.roomNumber && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              📍 {entry.roomNumber}
-                            </p>
-                          )}
                         </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => handleEdit(entry)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDelete(entry.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        {entry.roomNumber && (
+                          <p className="text-xs text-muted-foreground mt-2 pl-8">
+                            📍 {entry.roomNumber}
+                          </p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
-        )}
+          );
+        })}
       </div>
     </div>
   );
