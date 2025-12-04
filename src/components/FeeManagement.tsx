@@ -31,19 +31,21 @@ export function FeeManagement({
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Generate monthly fees for all students
-  useEffect(() => {
-    if (students.length > 0 && classFees.length > 0) {
-      generateMonthlyFees();
-    }
-  }, [students, classFees]);
+  // Removed auto-generation - user should click "Generate Fees" button after setting class fees
   function getCurrentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
   function generateMonthlyFees() {
+    if (classFees.length === 0 || classFees.every(cf => cf.amount === 0)) {
+      toast.error('Please set class fees first (with amounts > 0) before generating fees');
+      return;
+    }
+    
     const currentMonth = getCurrentMonth();
     const currentYear = new Date().getFullYear();
+    let feesGenerated = 0;
+    
     students.forEach(student => {
       const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${currentMonth}`);
       if (!existingFee) {
@@ -58,9 +60,16 @@ export function FeeManagement({
             dueDate: dueDate.toISOString().split('T')[0],
             status: 'unpaid'
           });
+          feesGenerated++;
         }
       }
     });
+    
+    if (feesGenerated > 0) {
+      toast.success(`Generated fees for ${feesGenerated} students`);
+    } else {
+      toast.info('All students already have fees for this month, or class fees are not set');
+    }
   }
 
   // Get months for filter (last 12 months)
@@ -277,7 +286,9 @@ export function FeeManagement({
         <CardContent className="p-3 sm:p-6">
           <div className="space-y-2">
             {filteredFees.length === 0 ? <div className="text-center py-8 text-muted-foreground text-sm">
-                No fees found for the selected month and student filter.
+                {classFees.length === 0 || classFees.every(cf => cf.amount === 0) 
+                  ? 'Set class fees above (with amounts > 0), then click "Generate Fees" to create fee records for students.'
+                  : 'No fees found for the selected filters. Click "Generate Fees" to create fee records for this month.'}
               </div> : filteredFees.map(fee => <div key={fee.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-3 sm:p-4 border rounded-lg">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center flex-wrap gap-2 mb-1">
