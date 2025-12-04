@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee, Subject, Faculty } from "@/types";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateTestDialog } from "./CreateTestDialog";
@@ -14,7 +16,7 @@ import { FeeManagement } from "./FeeManagement";
 import { StudentDashboard } from "./StudentDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2 } from "lucide-react";
+import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2, Search } from "lucide-react";
 import { ClassFeeManager } from "./ClassFeeManager";
 
 interface WeeklyTestManagerProps {
@@ -68,6 +70,16 @@ export function WeeklyTestManager({
 }: WeeklyTestManagerProps) {
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentClassFilter, setStudentClassFilter] = useState<string>('all');
+
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => {
+      const matchesSearch = student.name.toLowerCase().includes(studentSearch.toLowerCase());
+      const matchesClass = studentClassFilter === 'all' || student.class === studentClassFilter;
+      return matchesSearch && matchesClass;
+    });
+  }, [students, studentSearch, studentClassFilter]);
 
   const getTestStats = (test: WeeklyTest) => {
     // Filter students by test class
@@ -286,24 +298,52 @@ export function WeeklyTestManager({
               <p className="text-muted-foreground">Click on a student to view their detailed information</p>
             </CardHeader>
             <CardContent>
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search students..."
+                    value={studentSearch}
+                    onChange={(e) => setStudentSearch(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                <Select value={studentClassFilter} onValueChange={setStudentClassFilter}>
+                  <SelectTrigger className="w-full sm:w-36">
+                    <SelectValue placeholder="All Classes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Classes</SelectItem>
+                    <SelectItem value="8th">8th</SelectItem>
+                    <SelectItem value="9th">9th</SelectItem>
+                    <SelectItem value="10th">10th</SelectItem>
+                    <SelectItem value="11th">11th</SelectItem>
+                    <SelectItem value="12th">12th</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {students.map((student) => (
-                  <Card key={student.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedStudent(student)}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                          {student.name.split(' ').map(n => n[0]).join('')}
-                        </div>
-                        <div>
-                          <div className="font-medium">{student.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            Class: {student.class} | XP: {student.totalXp}
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => (
+                    <Card key={student.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedStudent(student)}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            {student.name.split(' ').map(n => n[0]).join('')}
+                          </div>
+                          <div>
+                            <div className="font-medium">{student.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              Class: {student.class} | XP: {student.totalXp}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <p className="text-muted-foreground col-span-full text-center py-4">No students found.</p>
+                )}
               </div>
             </CardContent>
           </Card>
