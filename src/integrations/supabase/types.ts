@@ -976,6 +976,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      setup_tuition_admin: {
+        Args: { _full_name: string; _tuition_id: string; _user_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "super_admin" | "tuition_admin" | "student" | "parent"

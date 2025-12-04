@@ -1,18 +1,10 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { 
   Building2, 
   Users, 
   Plus, 
-  Settings, 
-  TrendingUp,
-  Calendar,
-  DollarSign,
-  CheckCircle2,
-  XCircle,
   LogOut
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -20,10 +12,12 @@ import { useAuth } from '@/components/AuthProvider';
 import { CreateTuitionDialog } from '@/components/super-admin/CreateTuitionDialog';
 import { TuitionsList } from '@/components/super-admin/TuitionsList';
 import { SuperAdminStats } from '@/components/super-admin/SuperAdminStats';
+import { TuitionAdminManager } from '@/components/super-admin/TuitionAdminManager';
 
 export default function SuperAdmin() {
   const { signOut } = useAuth();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showAdminManager, setShowAdminManager] = useState(false);
   const [tuitions, setTuitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,10 +83,16 @@ export default function SuperAdmin() {
               Manage all registered tuition centers and their subscriptions
             </p>
           </div>
-          <Button onClick={() => setShowCreateDialog(true)} size="lg" className="shadow-md">
-            <Plus className="h-5 w-5 mr-2" />
-            Create Tuition
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setShowAdminManager(true)}>
+              <Users className="h-4 w-4 mr-2" />
+              Manage Admins
+            </Button>
+            <Button onClick={() => setShowCreateDialog(true)} size="lg" className="shadow-md">
+              <Plus className="h-5 w-5 mr-2" />
+              Create Tuition
+            </Button>
+          </div>
         </div>
 
         {/* Tuitions List */}
@@ -108,6 +108,12 @@ export default function SuperAdmin() {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onSuccess={fetchTuitions}
+      />
+
+      {/* Tuition Admin Manager Dialog */}
+      <TuitionAdminManager
+        open={showAdminManager}
+        onOpenChange={setShowAdminManager}
       />
     </div>
   );
