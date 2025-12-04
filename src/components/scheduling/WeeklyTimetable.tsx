@@ -26,8 +26,8 @@ interface WeeklyTimetableProps {
     roomId?: string,
     roomNumber?: string,
     specificDate?: string,
-    startDate?: string,
-    endDate?: string
+    eventType?: string,
+    notes?: string
   ) => Promise<void>;
   onUpdateEntry: (
     id: string,
