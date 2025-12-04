@@ -105,6 +105,32 @@ export function WeeklyTestManager({
     onDeleteTest(testId);
   };
 
+  if (selectedTest) {
+    return (
+      <div className="space-y-4">
+        <Button variant="outline" onClick={() => setSelectedTest(null)}>
+          ← Back to Tests
+        </Button>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <span>{selectedTest.name}</span>
+              <Badge variant="outline">{selectedTest.subject}</Badge>
+              <Badge variant="secondary">{selectedTest.class === "All" ? "All Classes" : `${selectedTest.class} Grade`}</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TestResultsView 
+              tests={[selectedTest]} 
+              testResults={testResults.filter(r => r.testId === selectedTest.id)} 
+              students={selectedTest.class === "All" ? students : students.filter(s => s.class === selectedTest.class)} 
+            />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (selectedStudent) {
     return (
       <StudentDashboard
