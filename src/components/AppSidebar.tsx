@@ -1,18 +1,18 @@
-import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap } from 'lucide-react';
+import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { useUserRole } from '@/hooks/useUserRole';
 
-const menuItems = [
+const tuitionAdminItems = [
   { title: 'Management', url: '/', icon: BookOpen },
   { title: 'Students', url: '/students', icon: GraduationCap },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
@@ -23,14 +23,27 @@ const menuItems = [
   { title: 'Fees', url: '/fees', icon: DollarSign },
 ];
 
+const superAdminItems = [
+  { title: 'Dashboard', url: '/super-admin', icon: Shield },
+];
+
 export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
+  const { role, loading } = useUserRole();
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
+    if (path === '/super-admin') return location.pathname === '/super-admin';
     return location.pathname.startsWith(path);
   };
+
+  // Don't show sidebar for students/parents or while loading
+  if (loading || role === 'student' || role === 'parent' || !role) {
+    return null;
+  }
+
+  const menuItems = role === 'super_admin' ? superAdminItems : tuitionAdminItems;
 
   return (
     <Sidebar collapsible="icon" className="hidden md:flex bg-white border-r border-gray-200">
