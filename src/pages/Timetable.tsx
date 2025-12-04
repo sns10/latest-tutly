@@ -1,7 +1,5 @@
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { TimetableManager } from '@/components/TimetableManager';
-import { FacultyManager } from '@/components/FacultyManager';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Loader2 } from 'lucide-react';
 
 export default function TimetablePage() {
@@ -10,10 +8,6 @@ export default function TimetablePage() {
     subjects,
     timetable,
     loading,
-    addFaculty,
-    updateFaculty,
-    deleteFaculty,
-    addSubject,
     addTimetableEntry,
     updateTimetableEntry,
     deleteTimetableEntry,
@@ -21,41 +15,20 @@ export default function TimetablePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
 
   return (
-    <div className="w-full px-3 py-4 sm:px-6">
-      <Tabs defaultValue="timetable" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="timetable">Timetable</TabsTrigger>
-          <TabsTrigger value="faculty">Faculty</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="timetable">
-          <TimetableManager
-            timetable={timetable}
-            faculty={faculty}
-            subjects={subjects}
-            onAddEntry={addTimetableEntry}
-            onUpdateEntry={updateTimetableEntry}
-            onDeleteEntry={deleteTimetableEntry}
-          />
-        </TabsContent>
-
-        <TabsContent value="faculty">
-          <FacultyManager
-            faculty={faculty}
-            subjects={subjects}
-            onAddFaculty={addFaculty}
-            onUpdateFaculty={updateFaculty}
-            onDeleteFaculty={deleteFaculty}
-          />
-        </TabsContent>
-      </Tabs>
-    </div>
+    <TimetableManager
+      timetable={timetable}
+      faculty={faculty}
+      subjects={subjects}
+      onAddEntry={addTimetableEntry}
+      onUpdateEntry={updateTimetableEntry}
+      onDeleteEntry={deleteTimetableEntry}
+    />
   );
 }
