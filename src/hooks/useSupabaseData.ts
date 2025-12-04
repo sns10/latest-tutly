@@ -816,10 +816,34 @@ export function useSupabaseData() {
   };
 
   const updateClassFee = async (className: string, amount: number) => {
-    const { error } = await supabase
+    if (!tuitionId) {
+      toast.error('Unable to save class fee - no tuition context');
+      return;
+    }
+    
+    // First check if the record exists
+    const { data: existing } = await supabase
       .from('class_fees')
-      .update({ amount })
-      .eq('class', className);
+      .select('id')
+      .eq('class', className)
+      .eq('tuition_id', tuitionId)
+      .maybeSingle();
+    
+    let error;
+    if (existing) {
+      // Update existing record
+      const result = await supabase
+        .from('class_fees')
+        .update({ amount })
+        .eq('id', existing.id);
+      error = result.error;
+    } else {
+      // Insert new record
+      const result = await supabase
+        .from('class_fees')
+        .insert({ class: className, amount, tuition_id: tuitionId });
+      error = result.error;
+    }
 
     if (error) {
       console.error('Error updating class fee:', error);
