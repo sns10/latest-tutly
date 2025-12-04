@@ -6,9 +6,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { ALL_FEATURES, FeatureKey } from '@/hooks/useTuitionFeatures';
 
 interface EditTuitionDialogProps {
   open: boolean;
@@ -27,6 +30,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
     is_active: true,
     subscription_status: 'active',
   });
+  const [enabledFeatures, setEnabledFeatures] = useState<FeatureKey[]>(ALL_FEATURES.map(f => f.key));
 
   useEffect(() => {
     if (tuition) {
@@ -38,8 +42,22 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
         is_active: tuition.is_active ?? true,
         subscription_status: tuition.subscription_status || 'active',
       });
+      // Load features
+      if (tuition.features && Array.isArray(tuition.features) && tuition.features.length > 0) {
+        setEnabledFeatures(tuition.features as FeatureKey[]);
+      } else {
+        setEnabledFeatures(ALL_FEATURES.map(f => f.key));
+      }
     }
   }, [tuition]);
+
+  const toggleFeature = (key: FeatureKey) => {
+    setEnabledFeatures(prev => 
+      prev.includes(key) 
+        ? prev.filter(f => f !== key) 
+        : [...prev, key]
+    );
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,6 +73,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
           address: formData.address,
           is_active: formData.is_active,
           subscription_status: formData.subscription_status,
+          features: enabledFeatures,
           updated_at: new Date().toISOString(),
         })
         .eq('id', tuition.id);
@@ -151,6 +170,32 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
               checked={formData.is_active}
               onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
             />
+          </div>
+
+          <Separator />
+
+          {/* Feature Toggles */}
+          <div className="space-y-3">
+            <div>
+              <Label>Feature Access</Label>
+              <p className="text-xs text-muted-foreground">Enable or disable features for this tuition center</p>
+            </div>
+            <ScrollArea className="h-[200px] border rounded-md p-3">
+              <div className="space-y-3">
+                {ALL_FEATURES.map((feature) => (
+                  <div key={feature.key} className="flex items-center justify-between">
+                    <Label htmlFor={feature.key} className="text-sm font-normal cursor-pointer">
+                      {feature.label}
+                    </Label>
+                    <Switch
+                      id={feature.key}
+                      checked={enabledFeatures.includes(feature.key)}
+                      onCheckedChange={() => toggleFeature(feature.key)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
           </div>
 
           <DialogFooter>

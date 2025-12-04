@@ -6,6 +6,7 @@ import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentTests } from "@/components/RecentTests";
+import { FeatureGate } from "@/components/FeatureGate";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Building2, LogOut } from "lucide-react";
@@ -147,11 +148,31 @@ const Index = () => {
           </Card>
         </div>
       } />
-      <Route path="/leaderboard" element={<LeaderboardPage />} />
-      <Route path="/materials" element={<MaterialsPage />} />
-      <Route path="/fees" element={<FeesPage />} />
-      <Route path="/attendance" element={<AttendancePage />} />
-      <Route path="/timetable" element={<TimetablePage />} />
+      <Route path="/leaderboard" element={
+        <FeatureGate featureKey="leaderboard" featureName="Leaderboard">
+          <LeaderboardPage />
+        </FeatureGate>
+      } />
+      <Route path="/materials" element={
+        <FeatureGate featureKey="materials" featureName="Materials">
+          <MaterialsPage />
+        </FeatureGate>
+      } />
+      <Route path="/fees" element={
+        <FeatureGate featureKey="fees" featureName="Fees">
+          <FeesPage />
+        </FeatureGate>
+      } />
+      <Route path="/attendance" element={
+        <FeatureGate featureKey="attendance" featureName="Attendance">
+          <AttendancePage />
+        </FeatureGate>
+      } />
+      <Route path="/timetable" element={
+        <FeatureGate featureKey="timetable" featureName="Timetable">
+          <TimetablePage />
+        </FeatureGate>
+      } />
       <Route path="/classes" element={<ClassesPage />} />
       <Route path="/students" element={<StudentsPage />} />
     </Routes>

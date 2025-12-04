@@ -11,26 +11,35 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTuitionFeatures, FeatureKey } from '@/hooks/useTuitionFeatures';
 
-const tuitionAdminItems = [
+interface MenuItem {
+  title: string;
+  url: string;
+  icon: any;
+  featureKey?: FeatureKey;
+}
+
+const tuitionAdminItems: MenuItem[] = [
   { title: 'Management', url: '/', icon: BookOpen },
   { title: 'Students', url: '/students', icon: GraduationCap },
-  { title: 'Leaderboard', url: '/leaderboard', icon: Trophy },
-  { title: 'Materials', url: '/materials', icon: FolderOpen },
-  { title: 'Timetable', url: '/timetable', icon: Clock },
-  { title: 'Attendance', url: '/attendance', icon: CalendarDays },
+  { title: 'Leaderboard', url: '/leaderboard', icon: Trophy, featureKey: 'leaderboard' },
+  { title: 'Materials', url: '/materials', icon: FolderOpen, featureKey: 'materials' },
+  { title: 'Timetable', url: '/timetable', icon: Clock, featureKey: 'timetable' },
+  { title: 'Attendance', url: '/attendance', icon: CalendarDays, featureKey: 'attendance' },
   { title: 'Classes', url: '/classes', icon: Users },
-  { title: 'Fees', url: '/fees', icon: DollarSign },
+  { title: 'Fees', url: '/fees', icon: DollarSign, featureKey: 'fees' },
 ];
 
-const superAdminItems = [
+const superAdminItems: MenuItem[] = [
   { title: 'Dashboard', url: '/super-admin', icon: Shield },
 ];
 
 export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
-  const { role, loading } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
+  const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -39,11 +48,16 @@ export function AppSidebar() {
   };
 
   // Don't show sidebar for students/parents or while loading
-  if (loading || role === 'student' || role === 'parent' || !role) {
+  if (roleLoading || role === 'student' || role === 'parent' || !role) {
     return null;
   }
 
-  const menuItems = role === 'super_admin' ? superAdminItems : tuitionAdminItems;
+  const baseMenuItems = role === 'super_admin' ? superAdminItems : tuitionAdminItems;
+  
+  // Filter menu items based on enabled features (only for tuition admins)
+  const menuItems = role === 'super_admin' 
+    ? baseMenuItems 
+    : baseMenuItems.filter(item => !item.featureKey || isFeatureEnabled(item.featureKey));
 
   return (
     <Sidebar collapsible="icon" className="hidden md:flex bg-white border-r border-gray-200">

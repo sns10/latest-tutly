@@ -2,27 +2,41 @@ import { NavLink } from 'react-router-dom';
 import { Home, Trophy, Clock, DollarSign, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
+import { useTuitionFeatures, FeatureKey } from '@/hooks/useTuitionFeatures';
 
-const tuitionAdminItems = [
+interface NavItem {
+  title: string;
+  url: string;
+  icon: any;
+  featureKey?: FeatureKey;
+}
+
+const tuitionAdminItems: NavItem[] = [
   { title: 'Home', url: '/', icon: Home },
-  { title: 'Board', url: '/leaderboard', icon: Trophy },
-  { title: 'Schedule', url: '/timetable', icon: Clock },
-  { title: 'Fees', url: '/fees', icon: DollarSign },
+  { title: 'Board', url: '/leaderboard', icon: Trophy, featureKey: 'leaderboard' },
+  { title: 'Schedule', url: '/timetable', icon: Clock, featureKey: 'timetable' },
+  { title: 'Fees', url: '/fees', icon: DollarSign, featureKey: 'fees' },
 ];
 
-const superAdminItems = [
+const superAdminItems: NavItem[] = [
   { title: 'Dashboard', url: '/super-admin', icon: Shield },
 ];
 
 export function BottomNav() {
-  const { role, loading } = useUserRole();
+  const { role, loading: roleLoading } = useUserRole();
+  const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
 
   // Don't show bottom nav for students/parents or while loading
-  if (loading || role === 'student' || role === 'parent' || !role) {
+  if (roleLoading || role === 'student' || role === 'parent' || !role) {
     return null;
   }
 
-  const navItems = role === 'super_admin' ? superAdminItems : tuitionAdminItems;
+  const baseNavItems = role === 'super_admin' ? superAdminItems : tuitionAdminItems;
+  
+  // Filter nav items based on enabled features (only for tuition admins)
+  const navItems = role === 'super_admin' 
+    ? baseNavItems 
+    : baseNavItems.filter(item => !item.featureKey || isFeatureEnabled(item.featureKey));
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 md:hidden shadow-lg">

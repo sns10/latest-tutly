@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Building2, Mail, Phone, MapPin, Calendar, Settings, Users, Trash2, Eye } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
@@ -21,6 +22,26 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
   const [editTuition, setEditTuition] = useState<any>(null);
   const [viewTuition, setViewTuition] = useState<any>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+
+  const handleToggleActive = async (tuitionId: string, currentStatus: boolean) => {
+    setTogglingId(tuitionId);
+    try {
+      const { error } = await supabase
+        .from('tuitions')
+        .update({ is_active: !currentStatus, updated_at: new Date().toISOString() })
+        .eq('id', tuitionId);
+
+      if (error) throw error;
+      toast.success(`Tuition ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
+      onRefresh();
+    } catch (error: any) {
+      console.error('Error toggling tuition status:', error);
+      toast.error(error.message || 'Failed to update tuition status');
+    } finally {
+      setTogglingId(null);
+    }
+  };
 
   const handleDelete = async (tuitionId: string) => {
     setDeletingId(tuitionId);
@@ -93,23 +114,30 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
                   </div>
                 </div>
               </div>
-              <div className="flex gap-2 mt-3">
-                <Badge 
-                  variant={tuition.is_active ? 'default' : 'secondary'}
-                  className={tuition.is_active ? 'bg-green-500' : 'bg-slate-400'}
-                >
-                  {tuition.is_active ? 'Active' : 'Inactive'}
-                </Badge>
-                <Badge 
-                  variant="outline"
-                  className={
-                    tuition.subscription_status === 'active' 
-                      ? 'border-green-500 text-green-700' 
-                      : 'border-orange-500 text-orange-700'
-                  }
-                >
-                  {tuition.subscription_status}
-                </Badge>
+              <div className="flex items-center justify-between mt-3">
+                <div className="flex gap-2">
+                  <Badge 
+                    variant={tuition.is_active ? 'default' : 'secondary'}
+                    className={tuition.is_active ? 'bg-green-500' : 'bg-slate-400'}
+                  >
+                    {tuition.is_active ? 'Active' : 'Inactive'}
+                  </Badge>
+                  <Badge 
+                    variant="outline"
+                    className={
+                      tuition.subscription_status === 'active' 
+                        ? 'border-green-500 text-green-700' 
+                        : 'border-orange-500 text-orange-700'
+                    }
+                  >
+                    {tuition.subscription_status}
+                  </Badge>
+                </div>
+                <Switch
+                  checked={tuition.is_active}
+                  onCheckedChange={() => handleToggleActive(tuition.id, tuition.is_active)}
+                  disabled={togglingId === tuition.id}
+                />
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
