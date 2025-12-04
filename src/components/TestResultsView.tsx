@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { WeeklyTest, StudentTestResult, Student } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, BarChart3 } from "lucide-react";
 import { toast } from "sonner";
 import { ReportExporter } from "./ReportExporter";
+import { ImageExporter, ExportButton, ImageExporterRef } from "./ImageExporter";
 
 interface TestResultsViewProps {
   tests: WeeklyTest[];
@@ -19,6 +19,7 @@ interface TestResultsViewProps {
 export function TestResultsView({ tests, testResults, students }: TestResultsViewProps) {
   const [selectedClass, setSelectedClass] = useState<string>("All");
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
+  const imageExporterRef = useRef<ImageExporterRef>(null);
 
   const classes = ["All", ...new Set(students.map(s => s.class))];
   const subjects = ["All", ...new Set(tests.map(t => t.subject))];
@@ -101,10 +102,16 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
         <div>
           <h3 className="text-base sm:text-xl font-semibold">Test Results & Reports</h3>
         </div>
-        <Button onClick={exportResults} className="flex items-center gap-2 text-xs sm:text-sm" size="sm">
-          <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={exportResults} className="flex items-center gap-2 text-xs sm:text-sm" size="sm" variant="outline">
+            <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            Export CSV
+          </Button>
+          <ExportButton
+            onExportImage={(format) => imageExporterRef.current?.exportAsImage(format)}
+            label="Export Image"
+          />
+        </div>
       </div>
 
       {/* Filters */}
@@ -132,93 +139,99 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
         </Select>
       </div>
 
-      {/* Subject Averages */}
-      <Card>
-        <CardHeader className="p-3 sm:p-6">
-          <CardTitle className="text-base sm:text-lg">Subject Performance Overview</CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 sm:p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
-            {subjects.filter(s => s !== "All").map(subject => (
-              <div key={subject} className="text-center p-3 sm:p-4 bg-secondary/20 rounded-lg">
-                <div className="text-xl sm:text-2xl font-bold text-primary">
-                  {getSubjectAverage(subject)}%
-                </div>
-                <div className="text-xs sm:text-sm text-muted-foreground font-semibold truncate">{subject}</div>
-                <div className="text-xs text-muted-foreground">Average</div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Student Results Table */}
-      <Card>
-        <CardHeader className="p-3 sm:p-6">
-          <CardTitle className="text-base sm:text-lg">Individual Student Results</CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 sm:p-6">
-          <div className="space-y-3 sm:space-y-4">
-            {filteredStudents.map(student => {
-              const results = getStudentResults(student.id);
-              const completedTests = results.filter(r => r.result).length;
-              const averageScore = results.length > 0 
-                ? results.reduce((sum, r) => sum + (r.percentage || 0), 0) / results.filter(r => r.percentage).length
-                : 0;
-
-              return (
-                <div key={student.id} className="border rounded-lg p-3 sm:p-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
-                    <div className="flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
-                        <AvatarImage src={student.avatar} />
-                        <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
-                      </div>
-                    </div>
-                    <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
-                      <div className="text-base sm:text-lg font-bold text-primary">
-                        {Math.round(averageScore || 0)}%
-                      </div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">
-                        {completedTests}/{filteredTests.length} tests
-                      </div>
-                    </div>
+      <ImageExporter
+        ref={imageExporterRef}
+        filename={`test-results-${selectedClass}-${selectedSubject}`}
+        title={`Test Results - ${selectedClass === 'All' ? 'All Classes' : selectedClass} - ${selectedSubject === 'All' ? 'All Subjects' : selectedSubject}`}
+      >
+        {/* Subject Averages */}
+        <Card>
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Subject Performance Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+              {subjects.filter(s => s !== "All").map(subject => (
+                <div key={subject} className="text-center p-3 sm:p-4 bg-secondary/20 rounded-lg">
+                  <div className="text-xl sm:text-2xl font-bold text-primary">
+                    {getSubjectAverage(subject)}%
                   </div>
-                  
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
-                    {results.map(({ test, result, percentage }) => (
-                      <div key={test.id} className="flex justify-between items-center p-2 bg-secondary/10 rounded min-w-0">
-                        <div className="text-xs sm:text-sm min-w-0 flex-1 mr-2">
-                          <div className="font-medium truncate">{test.name}</div>
-                          <div className="text-xs text-muted-foreground truncate">{test.subject}</div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          {result ? (
-                            <>
-                              <Badge variant={percentage! >= 80 ? "default" : percentage! >= 60 ? "secondary" : "destructive"} className="text-xs">
-                                {Math.round(percentage!)}%
-                              </Badge>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {result.marks}/{test.maxMarks}
-                              </div>
-                            </>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">Not taken</Badge>
-                          )}
+                  <div className="text-xs sm:text-sm text-muted-foreground font-semibold truncate">{subject}</div>
+                  <div className="text-xs text-muted-foreground">Average</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Student Results Table */}
+        <Card className="mt-4">
+          <CardHeader className="p-3 sm:p-6">
+            <CardTitle className="text-base sm:text-lg">Individual Student Results</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
+              {filteredStudents.map(student => {
+                const results = getStudentResults(student.id);
+                const completedTests = results.filter(r => r.result).length;
+                const averageScore = results.length > 0 
+                  ? results.reduce((sum, r) => sum + (r.percentage || 0), 0) / results.filter(r => r.percentage).length
+                  : 0;
+
+                return (
+                  <div key={student.id} className="border rounded-lg p-3 sm:p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                          <AvatarImage src={student.avatar} />
+                          <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="min-w-0 flex-1">
+                          <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
                         </div>
                       </div>
-                    ))}
+                      <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
+                        <div className="text-base sm:text-lg font-bold text-primary">
+                          {Math.round(averageScore || 0)}%
+                        </div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">
+                          {completedTests}/{filteredTests.length} tests
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3">
+                      {results.map(({ test, result, percentage }) => (
+                        <div key={test.id} className="flex justify-between items-center p-2 bg-secondary/10 rounded min-w-0">
+                          <div className="text-xs sm:text-sm min-w-0 flex-1 mr-2">
+                            <div className="font-medium truncate">{test.name}</div>
+                            <div className="text-xs text-muted-foreground truncate">{test.subject}</div>
+                          </div>
+                          <div className="text-right shrink-0">
+                            {result ? (
+                              <>
+                                <Badge variant={percentage! >= 80 ? "default" : percentage! >= 60 ? "secondary" : "destructive"} className="text-xs">
+                                  {Math.round(percentage!)}%
+                                </Badge>
+                                <div className="text-xs text-muted-foreground mt-1">
+                                  {result.marks}/{test.maxMarks}
+                                </div>
+                              </>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Not taken</Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </ImageExporter>
     </div>
   );
 }
