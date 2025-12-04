@@ -4,9 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
-import { Building2, Users, BookOpen, GraduationCap, Calendar, Mail, Phone, MapPin } from 'lucide-react';
+import { Building2, Users, BookOpen, GraduationCap, Calendar, Mail, Phone, MapPin, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ALL_FEATURES, FeatureKey } from '@/hooks/useTuitionFeatures';
 
 interface TuitionDetailsDialogProps {
   open: boolean;
@@ -22,6 +23,10 @@ export function TuitionDetailsDialog({ open, onOpenChange, tuition }: TuitionDet
     subjects: 0,
     classes: [] as string[],
   });
+
+  const enabledFeatures: FeatureKey[] = tuition?.features && Array.isArray(tuition.features) && tuition.features.length > 0
+    ? tuition.features as FeatureKey[]
+    : ALL_FEATURES.map(f => f.key);
 
   useEffect(() => {
     if (open && tuition) {
@@ -167,6 +172,25 @@ export function TuitionDetailsDialog({ open, onOpenChange, tuition }: TuitionDet
               </div>
             </div>
           )}
+
+          {/* Features */}
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <p className="text-sm font-medium">Enabled Features</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {ALL_FEATURES.map((feature) => (
+                <Badge 
+                  key={feature.key} 
+                  variant={enabledFeatures.includes(feature.key) ? 'default' : 'secondary'}
+                  className={enabledFeatures.includes(feature.key) ? 'bg-green-500' : 'opacity-50'}
+                >
+                  {feature.label}
+                </Badge>
+              ))}
+            </div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
