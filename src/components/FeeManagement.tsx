@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Student, StudentFee, ClassName } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DollarSign, AlertTriangle, CheckCircle, Clock, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
-import { ImageExporter, ExportButton, ImageExporterRef } from './ImageExporter';
+
 interface ClassFee {
   class: ClassName;
   amount: number;
@@ -31,9 +31,6 @@ export function FeeManagement({
   const [selectedClass, setSelectedClass] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  
-  const unpaidListRef = useRef<ImageExporterRef>(null);
-  const feeListRef = useRef<ImageExporterRef>(null);
 
   // Removed auto-generation - user should click "Generate Fees" button after setting class fees
   function getCurrentMonth() {
@@ -168,10 +165,6 @@ export function FeeManagement({
             <span className="hidden sm:inline">Generate Current Month Fees</span>
             <span className="sm:hidden">Generate Fees</span>
           </Button>
-          <ExportButton
-            onExportImage={(format) => feeListRef.current?.exportAsImage(format)}
-            label="Export Fees"
-          />
         </div>
       </div>
 
@@ -287,77 +280,60 @@ export function FeeManagement({
       </Card>
 
       {/* Fee List */}
-      <ImageExporter
-        ref={feeListRef}
-        filename={`fee-status-${selectedMonth}`}
-        title={`Fee Status - ${getAvailableMonths().find(m => m.value === selectedMonth)?.label}`}
-      >
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              Fee Status - {getAvailableMonths().find(m => m.value === selectedMonth)?.label}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-6">
-            <div className="space-y-2">
-              {filteredFees.length === 0 ? <div className="text-center py-8 text-muted-foreground text-sm">
-                  {classFees.length === 0 || classFees.every(cf => cf.amount === 0) 
-                    ? 'Set class fees above (with amounts > 0), then click "Generate Fees" to create fee records for students.'
-                    : 'No fees found for the selected filters. Click "Generate Fees" to create fee records for this month.'}
-                </div> : filteredFees.map(fee => <div key={fee.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-3 sm:p-4 border rounded-lg">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center flex-wrap gap-2 mb-1">
-                        <span className="font-medium text-sm sm:text-base truncate">{getStudentName(fee.studentId)}</span>
-                        <Badge variant="outline" className="text-xs shrink-0">
-                          {students.find(s => s.id === fee.studentId)?.class}
-                        </Badge>
-                      </div>
-                      <div className="text-xs sm:text-sm text-muted-foreground">
-                        Due: {new Date(fee.dueDate).toLocaleDateString()}
-                        {fee.paidDate && ` | Paid: ${new Date(fee.paidDate).toLocaleDateString()}`}
-                      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Fee Status - {getAvailableMonths().find(m => m.value === selectedMonth)?.label}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-3 sm:p-6">
+          <div className="space-y-2">
+            {filteredFees.length === 0 ? <div className="text-center py-8 text-muted-foreground text-sm">
+                {classFees.length === 0 || classFees.every(cf => cf.amount === 0) 
+                  ? 'Set class fees above (with amounts > 0), then click "Generate Fees" to create fee records for students.'
+                  : 'No fees found for the selected filters. Click "Generate Fees" to create fee records for this month.'}
+              </div> : filteredFees.map(fee => <div key={fee.id} className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 p-3 sm:p-4 border rounded-lg">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center flex-wrap gap-2 mb-1">
+                      <span className="font-medium text-sm sm:text-base truncate">{getStudentName(fee.studentId)}</span>
+                      <Badge variant="outline" className="text-xs shrink-0">
+                        {students.find(s => s.id === fee.studentId)?.class}
+                      </Badge>
                     </div>
-                    
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                      <div className="flex items-center gap-3 sm:text-right w-full sm:w-auto">
-                        <div className="flex-1 sm:flex-initial">
-                          <div className="font-bold text-sm sm:text-base">₹{fee.amount.toFixed(2)}</div>
-                          <div className="flex items-center gap-1 mt-1">
-                            {getStatusIcon(fee.status)}
-                            <Badge variant={getStatusColor(fee.status)} className="text-xs">
-                              {fee.status}
-                            </Badge>
-                          </div>
+                    <div className="text-xs sm:text-sm text-muted-foreground">
+                      Due: {new Date(fee.dueDate).toLocaleDateString()}
+                      {fee.paidDate && ` | Paid: ${new Date(fee.paidDate).toLocaleDateString()}`}
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
+                    <div className="flex items-center gap-3 sm:text-right w-full sm:w-auto">
+                      <div className="flex-1 sm:flex-initial">
+                        <div className="font-bold text-sm sm:text-base">₹{fee.amount.toFixed(2)}</div>
+                        <div className="flex items-center gap-1 mt-1">
+                          {getStatusIcon(fee.status)}
+                          <Badge variant={getStatusColor(fee.status)} className="text-xs">
+                            {fee.status}
+                          </Badge>
                         </div>
-                        {fee.status !== 'paid' && <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)} className="shrink-0">
-                            Mark Paid
-                          </Button>}
                       </div>
+                      {fee.status !== 'paid' && <Button size="sm" onClick={() => handleMarkAsPaid(fee.id)} className="shrink-0">
+                          Mark Paid
+                        </Button>}
                     </div>
-                  </div>)}
-            </div>
-          </CardContent>
-        </Card>
-      </ImageExporter>
+                  </div>
+                </div>)}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Unpaid Fees Alert for Current Month */}
-      {unpaidFeesThisMonth.length > 0 && selectedMonth === currentMonth && <ImageExporter
-        ref={unpaidListRef}
-        filename={`unpaid-fees-${currentMonth}`}
-        title={`Unpaid Fees - ${getAvailableMonths().find(m => m.value === currentMonth)?.label}`}
-      >
+      {unpaidFeesThisMonth.length > 0 && selectedMonth === currentMonth && 
         <Card className="border-red-200 bg-red-50">
           <CardHeader className="p-3 sm:p-6">
-            <CardTitle className="text-sm sm:text-base text-red-700 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span className="truncate">Students with Unpaid Fees ({unpaidFeesThisMonth.length})</span>
-              </div>
-              <ExportButton
-                onExportImage={(format) => unpaidListRef.current?.exportAsImage(format)}
-                label="Export"
-                size="sm"
-              />
+            <CardTitle className="text-sm sm:text-base text-red-700 flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 shrink-0" />
+              <span className="truncate">Students with Unpaid Fees ({unpaidFeesThisMonth.length})</span>
             </CardTitle>
           </CardHeader>
           <CardContent className="p-3 sm:p-6">
@@ -382,6 +358,6 @@ export function FeeManagement({
             </div>
           </CardContent>
         </Card>
-      </ImageExporter>}
+      }
     </div>;
 }
