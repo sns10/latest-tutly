@@ -328,14 +328,14 @@ export function ScheduleClassDialog({
               </div>
             )}
             <Select
-              value={formData.roomId}
-              onValueChange={(value) => setFormData({ ...formData, roomId: value })}
+              value={formData.roomId || "none"}
+              onValueChange={(value) => setFormData({ ...formData, roomId: value === "none" ? "" : value })}
             >
               <SelectTrigger className="bg-white">
                 <SelectValue placeholder="Select room (optional)" />
               </SelectTrigger>
               <SelectContent className="bg-white">
-                <SelectItem value="">No room assigned</SelectItem>
+                <SelectItem value="none">No room assigned</SelectItem>
                 {rooms.map((room) => {
                   const hasConflict = roomConflicts.has(room.id);
                   return (
