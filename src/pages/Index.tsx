@@ -7,7 +7,8 @@ import { ManagementCards } from "@/components/ManagementCards";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentTests } from "@/components/RecentTests";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Loader2, Building2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, Building2, LogOut } from "lucide-react";
 import LeaderboardPage from './Leaderboard';
 import MaterialsPage from './Materials';
 import FeesPage from './Fees';
@@ -17,7 +18,7 @@ import ClassesPage from './Classes';
 import StudentsPage from './Students';
 
 const Index = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, signOut, loading: authLoading } = useAuth();
   const { tuition } = useTuitionInfo();
   const {
     students,
@@ -70,18 +71,24 @@ const Index = () => {
     <Routes>
       <Route path="/" element={
         <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-              <Building2 className="h-5 w-5 text-white" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
+                <Building2 className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
+                  {tuition?.name || 'Dashboard'}
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-500">
+                  Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                {tuition?.name || 'Dashboard'}
-              </h2>
-              <p className="text-xs sm:text-sm text-gray-500">
-                Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
-              </p>
-            </div>
+            <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
+              <LogOut className="h-4 w-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </Button>
           </div>
           
           <ManagementCards 
