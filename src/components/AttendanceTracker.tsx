@@ -21,7 +21,7 @@ interface AttendanceTrackerProps {
   onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => void;
 }
 
-const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th'];
+const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
 
 interface DetectedClass {
   class: ClassName;

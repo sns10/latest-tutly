@@ -48,7 +48,10 @@ export function StudentAttendanceRow({ student, studentAttendance, onMarkAttenda
           size="sm" 
           variant={studentAttendance?.status === 'late' ? 'secondary' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'late')}
-          className="h-8 w-8 sm:h-9 sm:w-9 p-0"
+          className={cn(
+            "h-8 w-8 sm:h-9 sm:w-9 p-0",
+            studentAttendance?.status === 'late' && "bg-yellow-500 hover:bg-yellow-600 text-white"
+          )}
         >
           <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
         </Button>
