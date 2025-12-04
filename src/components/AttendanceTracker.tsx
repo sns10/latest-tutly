@@ -43,7 +43,7 @@ export function AttendanceTracker({
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedFaculty, setSelectedFaculty] = useState<string>('');
-  const [bulkStatus, setBulkStatus] = useState<'present' | 'absent' | 'late' | 'excused'>('present');
+  
   const [searchQuery, setSearchQuery] = useState('');
   const [isManualMode, setIsManualMode] = useState(false);
   const [detectedClass, setDetectedClass] = useState<DetectedClass | null>(null);
@@ -165,19 +165,19 @@ export function AttendanceTracker({
     toast.success(`${studentName}${context} marked as ${status}`);
   };
 
-  const handleBulkAttendance = () => {
+  const handleBulkAttendance = (status: 'present' | 'absent' | 'late' | 'excused') => {
     let markedCount = 0;
     
     filteredStudents.forEach(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
       if (!existingAttendance) {
-        onMarkAttendance(student.id, selectedDateStr, bulkStatus, undefined, selectedSubject || undefined, selectedFaculty || undefined);
+        onMarkAttendance(student.id, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
         markedCount++;
       }
     });
     
     if (markedCount > 0) {
-      toast.success(`${markedCount} students marked as ${bulkStatus}`);
+      toast.success(`${markedCount} students marked as ${status}`);
     } else {
       toast.info('All students already have attendance marked');
     }
@@ -361,26 +361,14 @@ export function AttendanceTracker({
                 </div>
 
                 {/* Bulk Actions */}
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <Label className="text-sm">Bulk Mark As</Label>
-                  <Select value={bulkStatus} onValueChange={(v: any) => setBulkStatus(v)}>
-                    <SelectTrigger className="bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="present">Present</SelectItem>
-                      <SelectItem value="absent">Absent</SelectItem>
-                      <SelectItem value="late">Late</SelectItem>
-                      <SelectItem value="excused">Excused</SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="pt-2 border-t border-slate-100">
                   <Button 
-                    onClick={handleBulkAttendance} 
-                    className="w-full bg-blue-600 hover:bg-blue-700" 
+                    onClick={() => handleBulkAttendance('present')} 
+                    className="w-full bg-green-600 hover:bg-green-700" 
                     size="sm"
                     disabled={!selectedClass}
                   >
-                    Mark All Unmarked
+                    Mark All Present
                   </Button>
                 </div>
               </CardContent>
