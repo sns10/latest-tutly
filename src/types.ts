@@ -148,6 +148,16 @@ export interface Faculty {
   updatedAt: string;
 }
 
+export interface Room {
+  id: string;
+  name: string;
+  capacity?: number;
+  description?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Timetable {
   id: string;
   class: ClassName;
@@ -157,12 +167,16 @@ export interface Timetable {
   startTime: string;
   endTime: string;
   roomNumber?: string;
+  roomId?: string;
   type: 'regular' | 'special';
   specificDate?: string; // ISO date string for one-time special classes
   startDate?: string; // ISO date string for date range start
   endDate?: string; // ISO date string for date range end
+  eventType?: string; // For special classes: exam_revision, night_class, etc.
+  notes?: string;
   subject?: Subject;
   faculty?: Faculty;
+  room?: Room;
   createdAt: string;
   updatedAt: string;
 }

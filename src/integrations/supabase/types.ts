@@ -344,6 +344,47 @@ export type Database = {
           },
         ]
       }
+      rooms: {
+        Row: {
+          capacity: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          tuition_id: string
+          updated_at: string
+        }
+        Insert: {
+          capacity?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          tuition_id: string
+          updated_at?: string
+        }
+        Update: {
+          capacity?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          tuition_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rooms_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       student_attendance: {
         Row: {
           created_at: string
@@ -716,8 +757,11 @@ export type Database = {
           day_of_week: number
           end_date: string | null
           end_time: string
+          event_type: string | null
           faculty_id: string
           id: string
+          notes: string | null
+          room_id: string | null
           room_number: string | null
           specific_date: string | null
           start_date: string | null
@@ -733,8 +777,11 @@ export type Database = {
           day_of_week: number
           end_date?: string | null
           end_time: string
+          event_type?: string | null
           faculty_id: string
           id?: string
+          notes?: string | null
+          room_id?: string | null
           room_number?: string | null
           specific_date?: string | null
           start_date?: string | null
@@ -750,8 +797,11 @@ export type Database = {
           day_of_week?: number
           end_date?: string | null
           end_time?: string
+          event_type?: string | null
           faculty_id?: string
           id?: string
+          notes?: string | null
+          room_id?: string | null
           room_number?: string | null
           specific_date?: string | null
           start_date?: string | null
@@ -767,6 +817,13 @@ export type Database = {
             columns: ["faculty_id"]
             isOneToOne: false
             referencedRelation: "faculty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "timetable_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
           {
