@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Student, StudentAttendance, Timetable, Subject, Faculty, ClassName } from '@/types';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AttendanceStats } from './attendance/AttendanceStats';
 import { StudentAttendanceList } from './attendance/StudentAttendanceList';
 import { ReportExporter } from './ReportExporter';
+import { ImageExporter, ExportButton, ImageExporterRef } from './ImageExporter';
 import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays } from 'lucide-react';
 
 interface AttendanceTrackerProps {
@@ -47,6 +48,8 @@ export function AttendanceTracker({
   const [searchQuery, setSearchQuery] = useState('');
   const [isManualMode, setIsManualMode] = useState(false);
   const [detectedClass, setDetectedClass] = useState<DetectedClass | null>(null);
+  
+  const imageExporterRef = useRef<ImageExporterRef>(null);
 
   const formatDate = (date: Date) => date.toISOString().split('T')[0];
   const selectedDateStr = formatDate(selectedDate);
@@ -299,9 +302,13 @@ export function AttendanceTracker({
             )}
             <ReportExporter
               type="absentees"
-              label="Export Absentees"
+              label="Export PDF"
               classValue={selectedClass || undefined}
               startDate={selectedDateStr}
+            />
+            <ExportButton
+              onExportImage={(format) => imageExporterRef.current?.exportAsImage(format)}
+              label="Export Image"
             />
           </div>
         </div>
@@ -476,7 +483,11 @@ export function AttendanceTracker({
                 </CardContent>
               </Card>
             ) : (
-              <>
+              <ImageExporter 
+                ref={imageExporterRef} 
+                filename={`absentees-${selectedClass}-${selectedDateStr}`}
+                title={`Attendance - ${selectedClass} Grade - ${selectedDate.toLocaleDateString()}`}
+              >
                 <AttendanceStats stats={stats} />
                 <StudentAttendanceList
                   students={filteredStudents}
@@ -484,7 +495,7 @@ export function AttendanceTracker({
                   getAttendanceForStudent={getAttendanceForStudent}
                   onMarkAttendance={handleMarkAttendance}
                 />
-              </>
+              </ImageExporter>
             )}
           </div>
         </div>
