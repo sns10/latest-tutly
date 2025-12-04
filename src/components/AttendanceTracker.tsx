@@ -290,15 +290,15 @@ export function AttendanceTracker({
                     Subject
                   </Label>
                   <Select 
-                    value={selectedSubject} 
-                    onValueChange={setSelectedSubject}
+                    value={selectedSubject || "all"} 
+                    onValueChange={(v) => setSelectedSubject(v === "all" ? "" : v)}
                     disabled={!selectedClass}
                   >
                     <SelectTrigger className="bg-white">
                       <SelectValue placeholder="All subjects" />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="">All subjects</SelectItem>
+                      <SelectItem value="all">All subjects</SelectItem>
                       {availableSubjects.map(subject => (
                         <SelectItem key={subject.id} value={subject.id}>
                           {subject.name}
@@ -315,15 +315,15 @@ export function AttendanceTracker({
                     Faculty
                   </Label>
                   <Select 
-                    value={selectedFaculty} 
-                    onValueChange={setSelectedFaculty}
+                    value={selectedFaculty || "all"} 
+                    onValueChange={(v) => setSelectedFaculty(v === "all" ? "" : v)}
                     disabled={!selectedClass}
                   >
                     <SelectTrigger className="bg-white">
                       <SelectValue placeholder="All faculty" />
                     </SelectTrigger>
                     <SelectContent className="bg-white">
-                      <SelectItem value="">All faculty</SelectItem>
+                      <SelectItem value="all">All faculty</SelectItem>
                       {availableFaculty.map(fac => (
                         <SelectItem key={fac.id} value={fac.id}>
                           {fac.name}
