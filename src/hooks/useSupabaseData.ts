@@ -26,10 +26,12 @@ export function useSupabaseData() {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch all data
+  // Fetch all data when tuitionId is available
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (tuitionId) {
+      fetchAllData();
+    }
+  }, [tuitionId]);
 
   const fetchAllData = async () => {
     try {
