@@ -26,6 +26,7 @@ export default function FeesPage() {
     <div className="w-full px-3 py-4 sm:px-6 space-y-4">
       <ClassFeeManager 
         classFees={classFees}
+        students={students}
         onUpdateClassFee={updateClassFee}
       />
       <FeeManagement

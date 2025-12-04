@@ -88,7 +88,9 @@ export function FeeManagement({
   const filteredFees = fees.filter(fee => {
     const student = students.find(s => s.id === fee.studentId);
     const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
-    const monthMatch = fee.feeType.includes(selectedMonth);
+    // Handle both old format (fee_type="monthly") and new format (fee_type="Monthly Fee - 2024-12")
+    const monthMatch = fee.feeType?.includes(selectedMonth) || 
+                       (fee.feeType === 'monthly' && fee.dueDate?.startsWith(selectedMonth));
     const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
     const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
     const searchMatch = searchQuery === '' || (student && student.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -96,10 +98,16 @@ export function FeeManagement({
   });
 
   // Get unpaid fees for current month
-  const unpaidFeesThisMonth = fees.filter(f => f.status === 'unpaid' && f.feeType.includes(getCurrentMonth()));
+  const currentMonth = getCurrentMonth();
+  const unpaidFeesThisMonth = fees.filter(f => 
+    f.status === 'unpaid' && 
+    (f.feeType?.includes(currentMonth) || (f.feeType === 'monthly' && f.dueDate?.startsWith(currentMonth)))
+  );
 
-  // Calculate statistics for current month
-  const currentMonthFees = fees.filter(f => f.feeType.includes(selectedMonth));
+  // Calculate statistics for selected month
+  const currentMonthFees = fees.filter(f => 
+    f.feeType?.includes(selectedMonth) || (f.feeType === 'monthly' && f.dueDate?.startsWith(selectedMonth))
+  );
   const totalAmount = currentMonthFees.reduce((sum, fee) => sum + fee.amount, 0);
   const paidAmount = currentMonthFees.filter(f => f.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
   const unpaidAmount = currentMonthFees.filter(f => f.status === 'unpaid').reduce((sum, fee) => sum + fee.amount, 0);
@@ -306,7 +314,7 @@ export function FeeManagement({
       </Card>
 
       {/* Unpaid Fees Alert for Current Month */}
-      {unpaidFeesThisMonth.length > 0 && selectedMonth === getCurrentMonth() && <Card className="border-red-200 bg-red-50">
+      {unpaidFeesThisMonth.length > 0 && selectedMonth === currentMonth && <Card className="border-red-200 bg-red-50">
           <CardHeader className="p-3 sm:p-6">
             <CardTitle className="text-sm sm:text-base text-red-700 flex items-center gap-2">
               <AlertTriangle className="h-4 w-4 shrink-0" />
