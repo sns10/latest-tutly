@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee, Faculty, Subject, Timetable, Division } from '@/types';
+import { Student, WeeklyTest, StudentTestResult, Badge, PurchasedReward, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee, Faculty, Subject, Timetable, Division, Room } from '@/types';
 import { toast } from 'sonner';
 import { BADGE_DEFINITIONS } from '@/config/badges';
 import { XP_STORE_ITEMS } from '@/config/rewards';
@@ -23,6 +23,7 @@ export function useSupabaseData() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [timetable, setTimetable] = useState<Timetable[]>([]);
   const [divisions, setDivisions] = useState<Division[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch all data
@@ -46,7 +47,8 @@ export function useSupabaseData() {
         fetchClassFees(),
         fetchFaculty(),
         fetchSubjects(),
-        fetchTimetable()
+        fetchTimetable(),
+        fetchRooms()
       ]);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -909,10 +911,13 @@ export function useSupabaseData() {
       startTime: t.start_time,
       endTime: t.end_time,
       roomNumber: t.room_number,
+      roomId: t.room_id,
       type: t.type || 'regular',
       specificDate: t.specific_date,
       startDate: t.start_date,
       endDate: t.end_date,
+      eventType: t.event_type,
+      notes: t.notes,
       subject: t.subjects ? {
         id: t.subjects.id,
         name: t.subjects.name,
@@ -932,6 +937,81 @@ export function useSupabaseData() {
     }));
 
     setTimetable(formattedTimetable);
+  };
+
+  // Fetch Rooms
+  const fetchRooms = async () => {
+    const { data, error } = await supabase
+      .from('rooms')
+      .select('*')
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching rooms:', error);
+      return;
+    }
+
+    const formattedRooms: Room[] = data.map((r: any) => ({
+      id: r.id,
+      name: r.name,
+      capacity: r.capacity,
+      description: r.description,
+      isActive: r.is_active,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    }));
+
+    setRooms(formattedRooms);
+  };
+
+  // Add Room
+  const addRoom = async (name: string, capacity?: number, description?: string) => {
+    const { error } = await supabase
+      .from('rooms')
+      .insert({ name, capacity, description, tuition_id: tuitionId! });
+
+    if (error) {
+      console.error('Error adding room:', error);
+      toast.error('Failed to add room');
+      return;
+    }
+
+    toast.success('Room added successfully');
+    await fetchRooms();
+  };
+
+  // Update Room
+  const updateRoom = async (id: string, name: string, capacity?: number, description?: string) => {
+    const { error } = await supabase
+      .from('rooms')
+      .update({ name, capacity, description, updated_at: new Date().toISOString() })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating room:', error);
+      toast.error('Failed to update room');
+      return;
+    }
+
+    toast.success('Room updated successfully');
+    await fetchRooms();
+  };
+
+  // Delete Room
+  const deleteRoom = async (id: string) => {
+    const { error } = await supabase
+      .from('rooms')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting room:', error);
+      toast.error('Failed to delete room');
+      return;
+    }
+
+    toast.success('Room deleted successfully');
+    await fetchRooms();
   };
 
   // Add Faculty
@@ -1219,6 +1299,7 @@ export function useSupabaseData() {
     subjects,
     timetable,
     divisions,
+    rooms,
     loading,
     addStudent,
     addWeeklyTest,
@@ -1248,5 +1329,8 @@ export function useSupabaseData() {
     updateDivision,
     deleteDivision,
     updateStudentDivision,
+    addRoom,
+    updateRoom,
+    deleteRoom,
   };
 }
