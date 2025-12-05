@@ -161,6 +161,8 @@ export interface Room {
 export interface Timetable {
   id: string;
   class: ClassName;
+  divisionId?: string;
+  division?: Division;
   subjectId: string;
   facultyId: string;
   dayOfWeek: number; // 0=Sunday, 6=Saturday

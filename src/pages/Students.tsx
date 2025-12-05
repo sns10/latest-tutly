@@ -25,6 +25,7 @@ export default function StudentsPage() {
     loading,
     addStudent,
     removeStudent,
+    updateStudent,
     addXp,
     assignTeam,
     buyReward,
@@ -210,9 +211,11 @@ export default function StudentsPage() {
           fees={fees.filter(f => f.studentId === selectedStudent.id)}
           subjects={subjects}
           faculty={faculty}
+          divisions={divisions}
           open={!!selectedStudent}
           onOpenChange={(open) => !open && setSelectedStudent(null)}
           onRemoveStudent={removeStudent}
+          onUpdateStudent={updateStudent}
         />
       )}
     </div>

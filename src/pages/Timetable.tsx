@@ -9,6 +9,7 @@ export default function TimetablePage() {
     subjects,
     timetable,
     rooms,
+    divisions,
     loading,
     addTimetableEntry,
     updateTimetableEntry,
@@ -31,7 +32,8 @@ export default function TimetablePage() {
     roomNumber?: string,
     specificDate?: string,
     eventType?: string,
-    notes?: string
+    notes?: string,
+    divisionId?: string
   ) => {
     await addTimetableEntry(
       classValue,
@@ -47,7 +49,8 @@ export default function TimetablePage() {
       undefined, // startDate
       undefined, // endDate
       eventType,
-      notes
+      notes,
+      divisionId
     );
   };
 
@@ -65,7 +68,8 @@ export default function TimetablePage() {
     roomNumber?: string,
     specificDate?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    divisionId?: string
   ) => {
     await updateTimetableEntry(
       id,
@@ -80,7 +84,10 @@ export default function TimetablePage() {
       roomNumber,
       specificDate,
       startDate,
-      endDate
+      endDate,
+      undefined, // eventType
+      undefined, // notes
+      divisionId
     );
   };
 
@@ -98,6 +105,7 @@ export default function TimetablePage() {
       faculty={faculty}
       subjects={subjects}
       rooms={rooms}
+      divisions={divisions}
       onAddEntry={handleAddEntry}
       onUpdateEntry={handleUpdateEntry}
       onDeleteEntry={deleteTimetableEntry}

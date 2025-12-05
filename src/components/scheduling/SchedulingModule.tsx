@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Timetable, Faculty, Subject, Room, ClassName } from '@/types';
+import { Timetable, Faculty, Subject, Room, ClassName, Division } from '@/types';
 import { RoomManager } from './RoomManager';
 import { WeeklyTimetable } from './WeeklyTimetable';
 import { ScheduleClassDialog } from './ScheduleClassDialog';
@@ -14,6 +14,7 @@ interface SchedulingModuleProps {
   faculty: Faculty[];
   subjects: Subject[];
   rooms: Room[];
+  divisions: Division[];
   onAddEntry: (
     classValue: ClassName,
     subjectId: string,
@@ -26,7 +27,8 @@ interface SchedulingModuleProps {
     roomNumber?: string,
     specificDate?: string,
     eventType?: string,
-    notes?: string
+    notes?: string,
+    divisionId?: string
   ) => Promise<void>;
   onUpdateEntry: (
     id: string,
@@ -41,7 +43,8 @@ interface SchedulingModuleProps {
     roomNumber?: string,
     specificDate?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    divisionId?: string
   ) => Promise<void>;
   onDeleteEntry: (id: string) => Promise<void>;
   onAddRoom: (name: string, capacity?: number, description?: string) => Promise<void>;
@@ -54,6 +57,7 @@ export function SchedulingModule({
   faculty,
   subjects,
   rooms,
+  divisions,
   onAddEntry,
   onUpdateEntry,
   onDeleteEntry,
@@ -85,6 +89,7 @@ export function SchedulingModule({
           faculty={faculty}
           subjects={subjects}
           rooms={rooms}
+          divisions={divisions}
           onScheduleClass={onAddEntry}
         />
       </div>
@@ -121,6 +126,7 @@ export function SchedulingModule({
             faculty={faculty}
             subjects={subjects}
             rooms={rooms}
+            divisions={divisions}
             onAddEntry={onAddEntry}
             onUpdateEntry={onUpdateEntry}
             onDeleteEntry={onDeleteEntry}
