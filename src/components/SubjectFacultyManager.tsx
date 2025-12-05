@@ -225,61 +225,67 @@ export function SubjectFacultyManager({
 
       {/* Add Faculty Dialog */}
       <Dialog open={isAddFacultyOpen} onOpenChange={setIsAddFacultyOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Add New Faculty</DialogTitle>
             <DialogDescription>Create a new faculty member and assign subjects</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="faculty-name" className="text-right">Name</Label>
-              <Input
-                id="faculty-name"
-                value={facultyName}
-                onChange={(e) => setFacultyName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="faculty-email" className="text-right">Email</Label>
-              <Input
-                id="faculty-email"
-                type="email"
-                value={facultyEmail}
-                onChange={(e) => setFacultyEmail(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="faculty-phone" className="text-right">Phone</Label>
-              <Input
-                id="faculty-phone"
-                value={facultyPhone}
-                onChange={(e) => setFacultyPhone(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">Subjects</Label>
-              <div className="col-span-3 space-y-2">
-                {subjects.map(subject => (
-                  <div key={subject.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`subject-${subject.id}`}
-                      checked={selectedSubjects.includes(subject.id)}
-                      onChange={() => toggleSubject(subject.id)}
-                      className="rounded"
-                    />
-                    <Label htmlFor={`subject-${subject.id}`} className="cursor-pointer">
-                      {subject.name} ({subject.class})
-                    </Label>
-                  </div>
-                ))}
+          <div className="flex-1 overflow-y-auto pr-2">
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="faculty-name">Name *</Label>
+                <Input
+                  id="faculty-name"
+                  value={facultyName}
+                  onChange={(e) => setFacultyName(e.target.value)}
+                  placeholder="Enter faculty name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="faculty-email">Email</Label>
+                <Input
+                  id="faculty-email"
+                  type="email"
+                  value={facultyEmail}
+                  onChange={(e) => setFacultyEmail(e.target.value)}
+                  placeholder="Enter email address"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="faculty-phone">Phone</Label>
+                <Input
+                  id="faculty-phone"
+                  value={facultyPhone}
+                  onChange={(e) => setFacultyPhone(e.target.value)}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Assign Subjects</Label>
+                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-muted/30">
+                  {subjects.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No subjects available. Add subjects first.</p>
+                  ) : (
+                    subjects.map(subject => (
+                      <div key={subject.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`subject-${subject.id}`}
+                          checked={selectedSubjects.includes(subject.id)}
+                          onChange={() => toggleSubject(subject.id)}
+                          className="rounded"
+                        />
+                        <Label htmlFor={`subject-${subject.id}`} className="cursor-pointer text-sm">
+                          {subject.name} ({subject.class})
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-4 border-t">
             <Button onClick={handleAddFaculty}>Add Faculty</Button>
           </DialogFooter>
         </DialogContent>
@@ -287,61 +293,67 @@ export function SubjectFacultyManager({
 
       {/* Edit Faculty Dialog */}
       <Dialog open={isEditFacultyOpen} onOpenChange={setIsEditFacultyOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-md sm:max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Faculty</DialogTitle>
             <DialogDescription>Update faculty member details</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-faculty-name" className="text-right">Name</Label>
-              <Input
-                id="edit-faculty-name"
-                value={facultyName}
-                onChange={(e) => setFacultyName(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-faculty-email" className="text-right">Email</Label>
-              <Input
-                id="edit-faculty-email"
-                type="email"
-                value={facultyEmail}
-                onChange={(e) => setFacultyEmail(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="edit-faculty-phone" className="text-right">Phone</Label>
-              <Input
-                id="edit-faculty-phone"
-                value={facultyPhone}
-                onChange={(e) => setFacultyPhone(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-start gap-4">
-              <Label className="text-right pt-2">Subjects</Label>
-              <div className="col-span-3 space-y-2">
-                {subjects.map(subject => (
-                  <div key={subject.id} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      id={`edit-subject-${subject.id}`}
-                      checked={selectedSubjects.includes(subject.id)}
-                      onChange={() => toggleSubject(subject.id)}
-                      className="rounded"
-                    />
-                    <Label htmlFor={`edit-subject-${subject.id}`} className="cursor-pointer">
-                      {subject.name} ({subject.class})
-                    </Label>
-                  </div>
-                ))}
+          <div className="flex-1 overflow-y-auto pr-2">
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-faculty-name">Name *</Label>
+                <Input
+                  id="edit-faculty-name"
+                  value={facultyName}
+                  onChange={(e) => setFacultyName(e.target.value)}
+                  placeholder="Enter faculty name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-faculty-email">Email</Label>
+                <Input
+                  id="edit-faculty-email"
+                  type="email"
+                  value={facultyEmail}
+                  onChange={(e) => setFacultyEmail(e.target.value)}
+                  placeholder="Enter email address"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-faculty-phone">Phone</Label>
+                <Input
+                  id="edit-faculty-phone"
+                  value={facultyPhone}
+                  onChange={(e) => setFacultyPhone(e.target.value)}
+                  placeholder="Enter phone number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Assign Subjects</Label>
+                <div className="border rounded-md p-3 max-h-40 overflow-y-auto space-y-2 bg-muted/30">
+                  {subjects.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No subjects available. Add subjects first.</p>
+                  ) : (
+                    subjects.map(subject => (
+                      <div key={subject.id} className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id={`edit-subject-${subject.id}`}
+                          checked={selectedSubjects.includes(subject.id)}
+                          onChange={() => toggleSubject(subject.id)}
+                          className="rounded"
+                        />
+                        <Label htmlFor={`edit-subject-${subject.id}`} className="cursor-pointer text-sm">
+                          {subject.name} ({subject.class})
+                        </Label>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="pt-4 border-t">
             <Button onClick={handleEditFaculty}>Update Faculty</Button>
           </DialogFooter>
         </DialogContent>
