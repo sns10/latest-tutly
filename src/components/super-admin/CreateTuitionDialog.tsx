@@ -55,70 +55,30 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
 
       if (tuitionError) throw tuitionError;
 
-      // 2. Try to create admin user account
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: formData.adminEmail,
-        password: formData.adminPassword,
-        options: {
-          data: {
-            full_name: formData.adminName,
-          },
+      // 2. Call edge function to set up admin (handles both new and existing users)
+      const { data: setupData, error: setupError } = await supabase.functions.invoke('setup-tuition-admin', {
+        body: {
+          adminEmail: formData.adminEmail,
+          adminPassword: formData.adminPassword,
+          adminName: formData.adminName,
+          tuitionId: tuitionData.id,
         },
       });
 
-      let userId: string | null = null;
-
-      if (authError) {
-        // Check if user already exists
-        if (authError.message?.includes('already registered') || authError.message?.includes('already been registered')) {
-          // User exists - find them by checking profiles with matching email pattern in full_name
-          // Since we can't query auth.users, check if there's a profile linked to this tuition
-          toast.info('User already exists. Please have them log in and the system will link them to this tuition.');
-          
-          // Store the admin email in tuition for later linking
-          await supabase
-            .from('tuitions')
-            .update({ email: formData.adminEmail })
-            .eq('id', tuitionData.id);
-            
-          toast.success('Tuition center created! The admin user needs to log in to be linked.');
-          onSuccess();
-          onOpenChange(false);
-          setFormData({
-            name: '',
-            email: '',
-            phone: '',
-            address: '',
-            adminEmail: '',
-            adminPassword: '',
-            adminName: '',
-          });
-          return;
-        } else {
-          throw authError;
-        }
+      if (setupError) {
+        console.error('Setup error:', setupError);
+        // Tuition created but admin setup failed - inform user
+        toast.warning('Tuition created but admin setup failed. You may need to manually assign the admin.');
+      } else if (setupData?.error) {
+        console.error('Setup response error:', setupData.error);
+        toast.warning(`Tuition created. Admin setup issue: ${setupData.error}`);
+      } else {
+        const message = setupData?.isNewUser 
+          ? 'Tuition center and admin account created successfully!'
+          : 'Tuition center created and existing user assigned as admin!';
+        toast.success(message);
       }
 
-      userId = authData?.user?.id || null;
-
-      // 3. Use RPC function to set up tuition admin (bypasses RLS)
-      if (userId) {
-        // Wait a moment for the profile trigger to potentially create the profile
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
-        const { error: setupError } = await supabase.rpc('setup_tuition_admin', {
-          _user_id: userId,
-          _tuition_id: tuitionData.id,
-          _full_name: formData.adminName,
-        });
-
-        if (setupError) {
-          console.error('Setup tuition admin error:', setupError);
-          toast.error('Tuition created but admin setup failed. Please try again.');
-        }
-      }
-
-      toast.success('Tuition center created successfully!');
       onSuccess();
       onOpenChange(false);
       setFormData({
@@ -151,7 +111,7 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
           <div className="space-y-6 py-4">
             {/* Tuition Details */}
             <div className="space-y-4">
-              <h3 className="font-semibold text-sm text-slate-900">Tuition Details</h3>
+              <h3 className="font-semibold text-sm text-foreground">Tuition Details</h3>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Label htmlFor="name">Tuition Name *</Label>
@@ -197,7 +157,10 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
 
             {/* Admin Account */}
             <div className="space-y-4 pt-4 border-t">
-              <h3 className="font-semibold text-sm text-slate-900">Admin Account</h3>
+              <h3 className="font-semibold text-sm text-foreground">Admin Account</h3>
+              <p className="text-xs text-muted-foreground">
+                If the email already exists, the user will be assigned as admin. Otherwise, a new account will be created.
+              </p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2">
                   <Label htmlFor="adminName">Admin Name *</Label>
@@ -221,16 +184,18 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
                   />
                 </div>
                 <div className="col-span-2">
-                  <Label htmlFor="adminPassword">Admin Password *</Label>
+                  <Label htmlFor="adminPassword">Admin Password (for new users)</Label>
                   <Input
                     id="adminPassword"
                     type="password"
                     value={formData.adminPassword}
                     onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                    placeholder="Minimum 6 characters"
-                    required
+                    placeholder="Minimum 6 characters (leave empty if user exists)"
                     minLength={6}
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Required only if creating a new user account
+                  </p>
                 </div>
               </div>
             </div>
