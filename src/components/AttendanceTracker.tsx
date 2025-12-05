@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Student, StudentAttendance, Timetable, Subject, Faculty, ClassName } from '@/types';
+import { Student, StudentAttendance, Timetable, Subject, Faculty, ClassName, Division } from '@/types';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AttendanceStats } from './attendance/AttendanceStats';
 import { StudentAttendanceList } from './attendance/StudentAttendanceList';
 import { ReportExporter } from './ReportExporter';
-import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays } from 'lucide-react';
+import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -18,6 +18,7 @@ interface AttendanceTrackerProps {
   timetable?: Timetable[];
   subjects?: Subject[];
   faculty?: Faculty[];
+  divisions?: Division[];
   onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => void;
 }
 
@@ -37,10 +38,12 @@ export function AttendanceTracker({
   timetable = [], 
   subjects = [], 
   faculty = [], 
+  divisions = [],
   onMarkAttendance 
 }: AttendanceTrackerProps) {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedClass, setSelectedClass] = useState<string>('');
+  const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedFaculty, setSelectedFaculty] = useState<string>('');
   
@@ -107,13 +110,20 @@ export function AttendanceTracker({
     setIsManualMode(true);
   }, [timetable, subjects, faculty, isManualMode]);
 
-  // Filter students by class and search query
+  // Get available divisions for selected class
+  const availableDivisions = useMemo(() => {
+    if (!selectedClass) return [];
+    return divisions.filter(d => d.class === selectedClass);
+  }, [divisions, selectedClass]);
+
+  // Filter students by class, division and search query
   const filteredStudents = useMemo(() => {
     if (!selectedClass) return [];
     return students
       .filter(s => s.class === selectedClass)
+      .filter(s => !selectedDivision || s.divisionId === selectedDivision)
       .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [students, selectedClass, searchQuery]);
+  }, [students, selectedClass, selectedDivision, searchQuery]);
 
   // Get attendance for selected date - must match exact subject/faculty context
   const getAttendanceForStudent = (studentId: string) => {
@@ -238,6 +248,7 @@ export function AttendanceTracker({
     setIsManualMode(true);
     setDetectedClass(null);
     setSelectedClass('');
+    setSelectedDivision('');
     setSelectedSubject('');
     setSelectedFaculty('');
   };
@@ -333,6 +344,7 @@ export function AttendanceTracker({
                   <Label className="text-sm font-medium">Filter by Class</Label>
                   <Select value={selectedClass} onValueChange={(value) => {
                     setSelectedClass(value);
+                    setSelectedDivision('');
                     setSelectedSubject('');
                     setSelectedFaculty('');
                   }}>
@@ -346,6 +358,33 @@ export function AttendanceTracker({
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Division Filter */}
+                {availableDivisions.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="flex items-center gap-2 text-sm">
+                      <Users className="h-4 w-4" />
+                      Division
+                    </Label>
+                    <Select 
+                      value={selectedDivision || "all"} 
+                      onValueChange={(v) => setSelectedDivision(v === "all" ? "" : v)}
+                      disabled={!selectedClass}
+                    >
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="All divisions" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white">
+                        <SelectItem value="all">All divisions</SelectItem>
+                        {availableDivisions.map(div => (
+                          <SelectItem key={div.id} value={div.id}>
+                            Division {div.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 {/* Subject Filter */}
                 <div className="space-y-2">

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { WeeklyTest, StudentTestResult, Student } from '@/types';
+import { WeeklyTest, StudentTestResult, Student, Division } from '@/types';
 import { ChevronRight } from 'lucide-react';
 import { EnterMarksDialog } from './EnterMarksDialog';
 
@@ -9,6 +9,7 @@ interface RecentTestsProps {
   tests: WeeklyTest[];
   testResults: StudentTestResult[];
   students: Student[];
+  divisions?: Division[];
   onAddTestResult: (result: StudentTestResult) => void;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
@@ -17,6 +18,7 @@ export function RecentTests({
   tests, 
   testResults, 
   students,
+  divisions = [],
   onAddTestResult,
   onAwardXP 
 }: RecentTestsProps) {
@@ -75,6 +77,7 @@ export function RecentTests({
                     test={test} 
                     students={students}
                     existingResults={testResults.filter(r => r.testId === test.id)}
+                    divisions={divisions}
                     onAddResult={onAddTestResult}
                     onAwardXP={onAwardXP}
                   />

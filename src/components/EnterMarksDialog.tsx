@@ -1,7 +1,7 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
-import { WeeklyTest, Student, StudentTestResult } from "@/types";
+import { WeeklyTest, Student, StudentTestResult, Division } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -17,6 +17,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Edit, Trophy, TrendingUp, Upload, Download } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -25,6 +26,7 @@ interface EnterMarksDialogProps {
   test: WeeklyTest;
   students: Student[];
   existingResults: StudentTestResult[];
+  divisions?: Division[];
   onAddResult: (result: StudentTestResult) => void;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
@@ -33,6 +35,7 @@ export function EnterMarksDialog({
   test, 
   students, 
   existingResults,
+  divisions = [],
   onAddResult,
   onAwardXP 
 }: EnterMarksDialogProps) {
@@ -41,11 +44,24 @@ export function EnterMarksDialog({
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreviewData, setBulkPreviewData] = useState<any[]>([]);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
+  const [selectedDivision, setSelectedDivision] = useState<string>('');
 
   // Filter students by class if test has a specific class
-  const filteredStudents = test.class && test.class !== "All" 
+  const classFilteredStudents = test.class && test.class !== "All" 
     ? students.filter(student => student.class === test.class)
     : students;
+
+  // Get available divisions for the test class
+  const availableDivisions = useMemo(() => {
+    if (!test.class || test.class === "All") return [];
+    return divisions.filter(d => d.class === test.class);
+  }, [divisions, test.class]);
+
+  // Filter by division if selected
+  const filteredStudents = useMemo(() => {
+    if (!selectedDivision) return classFilteredStudents;
+    return classFilteredStudents.filter(s => s.divisionId === selectedDivision);
+  }, [classFilteredStudents, selectedDivision]);
 
   const handleMarkChange = (studentId: string, value: string) => {
     const numValue = parseFloat(value);
@@ -320,6 +336,29 @@ export function EnterMarksDialog({
             <TabsTrigger value="manual">Manual Entry</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           </TabsList>
+
+          {/* Division Filter */}
+          {availableDivisions.length > 0 && (
+            <div className="py-3">
+              <Label className="text-sm mb-2 block">Filter by Division</Label>
+              <Select 
+                value={selectedDivision || "all"} 
+                onValueChange={(v) => setSelectedDivision(v === "all" ? "" : v)}
+              >
+                <SelectTrigger className="w-48">
+                  <SelectValue placeholder="All divisions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All divisions</SelectItem>
+                  {availableDivisions.map(div => (
+                    <SelectItem key={div.id} value={div.id}>
+                      Division {div.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           
           <TabsContent value="manual" className="space-y-4">
             <ScrollArea className="h-[50vh] sm:h-96 pr-2 sm:pr-4">

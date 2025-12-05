@@ -9,6 +9,7 @@ export default function AttendancePage() {
     timetable,
     subjects,
     faculty,
+    divisions,
     loading,
     markAttendance
   } = useSupabaseData();
@@ -28,6 +29,7 @@ export default function AttendancePage() {
       timetable={timetable}
       subjects={subjects}
       faculty={faculty}
+      divisions={divisions}
       onMarkAttendance={markAttendance}
     />
   );

@@ -33,6 +33,7 @@ const Index = () => {
     classFees,
     subjects,
     faculty,
+    divisions,
     loading,
     addStudent,
     addWeeklyTest,
@@ -111,6 +112,7 @@ const Index = () => {
             tests={weeklyTests}
             testResults={testResults}
             students={students}
+            divisions={divisions}
             onAddTestResult={addTestResult}
             onAwardXP={awardXP}
           />
@@ -132,6 +134,7 @@ const Index = () => {
                 classFees={classFees}
                 subjects={subjects}
                 faculty={faculty}
+                divisions={divisions}
                 onAddTest={addWeeklyTest}
                 onDeleteTest={deleteWeeklyTest}
                 onAddTestResult={addTestResult}
