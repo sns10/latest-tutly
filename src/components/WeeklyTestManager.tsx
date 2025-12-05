@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee, Subject, Faculty } from "@/types";
+import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee, Subject, Faculty, Division } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -31,6 +31,7 @@ interface WeeklyTestManagerProps {
   classFees: ClassFee[];
   subjects: Subject[];
   faculty: Faculty[];
+  divisions?: Division[];
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onDeleteTest: (testId: string) => void;
   onAddTestResult: (result: StudentTestResult) => void;
@@ -56,6 +57,7 @@ export function WeeklyTestManager({
   classFees,
   subjects,
   faculty,
+  divisions = [],
   onAddTest,
   onDeleteTest,
   onAddTestResult,
@@ -238,6 +240,7 @@ export function WeeklyTestManager({
                             test={test} 
                             students={students}
                             existingResults={testResults.filter(r => r.testId === test.id)}
+                            divisions={divisions}
                             onAddResult={onAddTestResult}
                             onAwardXP={onAwardXP}
                           />
@@ -306,6 +309,7 @@ export function WeeklyTestManager({
                         test={test} 
                         students={students}
                         existingResults={testResults.filter(r => r.testId === test.id)}
+                        divisions={divisions}
                         onAddResult={onAddTestResult}
                         onAwardXP={onAwardXP}
                       />
