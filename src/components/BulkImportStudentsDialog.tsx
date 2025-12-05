@@ -23,6 +23,7 @@ interface BulkImportStudentsDialogProps {
   onImportStudents: (students: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>[]) => void;
 }
 
+// Valid class names for import validation
 const classNames: ClassName[] = ["8th", "9th", "10th", "11th", "12th"];
 const avatars = [
   'photo-1582562124811-c09040d0a901',
