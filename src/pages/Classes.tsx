@@ -12,6 +12,8 @@ export default function ClassesPage() {
     updateDivision,
     deleteDivision,
     addSubject,
+    updateSubject,
+    deleteSubject,
     addFaculty,
     updateFaculty,
     deleteFaculty
@@ -35,6 +37,8 @@ export default function ClassesPage() {
         onUpdateDivision={updateDivision}
         onDeleteDivision={deleteDivision}
         onAddSubject={addSubject}
+        onUpdateSubject={updateSubject}
+        onDeleteSubject={deleteSubject}
         onAddFaculty={addFaculty}
         onUpdateFaculty={updateFaculty}
         onDeleteFaculty={deleteFaculty}

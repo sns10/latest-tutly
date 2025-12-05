@@ -153,7 +153,7 @@ export function WeeklyTestManager({
           <h2 className="text-2xl font-bold font-display text-primary">School Management</h2>
           <p className="text-muted-foreground">Manage tests, challenges, announcements and track progress</p>
         </div>
-        <CreateTestDialog onAddTest={onAddTest} />
+        <CreateTestDialog onAddTest={onAddTest} subjects={subjects} />
       </div>
 
       <Tabs defaultValue="tests" className="w-full">
@@ -189,7 +189,7 @@ export function WeeklyTestManager({
                 <TestTube2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No tests created yet</h3>
                 <p className="text-muted-foreground mb-4">Create your first weekly test to get started</p>
-                <CreateTestDialog onAddTest={onAddTest} />
+                <CreateTestDialog onAddTest={onAddTest} subjects={subjects} />
               </CardContent>
             </Card>
           ) : (

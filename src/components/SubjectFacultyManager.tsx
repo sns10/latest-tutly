@@ -14,6 +14,8 @@ interface SubjectFacultyManagerProps {
   subjects: Subject[];
   faculty: Faculty[];
   onAddSubject: (name: string, className: ClassName) => void;
+  onUpdateSubject: (id: string, name: string, className: ClassName) => void;
+  onDeleteSubject: (id: string) => void;
   onAddFaculty: (name: string, email: string, phone: string, subjectIds: string[]) => void;
   onUpdateFaculty: (id: string, name: string, email: string, phone: string, subjectIds: string[]) => void;
   onDeleteFaculty: (id: string) => void;
@@ -25,16 +27,20 @@ export function SubjectFacultyManager({
   subjects,
   faculty,
   onAddSubject,
+  onUpdateSubject,
+  onDeleteSubject,
   onAddFaculty,
   onUpdateFaculty,
   onDeleteFaculty
 }: SubjectFacultyManagerProps) {
   const [isAddSubjectOpen, setIsAddSubjectOpen] = useState(false);
+  const [isEditSubjectOpen, setIsEditSubjectOpen] = useState(false);
   const [isAddFacultyOpen, setIsAddFacultyOpen] = useState(false);
   const [isEditFacultyOpen, setIsEditFacultyOpen] = useState(false);
   
   const [subjectName, setSubjectName] = useState("");
   const [subjectClass, setSubjectClass] = useState<ClassName>("8th");
+  const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   
   const [facultyName, setFacultyName] = useState("");
   const [facultyEmail, setFacultyEmail] = useState("");
@@ -50,6 +56,24 @@ export function SubjectFacultyManager({
     onAddSubject(subjectName, subjectClass);
     setSubjectName("");
     setIsAddSubjectOpen(false);
+  };
+
+  const handleEditSubject = () => {
+    if (!editingSubject || !subjectName.trim()) {
+      toast.error('Please enter a subject name');
+      return;
+    }
+    onUpdateSubject(editingSubject.id, subjectName, subjectClass);
+    setEditingSubject(null);
+    setSubjectName("");
+    setIsEditSubjectOpen(false);
+  };
+
+  const openEditSubjectDialog = (subject: Subject) => {
+    setEditingSubject(subject);
+    setSubjectName(subject.name);
+    setSubjectClass(subject.class);
+    setIsEditSubjectOpen(true);
   };
 
   const handleAddFaculty = () => {
@@ -124,8 +148,28 @@ export function SubjectFacultyManager({
                       <span className="text-sm text-muted-foreground">No subjects</span>
                     ) : (
                       classSubjects.map(subject => (
-                        <Badge key={subject.id} variant="secondary">
+                        <Badge 
+                          key={subject.id} 
+                          variant="secondary"
+                          className="flex items-center gap-1 pr-1"
+                        >
                           {subject.name}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 hover:bg-transparent"
+                            onClick={() => openEditSubjectDialog(subject)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-4 w-4 p-0 hover:bg-transparent"
+                            onClick={() => onDeleteSubject(subject.id)}
+                          >
+                            <Trash2 className="h-3 w-3 text-destructive" />
+                          </Button>
                         </Badge>
                       ))
                     )}
@@ -219,6 +263,42 @@ export function SubjectFacultyManager({
           </div>
           <DialogFooter>
             <Button onClick={handleAddSubject}>Add Subject</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subject Dialog */}
+      <Dialog open={isEditSubjectOpen} onOpenChange={setIsEditSubjectOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Subject</DialogTitle>
+            <DialogDescription>Update subject details</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-subject-class" className="text-right">Class</Label>
+              <Select onValueChange={(value: ClassName) => setSubjectClass(value)} value={subjectClass}>
+                <SelectTrigger className="col-span-3">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {classNames.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="edit-subject-name" className="text-right">Subject</Label>
+              <Input
+                id="edit-subject-name"
+                value={subjectName}
+                onChange={(e) => setSubjectName(e.target.value)}
+                className="col-span-3"
+                placeholder="e.g. Mathematics"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleEditSubject}>Update Subject</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

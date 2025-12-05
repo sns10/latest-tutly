@@ -1134,6 +1134,40 @@ export function useSupabaseData() {
     await fetchSubjects();
   };
 
+  // Update Subject
+  const updateSubject = async (id: string, name: string, classValue: ClassName) => {
+    const { error } = await supabase
+      .from('subjects')
+      .update({ name, class: classValue })
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error updating subject:', error);
+      toast.error('Failed to update subject');
+      return;
+    }
+
+    toast.success('Subject updated successfully');
+    await fetchSubjects();
+  };
+
+  // Delete Subject
+  const deleteSubject = async (id: string) => {
+    const { error } = await supabase
+      .from('subjects')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting subject:', error);
+      toast.error('Failed to delete subject');
+      return;
+    }
+
+    toast.success('Subject deleted successfully');
+    await fetchSubjects();
+  };
+
   // Add Timetable Entry
   const addTimetableEntry = async (
     classValue: ClassName,
@@ -1360,6 +1394,8 @@ export function useSupabaseData() {
     updateFaculty,
     deleteFaculty,
     addSubject,
+    updateSubject,
+    deleteSubject,
     addTimetableEntry,
     updateTimetableEntry,
     deleteTimetableEntry,
