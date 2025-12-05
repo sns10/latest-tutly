@@ -41,9 +41,9 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
 
   const downloadTemplate = () => {
     const templateData = [
-      { Name: "John Doe", Class: "8th", Division: "Division A" },
-      { Name: "Jane Smith", Class: "9th", Division: "Division B" },
-      { Name: "Bob Johnson", Class: "12th", Division: "Division A" },
+      { Name: "John Doe", Class: "8th", Division: "A" },
+      { Name: "Jane Smith", Class: "9th", Division: "B" },
+      { Name: "Bob Johnson", Class: "12th", Division: "A" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
@@ -117,12 +117,22 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
     }
 
     const studentsToImport = previewData.map(row => {
-      // Find matching division by name and class
-      const divisionName = row.Division?.trim();
+      // Find matching division by name and class - support flexible matching
+      const divisionName = row.Division?.trim()?.toLowerCase() || '';
       const studentClass = row.Class as ClassName;
-      const matchingDivision = divisions.find(
-        d => d.name.toLowerCase() === divisionName?.toLowerCase() && d.class === studentClass
-      );
+      
+      // Try exact match first, then flexible match (e.g., "Division B" -> "B", or "B" -> "Division B")
+      const matchingDivision = divisions.find(d => {
+        if (d.class !== studentClass) return false;
+        const dbName = d.name.toLowerCase();
+        // Exact match
+        if (dbName === divisionName) return true;
+        // "Division B" matches "B"
+        if (divisionName.replace('division', '').trim() === dbName) return true;
+        // "B" matches "Division B"
+        if (dbName.replace('division', '').trim() === divisionName) return true;
+        return false;
+      });
       
       return {
         name: row.Name.trim(),
