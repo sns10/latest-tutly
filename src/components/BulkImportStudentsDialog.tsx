@@ -19,10 +19,11 @@ import * as XLSX from 'xlsx';
 import { toast } from "sonner";
 
 interface BulkImportStudentsDialogProps {
+  divisions?: { id: string; name: string; class: string }[];
   onImportStudents: (students: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>[]) => void;
 }
 
-const classNames: ClassName[] = ["8th", "9th", "10th", "11th"];
+const classNames: ClassName[] = ["8th", "9th", "10th", "11th", "12th"];
 const avatars = [
   'photo-1582562124811-c09040d0a901',
   'photo-1535268647677-300dbf3d78d1',
@@ -30,7 +31,7 @@ const avatars = [
   'photo-1441057206919-63d19fac2369',
 ];
 
-export function BulkImportStudentsDialog({ onImportStudents }: BulkImportStudentsDialogProps) {
+export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: BulkImportStudentsDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [previewData, setPreviewData] = useState<any[]>([]);
@@ -39,9 +40,9 @@ export function BulkImportStudentsDialog({ onImportStudents }: BulkImportStudent
 
   const downloadTemplate = () => {
     const templateData = [
-      { Name: "John Doe", Class: "8th" },
-      { Name: "Jane Smith", Class: "9th" },
-      { Name: "Bob Johnson", Class: "10th" },
+      { Name: "John Doe", Class: "8th", Division: "Division A" },
+      { Name: "Jane Smith", Class: "9th", Division: "Division B" },
+      { Name: "Bob Johnson", Class: "12th", Division: "Division A" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
@@ -114,11 +115,21 @@ export function BulkImportStudentsDialog({ onImportStudents }: BulkImportStudent
       return;
     }
 
-    const studentsToImport = previewData.map(row => ({
-      name: row.Name.trim(),
-      class: row.Class as ClassName,
-      avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
-    }));
+    const studentsToImport = previewData.map(row => {
+      // Find matching division by name and class
+      const divisionName = row.Division?.trim();
+      const studentClass = row.Class as ClassName;
+      const matchingDivision = divisions.find(
+        d => d.name.toLowerCase() === divisionName?.toLowerCase() && d.class === studentClass
+      );
+      
+      return {
+        name: row.Name.trim(),
+        class: studentClass,
+        divisionId: matchingDivision?.id,
+        avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
+      };
+    });
 
     onImportStudents(studentsToImport);
     
@@ -213,6 +224,7 @@ export function BulkImportStudentsDialog({ onImportStudents }: BulkImportStudent
                     <tr>
                       <th className="p-2 text-left">Name</th>
                       <th className="p-2 text-left">Class</th>
+                      <th className="p-2 text-left">Division</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -220,11 +232,12 @@ export function BulkImportStudentsDialog({ onImportStudents }: BulkImportStudent
                       <tr key={index} className="border-t">
                         <td className="p-2">{row.Name}</td>
                         <td className="p-2">{row.Class}</td>
+                        <td className="p-2">{row.Division || '-'}</td>
                       </tr>
                     ))}
                     {previewData.length > 10 && (
                       <tr className="border-t">
-                        <td colSpan={2} className="p-2 text-center text-muted-foreground">
+                        <td colSpan={3} className="p-2 text-center text-muted-foreground">
                           ... and {previewData.length - 10} more
                         </td>
                       </tr>

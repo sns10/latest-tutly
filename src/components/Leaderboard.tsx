@@ -78,7 +78,7 @@ export function Leaderboard({
           <p className="text-xs sm:text-sm text-muted-foreground">Track student progress and manage XP</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
+          <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />
           <AddStudentDialog divisions={divisions} onAddStudent={onAddStudent} />
         </div>
       </div>
@@ -102,6 +102,7 @@ export function Leaderboard({
                   <SelectItem value="9th">9th</SelectItem>
                   <SelectItem value="10th">10th</SelectItem>
                   <SelectItem value="11th">11th</SelectItem>
+                  <SelectItem value="12th">12th</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -180,7 +181,7 @@ export function Leaderboard({
               <h3 className="text-lg font-semibold mb-2">No students found</h3>
               <p className="text-muted-foreground mb-4">Add your first student to get started</p>
               <div className="flex flex-wrap justify-center gap-2">
-                <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
+                <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />
                 <AddStudentDialog divisions={divisions} onAddStudent={onAddStudent} />
               </div>
             </div>

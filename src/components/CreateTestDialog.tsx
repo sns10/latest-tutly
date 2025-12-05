@@ -133,6 +133,7 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
                       <SelectItem value="9th">9th Grade</SelectItem>
                       <SelectItem value="10th">10th Grade</SelectItem>
                       <SelectItem value="11th">11th Grade</SelectItem>
+                      <SelectItem value="12th">12th Grade</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />

@@ -19,7 +19,7 @@ interface SubjectFacultyManagerProps {
   onDeleteFaculty: (id: string) => void;
 }
 
-const classNames: ClassName[] = ["8th", "9th", "10th", "11th"];
+const classNames: ClassName[] = ["8th", "9th", "10th", "11th", "12th"];
 
 export function SubjectFacultyManager({
   subjects,
