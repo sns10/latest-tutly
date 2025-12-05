@@ -1,4 +1,5 @@
-import { Student, StudentAttendance, StudentTestResult, WeeklyTest, StudentFee, Subject, Faculty } from '@/types';
+import { useState } from 'react';
+import { Student, StudentAttendance, StudentTestResult, WeeklyTest, StudentFee, Subject, Faculty, Division, ClassName } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +13,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Trash2, Trophy, Calendar, BookOpen, CreditCard } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface StudentDetailsDialogProps {
@@ -23,10 +27,14 @@ interface StudentDetailsDialogProps {
   fees: StudentFee[];
   subjects: Subject[];
   faculty: Faculty[];
+  divisions?: Division[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRemoveStudent: (studentId: string) => void;
+  onUpdateStudent?: (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null }) => void;
 }
+
+const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
 
 export function StudentDetailsDialog({
   student,
@@ -36,10 +44,17 @@ export function StudentDetailsDialog({
   fees,
   subjects,
   faculty,
+  divisions = [],
   open,
   onOpenChange,
   onRemoveStudent,
+  onUpdateStudent,
 }: StudentDetailsDialogProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(student.name);
+  const [editClass, setEditClass] = useState<ClassName>(student.class);
+  const [editDivisionId, setEditDivisionId] = useState(student.divisionId || '');
+
   // Calculate statistics
   const presentCount = attendance.filter(a => a.status === 'present').length;
   const totalAttendance = attendance.length;
@@ -64,11 +79,45 @@ export function StudentDetailsDialog({
   const pendingFees = fees.filter(f => f.status === 'unpaid' || f.status === 'overdue');
   const totalPendingAmount = pendingFees.reduce((sum, f) => sum + f.amount, 0);
 
+  const availableDivisions = divisions.filter(d => d.class === editClass);
+
   const handleRemove = () => {
     if (window.confirm(`Are you sure you want to remove ${student.name}?`)) {
       onRemoveStudent(student.id);
       onOpenChange(false);
     }
+  };
+
+  const handleStartEdit = () => {
+    setEditName(student.name);
+    setEditClass(student.class);
+    setEditDivisionId(student.divisionId || '');
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditName(student.name);
+    setEditClass(student.class);
+    setEditDivisionId(student.divisionId || '');
+  };
+
+  const handleSaveEdit = () => {
+    if (!editName.trim()) return;
+    
+    onUpdateStudent?.(student.id, {
+      name: editName.trim(),
+      class: editClass,
+      divisionId: editDivisionId || null,
+    });
+    setIsEditing(false);
+  };
+
+  const handleClassChange = (newClass: ClassName) => {
+    setEditClass(newClass);
+    // Reset division when class changes
+    const classDiv = divisions.find(d => d.class === newClass);
+    setEditDivisionId(classDiv?.id || '');
   };
 
   return (
@@ -80,21 +129,71 @@ export function StudentDetailsDialog({
               <AvatarImage src={student.avatar} alt={student.name} />
               <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <div>
-              <p className="text-lg font-bold">{student.name}</p>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">{student.class} Grade</span>
-                {student.division && (
-                  <Badge variant="outline">{student.division.name}</Badge>
-                )}
-                {student.team && (
-                  <Badge variant="secondary">{student.team}</Badge>
-                )}
+            {isEditing ? (
+              <div className="flex-1 space-y-2">
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Student name"
+                  className="font-bold"
+                />
+                <div className="flex gap-2">
+                  <Select value={editClass} onValueChange={handleClassChange}>
+                    <SelectTrigger className="w-24 bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {CLASSES.map((cls) => (
+                        <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Select 
+                    value={editDivisionId || "none"} 
+                    onValueChange={(v) => setEditDivisionId(v === "none" ? "" : v)}
+                  >
+                    <SelectTrigger className="w-32 bg-white">
+                      <SelectValue placeholder="Division" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="none">No Division</SelectItem>
+                      {availableDivisions.map((div) => (
+                        <SelectItem key={div.id} value={div.id}>{div.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button size="icon" variant="ghost" onClick={handleSaveEdit} className="h-9 w-9">
+                    <Check className="h-4 w-4 text-green-600" />
+                  </Button>
+                  <Button size="icon" variant="ghost" onClick={handleCancelEdit} className="h-9 w-9">
+                    <X className="h-4 w-4 text-red-600" />
+                  </Button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <p className="text-lg font-bold">{student.name}</p>
+                  {onUpdateStudent && (
+                    <Button size="icon" variant="ghost" onClick={handleStartEdit} className="h-6 w-6">
+                      <Pencil className="h-3 w-3" />
+                    </Button>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">{student.class} Grade</span>
+                  {student.division && (
+                    <Badge variant="outline">{student.division.name}</Badge>
+                  )}
+                  {student.team && (
+                    <Badge variant="secondary">{student.team}</Badge>
+                  )}
+                </div>
+              </div>
+            )}
           </DialogTitle>
           <DialogDescription>
-            View student details, attendance, test results, and fees
+            View and edit student details, attendance, test results, and fees
           </DialogDescription>
         </DialogHeader>
 

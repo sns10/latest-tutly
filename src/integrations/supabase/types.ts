@@ -755,6 +755,7 @@ export type Database = {
           class: string
           created_at: string
           day_of_week: number
+          division_id: string | null
           end_date: string | null
           end_time: string
           event_type: string | null
@@ -775,6 +776,7 @@ export type Database = {
           class: string
           created_at?: string
           day_of_week: number
+          division_id?: string | null
           end_date?: string | null
           end_time: string
           event_type?: string | null
@@ -795,6 +797,7 @@ export type Database = {
           class?: string
           created_at?: string
           day_of_week?: number
+          division_id?: string | null
           end_date?: string | null
           end_time?: string
           event_type?: string | null
@@ -812,6 +815,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "timetable_division_id_fkey"
+            columns: ["division_id"]
+            isOneToOne: false
+            referencedRelation: "divisions"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "timetable_faculty_id_fkey"
             columns: ["faculty_id"]

@@ -919,7 +919,8 @@ export function useSupabaseData() {
       .select(`
         *,
         subjects (*),
-        faculty (*)
+        faculty (*),
+        divisions (*)
       `)
       .order('day_of_week, start_time');
 
@@ -931,6 +932,13 @@ export function useSupabaseData() {
     const formattedTimetable: Timetable[] = data.map((t: any) => ({
       id: t.id,
       class: t.class,
+      divisionId: t.division_id,
+      division: t.divisions ? {
+        id: t.divisions.id,
+        class: t.divisions.class as ClassName,
+        name: t.divisions.name,
+        createdAt: t.divisions.created_at,
+      } : undefined,
       subjectId: t.subject_id,
       facultyId: t.faculty_id,
       dayOfWeek: t.day_of_week,
@@ -1183,12 +1191,14 @@ export function useSupabaseData() {
     startDate?: string,
     endDate?: string,
     eventType?: string,
-    notes?: string
+    notes?: string,
+    divisionId?: string
   ) => {
     const { error } = await supabase
       .from('timetable')
       .insert({
         class: classValue,
+        division_id: divisionId || null,
         subject_id: subjectId,
         faculty_id: facultyId,
         day_of_week: dayOfWeek,
@@ -1231,12 +1241,14 @@ export function useSupabaseData() {
     startDate?: string,
     endDate?: string,
     eventType?: string,
-    notes?: string
+    notes?: string,
+    divisionId?: string
   ) => {
     const { error } = await supabase
       .from('timetable')
       .update({
         class: classValue,
+        division_id: divisionId || null,
         subject_id: subjectId,
         faculty_id: facultyId,
         day_of_week: dayOfWeek,
@@ -1357,6 +1369,28 @@ export function useSupabaseData() {
     await fetchStudents();
   };
 
+  // Update Student Details
+  const updateStudent = async (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null }) => {
+    const updateData: any = {};
+    if (updates.name !== undefined) updateData.name = updates.name;
+    if (updates.class !== undefined) updateData.class = updates.class;
+    if (updates.divisionId !== undefined) updateData.division_id = updates.divisionId;
+
+    const { error } = await supabase
+      .from('students')
+      .update(updateData)
+      .eq('id', studentId);
+
+    if (error) {
+      console.error('Error updating student:', error);
+      toast.error('Failed to update student');
+      return;
+    }
+
+    toast.success('Student updated successfully');
+    await fetchStudents();
+  };
+
   return {
     students,
     weeklyTests,
@@ -1406,5 +1440,6 @@ export function useSupabaseData() {
     addRoom,
     updateRoom,
     deleteRoom,
+    updateStudent,
   };
 }

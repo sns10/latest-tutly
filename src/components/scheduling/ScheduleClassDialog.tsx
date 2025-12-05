@@ -8,13 +8,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { Timetable, Faculty, Subject, Room, ClassName } from '@/types';
+import { Timetable, Faculty, Subject, Room, ClassName, Division } from '@/types';
 
 interface ScheduleClassDialogProps {
   timetable: Timetable[];
   faculty: Faculty[];
   subjects: Subject[];
   rooms: Room[];
+  divisions: Division[];
   onScheduleClass: (
     classValue: ClassName,
     subjectId: string,
@@ -27,7 +28,8 @@ interface ScheduleClassDialogProps {
     roomNumber?: string,
     specificDate?: string,
     eventType?: string,
-    notes?: string
+    notes?: string,
+    divisionId?: string
   ) => Promise<void>;
   trigger?: React.ReactNode;
 }
@@ -50,12 +52,14 @@ export function ScheduleClassDialog({
   faculty,
   subjects,
   rooms,
+  divisions,
   onScheduleClass,
   trigger,
 }: ScheduleClassDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [formData, setFormData] = useState({
     class: '8th' as ClassName,
+    divisionId: '',
     subjectId: '',
     facultyId: '',
     date: '',
@@ -69,6 +73,7 @@ export function ScheduleClassDialog({
   const resetForm = () => {
     setFormData({
       class: '8th',
+      divisionId: '',
       subjectId: '',
       facultyId: '',
       date: '',
@@ -79,6 +84,11 @@ export function ScheduleClassDialog({
       notes: '',
     });
   };
+
+  const classDivisions = useMemo(() => 
+    divisions.filter(d => d.class === formData.class),
+    [divisions, formData.class]
+  );
 
   // Check room conflicts for the selected date and time
   const roomConflicts = useMemo(() => {
@@ -167,7 +177,8 @@ export function ScheduleClassDialog({
       undefined,
       formData.date,
       formData.eventType,
-      formData.notes || undefined
+      formData.notes || undefined,
+      formData.divisionId || undefined
     );
 
     resetForm();
@@ -250,22 +261,41 @@ export function ScheduleClassDialog({
             </div>
           </div>
 
-          {/* Class */}
-          <div>
-            <Label>Class *</Label>
-            <Select
-              value={formData.class}
-              onValueChange={(value) => setFormData({ ...formData, class: value as ClassName, subjectId: '', facultyId: '' })}
-            >
-              <SelectTrigger className="bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {CLASSES.map((cls) => (
-                  <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Class and Division */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label>Class *</Label>
+              <Select
+                value={formData.class}
+                onValueChange={(value) => setFormData({ ...formData, class: value as ClassName, subjectId: '', facultyId: '', divisionId: '' })}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {CLASSES.map((cls) => (
+                    <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>Division</Label>
+              <Select
+                value={formData.divisionId || "all"}
+                onValueChange={(value) => setFormData({ ...formData, divisionId: value === "all" ? "" : value })}
+              >
+                <SelectTrigger className="bg-white">
+                  <SelectValue placeholder="All divisions" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">All Divisions</SelectItem>
+                  {classDivisions.map((div) => (
+                    <SelectItem key={div.id} value={div.id}>{div.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Subject */}

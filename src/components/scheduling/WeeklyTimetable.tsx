@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Timetable, Faculty, Subject, Room, ClassName } from '@/types';
+import { useState, useMemo } from 'react';
+import { Timetable, Faculty, Subject, Room, ClassName, Division } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Pencil, Trash2, Clock, MapPin, AlertTriangle } from 'lucide-react';
+import { Plus, Pencil, Trash2, Clock, MapPin, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface WeeklyTimetableProps {
@@ -15,6 +15,7 @@ interface WeeklyTimetableProps {
   faculty: Faculty[];
   subjects: Subject[];
   rooms: Room[];
+  divisions: Division[];
   onAddEntry: (
     classValue: ClassName,
     subjectId: string,
@@ -27,7 +28,8 @@ interface WeeklyTimetableProps {
     roomNumber?: string,
     specificDate?: string,
     eventType?: string,
-    notes?: string
+    notes?: string,
+    divisionId?: string
   ) => Promise<void>;
   onUpdateEntry: (
     id: string,
@@ -42,7 +44,8 @@ interface WeeklyTimetableProps {
     roomNumber?: string,
     specificDate?: string,
     startDate?: string,
-    endDate?: string
+    endDate?: string,
+    divisionId?: string
   ) => Promise<void>;
   onDeleteEntry: (id: string) => Promise<void>;
 }
@@ -55,6 +58,7 @@ export function WeeklyTimetable({
   faculty,
   subjects,
   rooms,
+  divisions,
   onAddEntry,
   onUpdateEntry,
   onDeleteEntry,
@@ -62,8 +66,10 @@ export function WeeklyTimetable({
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<Timetable | null>(null);
   const [selectedClass, setSelectedClass] = useState<ClassName>('8th');
+  const [selectedDivision, setSelectedDivision] = useState<string>('all');
   const [formData, setFormData] = useState({
     class: '8th' as ClassName,
+    divisionId: '',
     subjectId: '',
     facultyId: '',
     dayOfWeek: 1,
@@ -72,9 +78,20 @@ export function WeeklyTimetable({
     roomId: '',
   });
 
+  const availableDivisionsForClass = useMemo(() => 
+    divisions.filter(d => d.class === selectedClass),
+    [divisions, selectedClass]
+  );
+
+  const formDivisions = useMemo(() => 
+    divisions.filter(d => d.class === formData.class),
+    [divisions, formData.class]
+  );
+
   const resetForm = () => {
     setFormData({
       class: selectedClass,
+      divisionId: '',
       subjectId: '',
       facultyId: '',
       dayOfWeek: 1,
@@ -141,7 +158,12 @@ export function WeeklyTimetable({
         formData.startTime,
         formData.endTime,
         'regular',
-        formData.roomId || undefined
+        formData.roomId || undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        formData.divisionId || undefined
       );
     } else {
       await onAddEntry(
@@ -152,7 +174,12 @@ export function WeeklyTimetable({
         formData.startTime,
         formData.endTime,
         'regular',
-        formData.roomId || undefined
+        formData.roomId || undefined,
+        undefined,
+        undefined,
+        undefined,
+        undefined,
+        formData.divisionId || undefined
       );
     }
 
@@ -164,6 +191,7 @@ export function WeeklyTimetable({
     setEditingEntry(entry);
     setFormData({
       class: entry.class,
+      divisionId: entry.divisionId || '',
       subjectId: entry.subjectId,
       facultyId: entry.facultyId,
       dayOfWeek: entry.dayOfWeek,
@@ -180,7 +208,13 @@ export function WeeklyTimetable({
     }
   };
 
-  const regularTimetable = timetable.filter((entry) => entry.class === selectedClass && entry.type === 'regular');
+  const regularTimetable = timetable.filter((entry) => {
+    if (entry.class !== selectedClass) return false;
+    if (entry.type !== 'regular') return false;
+    if (selectedDivision !== 'all' && entry.divisionId !== selectedDivision) return false;
+    return true;
+  });
+
   const classSubjects = subjects.filter((s) => s.class === formData.class);
   const availableFaculty = formData.subjectId
     ? faculty.filter((f) => f.subjects?.some((s) => s.id === formData.subjectId))
@@ -220,21 +254,41 @@ export function WeeklyTimetable({
               <DialogTitle>{editingEntry ? 'Edit Period' : 'Add New Period'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <Label>Class *</Label>
-                <Select
-                  value={formData.class}
-                  onValueChange={(value) => setFormData({ ...formData, class: value as ClassName, subjectId: '', facultyId: '' })}
-                >
-                  <SelectTrigger className="bg-white">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="bg-white">
-                    {CLASSES.map((cls) => (
-                      <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Class *</Label>
+                  <Select
+                    value={formData.class}
+                    onValueChange={(value) => setFormData({ ...formData, class: value as ClassName, subjectId: '', facultyId: '', divisionId: '' })}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      {CLASSES.map((cls) => (
+                        <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label>Division</Label>
+                  <Select
+                    value={formData.divisionId || "all"}
+                    onValueChange={(value) => setFormData({ ...formData, divisionId: value === "all" ? "" : value })}
+                  >
+                    <SelectTrigger className="bg-white">
+                      <SelectValue placeholder="All divisions" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white">
+                      <SelectItem value="all">All Divisions</SelectItem>
+                      {formDivisions.map((div) => (
+                        <SelectItem key={div.id} value={div.id}>{div.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div>
@@ -354,21 +408,54 @@ export function WeeklyTimetable({
         </Dialog>
       </div>
 
-      {/* Class Tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-2">
-        {CLASSES.filter(c => c !== 'All').map((cls) => (
-          <button
-            key={cls}
-            onClick={() => setSelectedClass(cls)}
-            className={`px-6 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
-              selectedClass === cls
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'bg-white text-muted-foreground hover:bg-slate-100 border border-slate-200'
-            }`}
-          >
-            {cls} Class
-          </button>
-        ))}
+      {/* Class and Division Tabs */}
+      <div className="space-y-2">
+        <div className="flex gap-2 overflow-x-auto pb-2">
+          {CLASSES.filter(c => c !== 'All').map((cls) => (
+            <button
+              key={cls}
+              onClick={() => {
+                setSelectedClass(cls);
+                setSelectedDivision('all');
+              }}
+              className={`px-6 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap ${
+                selectedClass === cls
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'bg-white text-muted-foreground hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              {cls} Class
+            </button>
+          ))}
+        </div>
+        
+        {availableDivisionsForClass.length > 0 && (
+          <div className="flex gap-2 overflow-x-auto pb-2">
+            <button
+              onClick={() => setSelectedDivision('all')}
+              className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                selectedDivision === 'all'
+                  ? 'bg-green-600 text-white shadow-sm'
+                  : 'bg-white text-muted-foreground hover:bg-slate-100 border border-slate-200'
+              }`}
+            >
+              All Divisions
+            </button>
+            {availableDivisionsForClass.map((div) => (
+              <button
+                key={div.id}
+                onClick={() => setSelectedDivision(div.id)}
+                className={`px-4 py-1.5 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                  selectedDivision === div.id
+                    ? 'bg-green-600 text-white shadow-sm'
+                    : 'bg-white text-muted-foreground hover:bg-slate-100 border border-slate-200'
+                }`}
+              >
+                {div.name}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Schedule by Day */}
@@ -406,6 +493,12 @@ export function WeeklyTimetable({
                               </div>
                             </div>
                             <div className="flex items-center gap-2">
+                              {entry.division && (
+                                <Badge variant="outline" className="hidden sm:flex items-center gap-1">
+                                  <Users className="h-3 w-3" />
+                                  {entry.division.name}
+                                </Badge>
+                              )}
                               {roomName && (
                                 <Badge variant="secondary" className="hidden sm:flex items-center gap-1">
                                   <MapPin className="h-3 w-3" />
@@ -430,11 +523,14 @@ export function WeeklyTimetable({
                               </Button>
                             </div>
                           </div>
-                          {roomName && (
-                            <p className="text-xs text-muted-foreground mt-2 pl-8 sm:hidden">
-                              📍 {roomName}
-                            </p>
-                          )}
+                          <div className="flex gap-2 mt-2 pl-8 sm:hidden">
+                            {entry.division && (
+                              <span className="text-xs text-muted-foreground">👥 {entry.division.name}</span>
+                            )}
+                            {roomName && (
+                              <span className="text-xs text-muted-foreground">📍 {roomName}</span>
+                            )}
+                          </div>
                         </CardContent>
                       </Card>
                     );
