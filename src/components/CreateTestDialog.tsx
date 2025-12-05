@@ -41,7 +41,7 @@ const formSchema = z.object({
   subject: z.string().min(2, "Subject must be at least 2 characters."),
   maxMarks: z.coerce.number().int().positive("Max marks must be a positive number."),
   date: z.date(),
-  class: z.enum(["8th", "9th", "10th", "11th", "All"]),
+  class: z.enum(["8th", "9th", "10th", "11th", "12th", "All"]),
 });
 
 interface CreateTestDialogProps {

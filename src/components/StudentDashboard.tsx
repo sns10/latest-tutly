@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Student, StudentTestResult, WeeklyTest, StudentAttendance, StudentFee, Subject, Faculty } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -142,6 +142,29 @@ export function StudentDashboard({
     </div>
   );
 
+  // Group test results by subject
+  const testResultsBySubject = useMemo(() => {
+    const grouped: Record<string, { tests: typeof studentTests; avgScore: number; total: number }> = {};
+    
+    studentTests.forEach(result => {
+      const subjectName = result.test?.subject || 'Unknown';
+      if (!grouped[subjectName]) {
+        grouped[subjectName] = { tests: [], avgScore: 0, total: 0 };
+      }
+      grouped[subjectName].tests.push(result);
+      grouped[subjectName].total += result.percentage;
+    });
+    
+    // Calculate average for each subject
+    Object.keys(grouped).forEach(subject => {
+      grouped[subject].avgScore = grouped[subject].tests.length > 0 
+        ? grouped[subject].total / grouped[subject].tests.length 
+        : 0;
+    });
+    
+    return grouped;
+  }, [studentTests]);
+
   const renderAcademic = () => (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -167,26 +190,90 @@ export function StudentDashboard({
         </Card>
       </div>
 
+      {/* Subject-wise Test Results */}
       <Card>
         <CardHeader>
-          <CardTitle>Detailed Test Results</CardTitle>
+          <CardTitle>Subject-wise Performance</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {Object.keys(testResultsBySubject).length > 0 ? (
+              Object.entries(testResultsBySubject).map(([subject, data]) => (
+                <div key={subject} className="p-4 border rounded-lg space-y-3">
+                  <div className="flex justify-between items-center">
+                    <div className="font-semibold text-lg">{subject}</div>
+                    <Badge variant={data.avgScore >= 80 ? 'default' : data.avgScore >= 60 ? 'secondary' : 'destructive'}>
+                      Avg: {data.avgScore.toFixed(1)}%
+                    </Badge>
+                  </div>
+                  <Progress value={data.avgScore} className="h-2" />
+                  <div className="grid grid-cols-3 gap-2 text-sm text-center">
+                    <div>
+                      <div className="font-bold">{data.tests.length}</div>
+                      <div className="text-muted-foreground">Tests</div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-green-600">
+                        {data.tests.filter(t => t.percentage >= 80).length}
+                      </div>
+                      <div className="text-muted-foreground">A+ Grades</div>
+                    </div>
+                    <div>
+                      <div className="font-bold text-red-600">
+                        {data.tests.filter(t => t.percentage < 60).length}
+                      </div>
+                      <div className="text-muted-foreground">Below 60%</div>
+                    </div>
+                  </div>
+                  {/* Individual tests for this subject */}
+                  <div className="space-y-2 pt-2 border-t">
+                    {data.tests.map((result) => (
+                      <div key={result.testId} className="flex justify-between items-center text-sm p-2 bg-muted/50 rounded">
+                        <div>
+                          <span className="font-medium">{result.test?.name}</span>
+                          <span className="text-muted-foreground ml-2">
+                            {result.test?.date ? new Date(result.test.date).toLocaleDateString() : ''}
+                          </span>
+                        </div>
+                        <div className="font-bold">
+                          {result.marks}/{result.test?.maxMarks} ({result.percentage.toFixed(0)}%)
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-8">No test results yet</div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>All Test Results</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {studentTests.map((result) => (
-              <div key={result.testId} className="flex justify-between items-center p-3 border rounded">
-                <div>
-                  <div className="font-medium">{result.test?.name}</div>
-                  <div className="text-sm text-muted-foreground">{result.test?.subject}</div>
+            {studentTests.length > 0 ? (
+              studentTests.map((result) => (
+                <div key={result.testId} className="flex justify-between items-center p-3 border rounded">
+                  <div>
+                    <div className="font-medium">{result.test?.name}</div>
+                    <div className="text-sm text-muted-foreground">{result.test?.subject}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-bold">{result.marks}/{result.test?.maxMarks}</div>
+                    <Badge variant={result.percentage >= 80 ? 'default' : result.percentage >= 60 ? 'secondary' : 'destructive'}>
+                      {result.percentage.toFixed(1)}%
+                    </Badge>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <div className="font-bold">{result.marks}/{result.test?.maxMarks}</div>
-                  <Badge variant={result.percentage >= 80 ? 'default' : result.percentage >= 60 ? 'secondary' : 'destructive'}>
-                    {result.percentage.toFixed(1)}%
-                  </Badge>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <div className="text-center text-muted-foreground py-8">No test results yet</div>
+            )}
           </div>
         </CardContent>
       </Card>
