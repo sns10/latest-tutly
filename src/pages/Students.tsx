@@ -75,7 +75,7 @@ export default function StudentsPage() {
           <p className="text-xs sm:text-sm text-muted-foreground">Manage and view student details</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
+          <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />
           <AddStudentDialog divisions={divisions} onAddStudent={addStudent} />
         </div>
       </div>
@@ -107,6 +107,7 @@ export default function StudentsPage() {
                   <SelectItem value="9th">9th</SelectItem>
                   <SelectItem value="10th">10th</SelectItem>
                   <SelectItem value="11th">11th</SelectItem>
+                  <SelectItem value="12th">12th</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={divisionFilter} onValueChange={setDivisionFilter}>
@@ -160,7 +161,7 @@ export default function StudentsPage() {
               </p>
               {!searchQuery && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  <BulkImportStudentsDialog onImportStudents={handleBulkImport} />
+                  <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />
                   <AddStudentDialog divisions={divisions} onAddStudent={addStudent} />
                 </div>
               )}
