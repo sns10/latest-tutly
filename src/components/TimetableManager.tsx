@@ -44,7 +44,7 @@ interface TimetableManagerProps {
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th'];
+const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
 
 export function TimetableManager({
   timetable,
@@ -223,8 +223,8 @@ export function TimetableManager({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="bg-white">
-                    {DAYS.slice(1, 6).map((day, index) => (
-                      <SelectItem key={index + 1} value={(index + 1).toString()}>
+                    {DAYS.map((day, index) => (
+                      <SelectItem key={index} value={index.toString()}>
                         {day}
                       </SelectItem>
                     ))}
@@ -346,9 +346,9 @@ export function TimetableManager({
 
       {/* Schedule List - Grouped by Day */}
       <div className="space-y-6">
-        {DAYS.slice(1, 6).map((day, dayIndex) => {
+        {DAYS.map((day, dayIndex) => {
           const dayEntries = regularTimetable
-            .filter((entry) => entry.dayOfWeek === dayIndex + 1)
+            .filter((entry) => entry.dayOfWeek === dayIndex)
             .sort((a, b) => a.startTime.localeCompare(b.startTime));
 
           return (
