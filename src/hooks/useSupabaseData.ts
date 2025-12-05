@@ -310,9 +310,12 @@ export function useSupabaseData() {
   };
 
   const fetchClassFees = async () => {
+    if (!tuitionId) return;
+    
     const { data, error } = await supabase
       .from('class_fees')
-      .select('*');
+      .select('*')
+      .eq('tuition_id', tuitionId);
 
     if (error) {
       console.error('Error fetching class fees:', error);
