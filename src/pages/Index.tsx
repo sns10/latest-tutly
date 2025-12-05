@@ -105,7 +105,7 @@ const Index = () => {
             activeChallenges={challenges.filter(c => c.isActive).length}
           />
 
-          <QuickActions onAddTest={addWeeklyTest} />
+          <QuickActions onAddTest={addWeeklyTest} subjects={subjects} />
           
           <RecentTests 
             tests={weeklyTests}

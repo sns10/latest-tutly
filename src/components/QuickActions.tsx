@@ -2,14 +2,15 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, Clock, FileText, DollarSign } from 'lucide-react';
 import { CreateTestDialog } from './CreateTestDialog';
-import { WeeklyTest } from '@/types';
+import { WeeklyTest, Subject } from '@/types';
 import { useNavigate } from 'react-router-dom';
 
 interface QuickActionsProps {
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
+  subjects: Subject[];
 }
 
-export function QuickActions({ onAddTest }: QuickActionsProps) {
+export function QuickActions({ onAddTest, subjects }: QuickActionsProps) {
   const navigate = useNavigate();
 
   return (
@@ -35,7 +36,7 @@ export function QuickActions({ onAddTest }: QuickActionsProps) {
           <span className="text-[10px] sm:text-xs">Timetable</span>
         </Button>
         <div className="w-full">
-          <CreateTestDialog onAddTest={onAddTest} />
+          <CreateTestDialog onAddTest={onAddTest} subjects={subjects} />
         </div>
         <Button 
           variant="outline" 

@@ -19,6 +19,8 @@ interface ClassManagementProps {
   onUpdateDivision: (id: string, name: string) => void;
   onDeleteDivision: (id: string) => void;
   onAddSubject: (name: string, className: ClassName) => void;
+  onUpdateSubject: (id: string, name: string, className: ClassName) => void;
+  onDeleteSubject: (id: string) => void;
   onAddFaculty: (name: string, email: string, phone: string, subjectIds: string[]) => void;
   onUpdateFaculty: (id: string, name: string, email: string, phone: string, subjectIds: string[]) => void;
   onDeleteFaculty: (id: string) => void;
@@ -34,6 +36,8 @@ export function ClassManagement({
   onUpdateDivision, 
   onDeleteDivision,
   onAddSubject,
+  onUpdateSubject,
+  onDeleteSubject,
   onAddFaculty,
   onUpdateFaculty,
   onDeleteFaculty
@@ -191,6 +195,8 @@ export function ClassManagement({
             subjects={subjects}
             faculty={faculty}
             onAddSubject={onAddSubject}
+            onUpdateSubject={onUpdateSubject}
+            onDeleteSubject={onDeleteSubject}
             onAddFaculty={onAddFaculty}
             onUpdateFaculty={onUpdateFaculty}
             onDeleteFaculty={onDeleteFaculty}

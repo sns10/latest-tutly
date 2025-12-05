@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -34,11 +34,11 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, TestTube2 } from "lucide-react";
-import { WeeklyTest, ClassName } from "@/types";
+import { WeeklyTest, ClassName, Subject } from "@/types";
 
 const formSchema = z.object({
   name: z.string().min(2, "Test name must be at least 2 characters."),
-  subject: z.string().min(2, "Subject must be at least 2 characters."),
+  subject: z.string().min(1, "Please select a subject."),
   maxMarks: z.coerce.number().int().positive("Max marks must be a positive number."),
   date: z.date(),
   class: z.enum(["8th", "9th", "10th", "11th", "12th", "All"]),
@@ -46,9 +46,10 @@ const formSchema = z.object({
 
 interface CreateTestDialogProps {
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
+  subjects: Subject[];
 }
 
-export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
+export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -60,6 +61,23 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
       class: "All",
     },
   });
+
+  const selectedClass = form.watch("class");
+
+  // Filter subjects based on selected class
+  const filteredSubjects = useMemo(() => {
+    if (selectedClass === "All") {
+      // Get unique subject names when "All" is selected
+      const uniqueSubjects = new Map<string, Subject>();
+      subjects.forEach(s => {
+        if (!uniqueSubjects.has(s.name)) {
+          uniqueSubjects.set(s.name, s);
+        }
+      });
+      return Array.from(uniqueSubjects.values());
+    }
+    return subjects.filter(s => s.class === selectedClass);
+  }, [subjects, selectedClass]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
     onAddTest({
@@ -104,19 +122,6 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
             />
             <FormField
               control={form.control}
-              name="subject"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Subject</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Science" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="class"
               render={({ field }) => (
                 <FormItem>
@@ -134,6 +139,36 @@ export function CreateTestDialog({ onAddTest }: CreateTestDialogProps) {
                       <SelectItem value="10th">10th Grade</SelectItem>
                       <SelectItem value="11th">11th Grade</SelectItem>
                       <SelectItem value="12th">12th Grade</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="subject"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Subject</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a subject" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {filteredSubjects.length === 0 ? (
+                        <SelectItem value="no-subjects" disabled>
+                          No subjects available for this class
+                        </SelectItem>
+                      ) : (
+                        filteredSubjects.map(subject => (
+                          <SelectItem key={subject.id} value={subject.name}>
+                            {subject.name} {selectedClass === "All" ? "" : `(${subject.class})`}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                   <FormMessage />
