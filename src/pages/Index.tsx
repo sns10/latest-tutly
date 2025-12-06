@@ -2,6 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useTuitionInfo } from "@/hooks/useTuitionInfo";
+import { useTermExamData } from "@/hooks/useTermExamData";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
 import { QuickActions } from "@/components/QuickActions";
@@ -21,6 +22,16 @@ import StudentsPage from './Students';
 const Index = () => {
   const { user, signOut, loading: authLoading } = useAuth();
   const { tuition } = useTuitionInfo();
+  const {
+    termExams,
+    termExamSubjects,
+    termExamResults,
+    loading: termExamLoading,
+    addTermExam,
+    deleteTermExam,
+    addTermExamResult,
+    bulkAddTermExamResults,
+  } = useTermExamData();
   const {
     students,
     weeklyTests,
@@ -54,7 +65,7 @@ const Index = () => {
     updateClassFee,
   } = useSupabaseData();
 
-  if (authLoading || loading) {
+  if (authLoading || loading || termExamLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-2">
@@ -135,6 +146,9 @@ const Index = () => {
                 subjects={subjects}
                 faculty={faculty}
                 divisions={divisions}
+                termExams={termExams}
+                termExamSubjects={termExamSubjects}
+                termExamResults={termExamResults}
                 onAddTest={addWeeklyTest}
                 onDeleteTest={deleteWeeklyTest}
                 onAddTestResult={addTestResult}
@@ -146,6 +160,10 @@ const Index = () => {
                 onAddFee={addFee}
                 onUpdateFeeStatus={updateFeeStatus}
                 onUpdateClassFee={updateClassFee}
+                onCreateTermExam={addTermExam}
+                onDeleteTermExam={deleteTermExam}
+                onAddTermExamResult={addTermExamResult}
+                onBulkAddTermExamResults={bulkAddTermExamResults}
               />
             </CardContent>
           </Card>

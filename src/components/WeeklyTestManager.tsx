@@ -444,6 +444,23 @@ export function WeeklyTestManager({
             students={students}
           />
         </TabsContent>
+
+        <TabsContent value="term-exams">
+          {onCreateTermExam && onDeleteTermExam && onAddTermExamResult && onBulkAddTermExamResults && (
+            <TermExamManager
+              termExams={termExams}
+              termExamSubjects={termExamSubjects}
+              termExamResults={termExamResults}
+              students={students}
+              subjects={subjects}
+              divisions={divisions}
+              onCreateExam={onCreateTermExam}
+              onDeleteExam={onDeleteTermExam}
+              onAddResult={onAddTermExamResult}
+              onBulkAddResults={onBulkAddTermExamResults}
+            />
+          )}
+        </TabsContent>
       </Tabs>
 
       {selectedTest && (
