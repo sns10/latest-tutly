@@ -7,10 +7,11 @@ import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AttendanceStats } from './attendance/AttendanceStats';
 import { StudentAttendanceList } from './attendance/StudentAttendanceList';
 import { ReportExporter } from './ReportExporter';
-import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users } from 'lucide-react';
+import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -50,6 +51,11 @@ export function AttendanceTracker({
   const [searchQuery, setSearchQuery] = useState('');
   const [isManualMode, setIsManualMode] = useState(false);
   const [detectedClass, setDetectedClass] = useState<DetectedClass | null>(null);
+  
+  // Collapsible state for mobile - default collapsed
+  const [todaysClassesOpen, setTodaysClassesOpen] = useState(false);
+  const [statsOpen, setStatsOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
 
   const formatDate = (date: Date) => date.toISOString().split('T')[0];
   const selectedDateStr = formatDate(selectedDate);
@@ -259,7 +265,7 @@ export function AttendanceTracker({
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-slate-50 pb-20">
       {/* Auto-Detected Class Banner */}
       {detectedClass && !isManualMode && (
         <div className="bg-green-50 border-b border-green-200 px-4 py-3">
@@ -289,12 +295,12 @@ export function AttendanceTracker({
         </div>
       )}
 
-      <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+      <div className="p-4 max-w-3xl mx-auto space-y-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-foreground">Attendance Tracker</h1>
-            <p className="text-muted-foreground text-sm">Track and manage student attendance</p>
+            <h1 className="text-xl font-bold text-foreground">Attendance</h1>
+            <p className="text-muted-foreground text-xs">{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
           </div>
           <div className="flex gap-2">
             {isManualMode && (
@@ -302,178 +308,223 @@ export function AttendanceTracker({
                 variant="outline" 
                 size="sm" 
                 onClick={handleRefreshDetection}
-                className="gap-2"
+                className="gap-1 h-8 text-xs"
               >
-                <RefreshCw className="h-4 w-4" />
-                Auto-detect
+                <RefreshCw className="h-3 w-3" />
+                Auto
               </Button>
             )}
             <ReportExporter
               type="absentees"
-              label="Export PDF"
+              label="PDF"
               classValue={selectedClass || undefined}
               startDate={selectedDateStr}
             />
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Panel - Controls */}
-          <div className="space-y-4">
-            {/* Date Picker Card */}
-            <Card className="bg-white shadow-sm border-slate-200">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-2 mb-3">
-                  <CalendarDays className="h-4 w-4 text-muted-foreground" />
-                  <Label className="font-medium">Select Date</Label>
-                </div>
-                <Calendar
-                  mode="single"
-                  selected={selectedDate}
-                  onSelect={(date) => date && setSelectedDate(date)}
-                  className="rounded-md border border-slate-200 pointer-events-auto"
-                />
-              </CardContent>
-            </Card>
+        {/* Compact Filters Row */}
+        <Card className="bg-white shadow-sm border-slate-200">
+          <CardContent className="p-3 space-y-3">
+            {/* Row 1: Class + Division */}
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={selectedClass} onValueChange={(value) => {
+                setSelectedClass(value);
+                setSelectedDivision('');
+                setSelectedSubject('');
+                setSelectedFaculty('');
+              }}>
+                <SelectTrigger className="bg-white h-9 text-sm">
+                  <SelectValue placeholder="Select class" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {CLASSES.map(cls => (
+                    <SelectItem key={cls} value={cls}>{cls} Grade</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            {/* Filters Card */}
-            <Card className="bg-white shadow-sm border-slate-200">
-              <CardContent className="p-4 space-y-4">
-                {/* Class Filter */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Filter by Class</Label>
-                  <Select value={selectedClass} onValueChange={(value) => {
-                    setSelectedClass(value);
-                    setSelectedDivision('');
-                    setSelectedSubject('');
-                    setSelectedFaculty('');
-                  }}>
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="Select class" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {CLASSES.map(cls => (
-                        <SelectItem key={cls} value={cls}>{cls} Grade</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {availableDivisions.length > 0 ? (
+                <Select 
+                  value={selectedDivision || "all"} 
+                  onValueChange={(v) => setSelectedDivision(v === "all" ? "" : v)}
+                  disabled={!selectedClass}
+                >
+                  <SelectTrigger className="bg-white h-9 text-sm">
+                    <SelectValue placeholder="All divisions" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white">
+                    <SelectItem value="all">All divisions</SelectItem>
+                    {availableDivisions.map(div => (
+                      <SelectItem key={div.id} value={div.id}>
+                        Div {div.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div />
+              )}
+            </div>
 
-                {/* Division Filter */}
-                {availableDivisions.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="flex items-center gap-2 text-sm">
-                      <Users className="h-4 w-4" />
-                      Division
-                    </Label>
-                    <Select 
-                      value={selectedDivision || "all"} 
-                      onValueChange={(v) => setSelectedDivision(v === "all" ? "" : v)}
-                      disabled={!selectedClass}
-                    >
-                      <SelectTrigger className="bg-white">
-                        <SelectValue placeholder="All divisions" />
-                      </SelectTrigger>
-                      <SelectContent className="bg-white">
-                        <SelectItem value="all">All divisions</SelectItem>
-                        {availableDivisions.map(div => (
-                          <SelectItem key={div.id} value={div.id}>
-                            Division {div.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+            {/* Row 2: Subject + Faculty */}
+            <div className="grid grid-cols-2 gap-2">
+              <Select 
+                value={selectedSubject || "all"} 
+                onValueChange={(v) => setSelectedSubject(v === "all" ? "" : v)}
+                disabled={!selectedClass}
+              >
+                <SelectTrigger className="bg-white h-9 text-sm">
+                  <SelectValue placeholder="All subjects" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">All subjects</SelectItem>
+                  {availableSubjects.map(subject => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select 
+                value={selectedFaculty || "all"} 
+                onValueChange={(v) => setSelectedFaculty(v === "all" ? "" : v)}
+                disabled={!selectedClass}
+              >
+                <SelectTrigger className="bg-white h-9 text-sm">
+                  <SelectValue placeholder="All faculty" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  <SelectItem value="all">All faculty</SelectItem>
+                  {availableFaculty.map(fac => (
+                    <SelectItem key={fac.id} value={fac.id}>
+                      {fac.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search student..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 bg-white h-10"
+              />
+            </div>
+
+            {/* Mark All Present Button */}
+            <Button 
+              onClick={() => handleBulkAttendance('present')} 
+              className="w-full bg-green-600 hover:bg-green-700 h-9 text-sm font-medium" 
+              disabled={!selectedClass || filteredStudents.length === 0}
+            >
+              Mark All Present ({filteredStudents.length})
+            </Button>
+          </CardContent>
+        </Card>
+
+        {/* Student List - Primary Content */}
+        {!selectedClass ? (
+          <Card className="bg-white shadow-sm border-slate-200">
+            <CardContent className="py-8 text-center">
+              <AlertCircle className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+              <h3 className="text-base font-medium text-foreground mb-1">Select a Class</h3>
+              <p className="text-muted-foreground text-sm">
+                Choose a class to view students
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="bg-white shadow-sm border-slate-200">
+            <CardContent className="p-3">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-medium text-foreground">
+                  Students ({filteredStudents.length})
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {selectedDate.toLocaleDateString()}
+                </span>
+              </div>
+              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student) => {
+                    const studentAttendance = getAttendanceForStudent(student.id);
+                    return (
+                      <StudentAttendanceRow
+                        key={student.id}
+                        student={student}
+                        studentAttendance={studentAttendance}
+                        onMarkAttendance={handleMarkAttendance}
+                      />
+                    );
+                  })
+                ) : (
+                  <p className="text-muted-foreground text-center py-4 text-sm">No students found.</p>
                 )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
-                {/* Subject Filter */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm">
-                    <BookOpen className="h-4 w-4" />
-                    Subject
-                  </Label>
-                  <Select 
-                    value={selectedSubject || "all"} 
-                    onValueChange={(v) => setSelectedSubject(v === "all" ? "" : v)}
-                    disabled={!selectedClass}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="All subjects" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="all">All subjects</SelectItem>
-                      {availableSubjects.map(subject => (
-                        <SelectItem key={subject.id} value={subject.id}>
-                          {subject.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Faculty Filter */}
-                <div className="space-y-2">
-                  <Label className="flex items-center gap-2 text-sm">
-                    <UserCircle className="h-4 w-4" />
-                    Faculty
-                  </Label>
-                  <Select 
-                    value={selectedFaculty || "all"} 
-                    onValueChange={(v) => setSelectedFaculty(v === "all" ? "" : v)}
-                    disabled={!selectedClass}
-                  >
-                    <SelectTrigger className="bg-white">
-                      <SelectValue placeholder="All faculty" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="all">All faculty</SelectItem>
-                      {availableFaculty.map(fac => (
-                        <SelectItem key={fac.id} value={fac.id}>
-                          {fac.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Search */}
-                <div className="space-y-2">
-                  <Label className="text-sm">Search Student</Label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by name..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10 bg-white"
-                    />
+        {/* Collapsible Secondary Sections */}
+        <div className="space-y-2">
+          {/* Date Picker - Collapsible */}
+          <Collapsible open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+            <Card className="bg-white shadow-sm border-slate-200 overflow-hidden">
+              <CollapsibleTrigger asChild>
+                <button className="w-full p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">Change Date</span>
                   </div>
+                  {datePickerOpen ? (
+                    <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-3 pb-3 border-t border-slate-100">
+                  <Calendar
+                    mode="single"
+                    selected={selectedDate}
+                    onSelect={(date) => date && setSelectedDate(date)}
+                    className="rounded-md border border-slate-200 pointer-events-auto mx-auto"
+                  />
                 </div>
-
-                {/* Bulk Actions */}
-                <div className="pt-2 border-t border-slate-100">
-                  <Button 
-                    onClick={() => handleBulkAttendance('present')} 
-                    className="w-full bg-green-600 hover:bg-green-700" 
-                    size="sm"
-                    disabled={!selectedClass}
-                  >
-                    Mark All Present
-                  </Button>
-                </div>
-              </CardContent>
+              </CollapsibleContent>
             </Card>
+          </Collapsible>
 
-            {/* Today's Classes Quick Access */}
-            {todaysClasses.length > 0 && (
-              <Card className="bg-white shadow-sm border-slate-200">
-                <CardContent className="p-4">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Clock className="h-4 w-4 text-blue-600" />
-                    <Label className="font-medium">Today's Classes</Label>
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {todaysClasses.slice(0, 6).map((entry, idx) => (
+          {/* Today's Classes - Collapsible */}
+          {todaysClasses.length > 0 && (
+            <Collapsible open={todaysClassesOpen} onOpenChange={setTodaysClassesOpen}>
+              <Card className="bg-white shadow-sm border-slate-200 overflow-hidden">
+                <CollapsibleTrigger asChild>
+                  <button className="w-full p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-600" />
+                      <span className="text-sm font-medium">Today's Classes</span>
+                      <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded">
+                        {todaysClasses.length}
+                      </span>
+                    </div>
+                    {todaysClassesOpen ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-3 pb-3 border-t border-slate-100 space-y-2 max-h-48 overflow-y-auto">
+                    {todaysClasses.map((entry, idx) => (
                       <button
                         key={`${entry.id}-${idx}`}
                         onClick={() => {
@@ -481,6 +532,7 @@ export function AttendanceTracker({
                           setSelectedSubject(entry.subjectId);
                           setSelectedFaculty(entry.facultyId);
                           setIsManualMode(true);
+                          setTodaysClassesOpen(false);
                         }}
                         className="w-full text-left p-2 rounded-md hover:bg-slate-50 border border-slate-100 transition-colors"
                       >
@@ -497,36 +549,106 @@ export function AttendanceTracker({
                       </button>
                     ))}
                   </div>
-                </CardContent>
+                </CollapsibleContent>
               </Card>
-            )}
-          </div>
+            </Collapsible>
+          )}
 
-          {/* Right Panel - Student List */}
-          <div className="lg:col-span-3 space-y-4">
-            {!selectedClass ? (
-              <Card className="bg-white shadow-sm border-slate-200">
-                <CardContent className="py-12 text-center">
-                  <AlertCircle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <h3 className="text-lg font-medium text-foreground mb-2">Select a Class</h3>
-                  <p className="text-muted-foreground">
-                    Choose a class from the filter to view and mark student attendance
-                  </p>
-                </CardContent>
+          {/* Attendance Summary - Collapsible */}
+          {selectedClass && (
+            <Collapsible open={statsOpen} onOpenChange={setStatsOpen}>
+              <Card className="bg-white shadow-sm border-slate-200 overflow-hidden">
+                <CollapsibleTrigger asChild>
+                  <button className="w-full p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium">Summary</span>
+                      <span className="text-xs text-muted-foreground">
+                        {stats.present}P / {stats.absent}A / {stats.late}L
+                      </span>
+                    </div>
+                    {statsOpen ? (
+                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-3 pb-3 border-t border-slate-100">
+                    <AttendanceStats stats={stats} />
+                  </div>
+                </CollapsibleContent>
               </Card>
-            ) : (
-              <>
-                <AttendanceStats stats={stats} />
-                <StudentAttendanceList
-                  students={filteredStudents}
-                  selectedDate={selectedDate}
-                  getAttendanceForStudent={getAttendanceForStudent}
-                  onMarkAttendance={handleMarkAttendance}
-                />
-              </>
-            )}
-          </div>
+            </Collapsible>
+          )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Inline compact student row component for better UX
+function StudentAttendanceRow({ 
+  student, 
+  studentAttendance, 
+  onMarkAttendance 
+}: { 
+  student: Student; 
+  studentAttendance?: StudentAttendance; 
+  onMarkAttendance: (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => void;
+}) {
+  const status = studentAttendance?.status;
+  
+  return (
+    <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-slate-50/50">
+      <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium shrink-0">
+          {student.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="font-medium text-sm truncate">{student.name}</div>
+          <div className="text-xs text-muted-foreground">{student.class}</div>
+        </div>
+      </div>
+      
+      <div className="flex items-center gap-1">
+        <Button 
+          size="sm" 
+          variant={status === 'present' ? 'default' : 'outline'}
+          onClick={() => onMarkAttendance(student.id, 'present')}
+          className={`h-8 px-3 text-xs font-medium ${
+            status === 'present' 
+              ? 'bg-green-600 hover:bg-green-700 text-white' 
+              : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
+          }`}
+        >
+          P
+        </Button>
+        <Button 
+          size="sm" 
+          variant={status === 'absent' ? 'destructive' : 'outline'}
+          onClick={() => onMarkAttendance(student.id, 'absent')}
+          className={`h-8 px-3 text-xs font-medium ${
+            status === 'absent' 
+              ? '' 
+              : 'hover:bg-red-50 hover:text-red-700 hover:border-red-300'
+          }`}
+        >
+          A
+        </Button>
+        <Button 
+          size="sm" 
+          variant={status === 'late' ? 'secondary' : 'outline'}
+          onClick={() => onMarkAttendance(student.id, 'late')}
+          className={`h-8 px-3 text-xs font-medium ${
+            status === 'late' 
+              ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
+              : 'hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-300'
+          }`}
+        >
+          L
+        </Button>
       </div>
     </div>
   );
