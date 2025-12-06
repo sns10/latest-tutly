@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee, Subject, Faculty, Division } from "@/types";
+import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee, Subject, Faculty, Division, TermExam, TermExamSubject, TermExamResult } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -16,8 +16,9 @@ import { FeeManagement } from "./FeeManagement";
 import { StudentDashboard } from "./StudentDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2, Search } from "lucide-react";
+import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2, Search, BookOpen } from "lucide-react";
 import { ClassFeeManager } from "./ClassFeeManager";
+import { TermExamManager } from "./term-exams/TermExamManager";
 
 interface WeeklyTestManagerProps {
   tests: WeeklyTest[];
@@ -32,6 +33,9 @@ interface WeeklyTestManagerProps {
   subjects: Subject[];
   faculty: Faculty[];
   divisions?: Division[];
+  termExams?: TermExam[];
+  termExamSubjects?: TermExamSubject[];
+  termExamResults?: TermExamResult[];
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onDeleteTest: (testId: string) => void;
   onAddTestResult: (result: StudentTestResult) => void;
@@ -43,6 +47,10 @@ interface WeeklyTestManagerProps {
   onAddFee: (fee: any) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
   onUpdateClassFee: (className: string, amount: number) => void;
+  onCreateTermExam?: (exam: any) => Promise<string | null>;
+  onDeleteTermExam?: (examId: string) => void;
+  onAddTermExamResult?: (result: any) => void;
+  onBulkAddTermExamResults?: (results: any[]) => Promise<boolean>;
 }
 
 export function WeeklyTestManager({ 
@@ -58,6 +66,9 @@ export function WeeklyTestManager({
   subjects,
   faculty,
   divisions = [],
+  termExams = [],
+  termExamSubjects = [],
+  termExamResults = [],
   onAddTest,
   onDeleteTest,
   onAddTestResult,
@@ -68,7 +79,11 @@ export function WeeklyTestManager({
   onMarkAttendance,
   onAddFee,
   onUpdateFeeStatus,
-  onUpdateClassFee
+  onUpdateClassFee,
+  onCreateTermExam,
+  onDeleteTermExam,
+  onAddTermExamResult,
+  onBulkAddTermExamResults,
 }: WeeklyTestManagerProps) {
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -180,6 +195,10 @@ export function WeeklyTestManager({
             <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
               <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Fees</span>
+            </TabsTrigger>
+            <TabsTrigger value="term-exams" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span>Term Exams</span>
             </TabsTrigger>
           </TabsList>
         </div>

@@ -750,6 +750,150 @@ export type Database = {
           },
         ]
       }
+      term_exam_results: {
+        Row: {
+          created_at: string
+          grade: string | null
+          id: string
+          marks: number | null
+          student_id: string
+          subject_id: string
+          term_exam_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          grade?: string | null
+          id?: string
+          marks?: number | null
+          student_id: string
+          subject_id: string
+          term_exam_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          grade?: string | null
+          id?: string
+          marks?: number | null
+          student_id?: string
+          subject_id?: string
+          term_exam_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "term_exam_results_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "term_exam_results_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "term_exam_results_term_exam_id_fkey"
+            columns: ["term_exam_id"]
+            isOneToOne: false
+            referencedRelation: "term_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      term_exam_subjects: {
+        Row: {
+          created_at: string
+          exam_date: string | null
+          id: string
+          max_marks: number
+          subject_id: string
+          term_exam_id: string
+        }
+        Insert: {
+          created_at?: string
+          exam_date?: string | null
+          id?: string
+          max_marks?: number
+          subject_id: string
+          term_exam_id: string
+        }
+        Update: {
+          created_at?: string
+          exam_date?: string | null
+          id?: string
+          max_marks?: number
+          subject_id?: string
+          term_exam_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "term_exam_subjects_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "term_exam_subjects_term_exam_id_fkey"
+            columns: ["term_exam_id"]
+            isOneToOne: false
+            referencedRelation: "term_exams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      term_exams: {
+        Row: {
+          academic_year: string
+          class: string
+          created_at: string
+          end_date: string | null
+          id: string
+          name: string
+          start_date: string | null
+          term: string
+          tuition_id: string
+          updated_at: string
+        }
+        Insert: {
+          academic_year: string
+          class: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name: string
+          start_date?: string | null
+          term: string
+          tuition_id: string
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          class?: string
+          created_at?: string
+          end_date?: string | null
+          id?: string
+          name?: string
+          start_date?: string | null
+          term?: string
+          tuition_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "term_exams_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       timetable: {
         Row: {
           class: string

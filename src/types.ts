@@ -130,6 +130,40 @@ export interface ClassFee {
   amount: number;
 }
 
+// Term Exam Types
+export interface TermExam {
+  id: string;
+  name: string;
+  term: '1st Term' | '2nd Term' | '3rd Term';
+  class: ClassName;
+  academicYear: string;
+  startDate?: string;
+  endDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TermExamSubject {
+  id: string;
+  termExamId: string;
+  subjectId: string;
+  maxMarks: number;
+  examDate?: string;
+  subject?: Subject;
+  createdAt: string;
+}
+
+export interface TermExamResult {
+  id: string;
+  termExamId: string;
+  studentId: string;
+  subjectId: string;
+  marks?: number;
+  grade?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Faculty and Timetable types
 export interface Subject {
   id: string;
