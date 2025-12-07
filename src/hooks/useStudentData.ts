@@ -30,12 +30,38 @@ export function useStudentData() {
       }
 
       try {
-        // Fetch student record - use maybeSingle to avoid error when no record exists
-        const { data: studentData, error: studentError } = await supabase
+        // First try to find student by user_id (already linked)
+        let { data: studentData, error: studentError } = await supabase
           .from('students')
           .select('*')
           .eq('user_id', user.id)
           .maybeSingle();
+
+        // If no student found by user_id, try to find by email and link
+        if (!studentData && user.email) {
+          const { data: studentByEmail, error: emailError } = await supabase
+            .from('students')
+            .select('*')
+            .eq('email', user.email)
+            .maybeSingle();
+
+          if (studentByEmail && !studentByEmail.user_id) {
+            // Link the student to this user account
+            const { data: updatedStudent, error: updateError } = await supabase
+              .from('students')
+              .update({ user_id: user.id })
+              .eq('id', studentByEmail.id)
+              .select()
+              .single();
+
+            if (!updateError && updatedStudent) {
+              studentData = updatedStudent;
+            }
+          } else if (studentByEmail) {
+            // Student already linked to another user
+            studentData = studentByEmail;
+          }
+        }
 
         if (studentError) {
           console.error('Error fetching student:', studentError);

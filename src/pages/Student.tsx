@@ -9,13 +9,28 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { StudentPortalLeaderboard } from '@/components/StudentPortalLeaderboard';
+import { StudentPortalAuth } from '@/components/StudentPortalAuth';
 import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut, Trophy } from 'lucide-react';
 
 export default function Student() {
+  const { user, loading: authLoading } = useAuth();
   const { student, attendance, testResults, tests, fees, subjects, announcements, loading } = useStudentData();
   const { tuition } = useTuitionInfo();
   const { leaderboardStudents, loading: leaderboardLoading } = useStudentLeaderboard(student?.tuition_id || null);
   const { signOut } = useAuth();
+
+  // Show auth screen if not logged in
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <StudentPortalAuth onAuthSuccess={() => window.location.reload()} />;
+  }
 
   if (loading) {
     return (
@@ -27,13 +42,19 @@ export default function Student() {
 
   if (!student) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Student Not Found</CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">Your account is not linked to a student profile. Please contact your tuition administrator.</p>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Your email ({user.email}) is not linked to any student profile. Please contact your tuition administrator to get access.
+            </p>
+            <Button variant="outline" onClick={signOut} className="w-full gap-2">
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
           </CardContent>
         </Card>
       </div>
