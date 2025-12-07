@@ -670,6 +670,7 @@ export type Database = {
           class: string
           created_at: string
           division_id: string | null
+          email: string | null
           id: string
           name: string
           team: string | null
@@ -682,6 +683,7 @@ export type Database = {
           class: string
           created_at?: string
           division_id?: string | null
+          email?: string | null
           id?: string
           name: string
           team?: string | null
@@ -694,6 +696,7 @@ export type Database = {
           class?: string
           created_at?: string
           division_id?: string | null
+          email?: string | null
           id?: string
           name?: string
           team?: string | null
