@@ -1,5 +1,6 @@
 import { useStudentData } from '@/hooks/useStudentData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
+import { useStudentLeaderboard } from '@/hooks/useStudentLeaderboard';
 import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,11 +8,13 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut } from 'lucide-react';
+import { StudentPortalLeaderboard } from '@/components/StudentPortalLeaderboard';
+import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut, Trophy } from 'lucide-react';
 
 export default function Student() {
   const { student, attendance, testResults, tests, fees, subjects, announcements, loading } = useStudentData();
   const { tuition } = useTuitionInfo();
+  const { leaderboardStudents, loading: leaderboardLoading } = useStudentLeaderboard(student?.tuition_id || null);
   const { signOut } = useAuth();
 
   if (loading) {
@@ -153,10 +156,15 @@ export default function Student() {
 
       {/* Tabs */}
       <Tabs defaultValue="tests" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="tests">Tests</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
           <TabsTrigger value="fees">Fees</TabsTrigger>
+          <TabsTrigger value="leaderboard" className="flex items-center gap-1">
+            <Trophy className="h-3 w-3" />
+            <span className="hidden sm:inline">Leaderboard</span>
+            <span className="sm:hidden">Rank</span>
+          </TabsTrigger>
           <TabsTrigger value="announcements">News</TabsTrigger>
         </TabsList>
 
@@ -261,6 +269,33 @@ export default function Student() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* Leaderboard Tab */}
+        <TabsContent value="leaderboard">
+          {leaderboardLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            </div>
+          ) : (
+            <StudentPortalLeaderboard
+              students={leaderboardStudents.map(s => ({
+                id: s.id,
+                name: s.name,
+                class: s.class,
+                avatar: s.avatar,
+                totalXp: s.totalXp,
+                division: s.division ? { id: s.division.id, name: s.division.name, class: s.class, createdAt: '' } : undefined,
+                divisionId: s.division?.id,
+                xp: { blackout: 0, futureMe: 0, recallWar: 0 },
+                purchasedRewards: [],
+                team: null,
+                badges: [],
+              }))}
+              currentStudentId={student.id}
+              classFilter={student.class}
+            />
+          )}
         </TabsContent>
 
         {/* Announcements Tab */}

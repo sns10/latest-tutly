@@ -110,6 +110,7 @@ export function useSupabaseData() {
         createdAt: new Date().toISOString(),
       } : undefined,
       avatar: student.avatar || '',
+      email: (student as any).email || undefined,
       team: student.team as TeamName | null,
       totalXp: student.total_xp,
       xp: {
@@ -1373,11 +1374,12 @@ export function useSupabaseData() {
   };
 
   // Update Student Details
-  const updateStudent = async (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null }) => {
+  const updateStudent = async (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null; email?: string | null }) => {
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.class !== undefined) updateData.class = updates.class;
     if (updates.divisionId !== undefined) updateData.division_id = updates.divisionId;
+    if (updates.email !== undefined) updateData.email = updates.email;
 
     const { error } = await supabase
       .from('students')
@@ -1392,6 +1394,23 @@ export function useSupabaseData() {
 
     toast.success('Student updated successfully');
     await fetchStudents();
+  };
+
+  // Assign email for student portal access
+  const assignStudentEmail = async (studentId: string, email: string): Promise<boolean> => {
+    const { error } = await supabase
+      .from('students')
+      .update({ email })
+      .eq('id', studentId);
+
+    if (error) {
+      console.error('Error assigning student email:', error);
+      toast.error('Failed to assign email');
+      return false;
+    }
+
+    await fetchStudents();
+    return true;
   };
 
   return {
@@ -1444,5 +1463,6 @@ export function useSupabaseData() {
     updateRoom,
     deleteRoom,
     updateStudent,
+    assignStudentEmail,
   };
 }

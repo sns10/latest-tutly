@@ -26,6 +26,7 @@ export default function StudentsPage() {
     addStudent,
     removeStudent,
     updateStudent,
+    assignStudentEmail,
     addXp,
     assignTeam,
     buyReward,
@@ -216,6 +217,7 @@ export default function StudentsPage() {
           onOpenChange={(open) => !open && setSelectedStudent(null)}
           onRemoveStudent={removeStudent}
           onUpdateStudent={updateStudent}
+          onAssignStudentEmail={assignStudentEmail}
         />
       )}
     </div>

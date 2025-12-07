@@ -16,8 +16,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check } from 'lucide-react';
+import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check, Mail, UserCheck } from 'lucide-react';
 import { format } from 'date-fns';
+import { AssignStudentEmailDialog } from './AssignStudentEmailDialog';
 
 interface StudentDetailsDialogProps {
   student: Student;
@@ -32,6 +33,7 @@ interface StudentDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   onRemoveStudent: (studentId: string) => void;
   onUpdateStudent?: (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null }) => void;
+  onAssignStudentEmail?: (studentId: string, email: string) => Promise<boolean>;
 }
 
 const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
@@ -49,8 +51,10 @@ export function StudentDetailsDialog({
   onOpenChange,
   onRemoveStudent,
   onUpdateStudent,
+  onAssignStudentEmail,
 }: StudentDetailsDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
   const [editName, setEditName] = useState(student.name);
   const [editClass, setEditClass] = useState<ClassName>(student.class);
   const [editDivisionId, setEditDivisionId] = useState(student.divisionId || '');
@@ -351,16 +355,42 @@ export function StudentDetailsDialog({
         </Tabs>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Close
-          </Button>
-          <Button variant="destructive" size="sm" onClick={handleRemove}>
-            <Trash2 className="h-4 w-4 mr-1" />
-            Remove Student
-          </Button>
+        <div className="flex flex-wrap justify-between gap-2 mt-4 pt-4 border-t">
+          <div className="flex items-center gap-2">
+            {onAssignStudentEmail && (
+              <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(true)} className="gap-2">
+                <Mail className="h-4 w-4" />
+                {student.email ? 'Update Portal Access' : 'Enable Portal Access'}
+              </Button>
+            )}
+            {student.email && (
+              <Badge variant="secondary" className="gap-1">
+                <UserCheck className="h-3 w-3" />
+                {student.email}
+              </Badge>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Close
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleRemove}>
+              <Trash2 className="h-4 w-4 mr-1" />
+              Remove Student
+            </Button>
+          </div>
         </div>
       </DialogContent>
+
+      {/* Email Assignment Dialog */}
+      {onAssignStudentEmail && (
+        <AssignStudentEmailDialog
+          student={student}
+          open={showEmailDialog}
+          onOpenChange={setShowEmailDialog}
+          onAssignEmail={onAssignStudentEmail}
+        />
+      )}
     </Dialog>
   );
 }
