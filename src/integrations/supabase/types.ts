@@ -1010,6 +1010,7 @@ export type Database = {
           logo_url: string | null
           name: string
           phone: string | null
+          portal_email: string | null
           subscription_end_date: string | null
           subscription_start_date: string | null
           subscription_status: string
@@ -1025,6 +1026,7 @@ export type Database = {
           logo_url?: string | null
           name: string
           phone?: string | null
+          portal_email?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string
@@ -1040,6 +1042,7 @@ export type Database = {
           logo_url?: string | null
           name?: string
           phone?: string | null
+          portal_email?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserTuition } from './useUserTuition';
 
@@ -8,6 +8,7 @@ interface TuitionInfo {
   email: string | null;
   phone: string | null;
   logo_url: string | null;
+  portal_email: string | null;
 }
 
 export function useTuitionInfo() {
@@ -15,35 +16,35 @@ export function useTuitionInfo() {
   const [tuition, setTuition] = useState<TuitionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchTuition = useCallback(async () => {
+    if (!tuitionId) {
+      setTuition(null);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('tuitions')
+        .select('id, name, email, phone, logo_url, portal_email')
+        .eq('id', tuitionId)
+        .maybeSingle();
+
+      if (error) throw error;
+      setTuition(data);
+    } catch (error) {
+      console.error('Error fetching tuition info:', error);
+      setTuition(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [tuitionId]);
+
   useEffect(() => {
-    const fetchTuition = async () => {
-      if (!tuitionId) {
-        setTuition(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('tuitions')
-          .select('id, name, email, phone, logo_url')
-          .eq('id', tuitionId)
-          .maybeSingle();
-
-        if (error) throw error;
-        setTuition(data);
-      } catch (error) {
-        console.error('Error fetching tuition info:', error);
-        setTuition(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     if (!tuitionIdLoading) {
       fetchTuition();
     }
-  }, [tuitionId, tuitionIdLoading]);
+  }, [tuitionId, tuitionIdLoading, fetchTuition]);
 
-  return { tuition, loading: loading || tuitionIdLoading };
+  return { tuition, loading: loading || tuitionIdLoading, refetch: fetchTuition };
 }

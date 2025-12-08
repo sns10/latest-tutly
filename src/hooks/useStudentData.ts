@@ -10,10 +10,23 @@ type StudentFee = Tables<'student_fees'>;
 type WeeklyTest = Tables<'weekly_tests'>;
 type Subject = Tables<'subjects'>;
 type Announcement = Tables<'announcements'>;
+type Tuition = Tables<'tuitions'>;
 
-export function useStudentData() {
+interface Division {
+  id: string;
+  name: string;
+}
+
+interface StudentWithDivision extends Student {
+  divisions?: Division | null;
+}
+
+export function useStudentData(selectedStudentId?: string | null) {
   const { user } = useAuth();
   const [student, setStudent] = useState<Student | null>(null);
+  const [allStudents, setAllStudents] = useState<StudentWithDivision[]>([]);
+  const [tuition, setTuition] = useState<Tuition | null>(null);
+  const [isSharedAccess, setIsSharedAccess] = useState(false);
   const [attendance, setAttendance] = useState<StudentAttendance[]>([]);
   const [testResults, setTestResults] = useState<StudentTestResult[]>([]);
   const [tests, setTests] = useState<WeeklyTest[]>([]);
@@ -30,8 +43,43 @@ export function useStudentData() {
       }
 
       try {
-        // First try to find student by user_id (already linked)
-        let { data: studentData, error: studentError } = await supabase
+        // First check if this is shared portal access (email matches tuition's portal_email)
+        const { data: tuitionData } = await supabase
+          .from('tuitions')
+          .select('*')
+          .eq('portal_email', user.email || '')
+          .maybeSingle();
+
+        if (tuitionData) {
+          // Shared access mode - fetch all students for this tuition
+          setIsSharedAccess(true);
+          setTuition(tuitionData);
+
+          const { data: studentsData } = await supabase
+            .from('students')
+            .select('*, divisions(id, name)')
+            .eq('tuition_id', tuitionData.id)
+            .order('name');
+
+          if (studentsData) {
+            setAllStudents(studentsData as StudentWithDivision[]);
+          }
+
+          // If a student is selected, fetch their data
+          if (selectedStudentId) {
+            const selectedStudent = studentsData?.find(s => s.id === selectedStudentId);
+            if (selectedStudent) {
+              setStudent(selectedStudent);
+              await fetchStudentRelatedData(selectedStudent);
+            }
+          }
+
+          setLoading(false);
+          return;
+        }
+
+        // Individual access mode - try to find student by user_id
+        let { data: studentData } = await supabase
           .from('students')
           .select('*')
           .eq('user_id', user.id)
@@ -39,90 +87,35 @@ export function useStudentData() {
 
         // If no student found by user_id, try to find by email and link
         if (!studentData && user.email) {
-          const { data: studentByEmail, error: emailError } = await supabase
+          const { data: studentByEmail } = await supabase
             .from('students')
             .select('*')
             .eq('email', user.email)
             .maybeSingle();
 
           if (studentByEmail && !studentByEmail.user_id) {
-            // Link the student to this user account
-            const { data: updatedStudent, error: updateError } = await supabase
+            const { data: updatedStudent } = await supabase
               .from('students')
               .update({ user_id: user.id })
               .eq('id', studentByEmail.id)
               .select()
               .single();
 
-            if (!updateError && updatedStudent) {
+            if (updatedStudent) {
               studentData = updatedStudent;
             }
           } else if (studentByEmail) {
-            // Student already linked to another user
             studentData = studentByEmail;
           }
         }
 
-        if (studentError) {
-          console.error('Error fetching student:', studentError);
-          setLoading(false);
-          return;
-        }
         if (!studentData) {
-          // No student record for this user - this is normal for non-student users
           setLoading(false);
           return;
         }
 
         setStudent(studentData);
-
-        // Fetch all related data in parallel
-        const [
-          attendanceRes,
-          testResultsRes,
-          testsRes,
-          feesRes,
-          subjectsRes,
-          announcementsRes
-        ] = await Promise.all([
-          supabase
-            .from('student_attendance')
-            .select('*')
-            .eq('student_id', studentData.id)
-            .order('date', { ascending: false }),
-          supabase
-            .from('student_test_results')
-            .select('*')
-            .eq('student_id', studentData.id),
-          supabase
-            .from('weekly_tests')
-            .select('*')
-            .eq('tuition_id', studentData.tuition_id)
-            .order('test_date', { ascending: false }),
-          supabase
-            .from('student_fees')
-            .select('*')
-            .eq('student_id', studentData.id)
-            .order('due_date', { ascending: false }),
-          supabase
-            .from('subjects')
-            .select('*')
-            .eq('tuition_id', studentData.tuition_id)
-            .eq('class', studentData.class),
-          supabase
-            .from('announcements')
-            .select('*')
-            .eq('tuition_id', studentData.tuition_id)
-            .or(`target_class.eq.${studentData.class},target_class.is.null`)
-            .order('published_at', { ascending: false })
-        ]);
-
-        if (attendanceRes.data) setAttendance(attendanceRes.data);
-        if (testResultsRes.data) setTestResults(testResultsRes.data);
-        if (testsRes.data) setTests(testsRes.data);
-        if (feesRes.data) setFees(feesRes.data);
-        if (subjectsRes.data) setSubjects(subjectsRes.data);
-        if (announcementsRes.data) setAnnouncements(announcementsRes.data);
+        await fetchStudentRelatedData(studentData);
 
       } catch (error) {
         console.error('Error fetching student data:', error);
@@ -131,11 +124,63 @@ export function useStudentData() {
       }
     };
 
+    const fetchStudentRelatedData = async (studentData: Student) => {
+      const [
+        attendanceRes,
+        testResultsRes,
+        testsRes,
+        feesRes,
+        subjectsRes,
+        announcementsRes
+      ] = await Promise.all([
+        supabase
+          .from('student_attendance')
+          .select('*')
+          .eq('student_id', studentData.id)
+          .order('date', { ascending: false }),
+        supabase
+          .from('student_test_results')
+          .select('*')
+          .eq('student_id', studentData.id),
+        supabase
+          .from('weekly_tests')
+          .select('*')
+          .eq('tuition_id', studentData.tuition_id)
+          .order('test_date', { ascending: false }),
+        supabase
+          .from('student_fees')
+          .select('*')
+          .eq('student_id', studentData.id)
+          .order('due_date', { ascending: false }),
+        supabase
+          .from('subjects')
+          .select('*')
+          .eq('tuition_id', studentData.tuition_id)
+          .eq('class', studentData.class),
+        supabase
+          .from('announcements')
+          .select('*')
+          .eq('tuition_id', studentData.tuition_id)
+          .or(`target_class.eq.${studentData.class},target_class.is.null`)
+          .order('published_at', { ascending: false })
+      ]);
+
+      if (attendanceRes.data) setAttendance(attendanceRes.data);
+      if (testResultsRes.data) setTestResults(testResultsRes.data);
+      if (testsRes.data) setTests(testsRes.data);
+      if (feesRes.data) setFees(feesRes.data);
+      if (subjectsRes.data) setSubjects(subjectsRes.data);
+      if (announcementsRes.data) setAnnouncements(announcementsRes.data);
+    };
+
     fetchStudentData();
-  }, [user]);
+  }, [user, selectedStudentId]);
 
   return {
     student,
+    allStudents,
+    tuition,
+    isSharedAccess,
     attendance,
     testResults,
     tests,
