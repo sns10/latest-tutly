@@ -10,7 +10,9 @@ import { RecentTests } from "@/components/RecentTests";
 import { FeatureGate } from "@/components/FeatureGate";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Building2, LogOut } from "lucide-react";
+import { Loader2, Building2, LogOut, Share2, Copy, Check } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import LeaderboardPage from './Leaderboard';
 import MaterialsPage from './Materials';
 import FeesPage from './Fees';
@@ -80,6 +82,16 @@ const Index = () => {
     return <Navigate to="/auth" replace />;
   }
 
+  const [copied, setCopied] = useState(false);
+
+  const handleSharePortalLink = () => {
+    const portalUrl = `${window.location.origin}/student`;
+    navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    toast.success('Student portal link copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <Routes>
       <Route path="/" element={
@@ -98,10 +110,21 @@ const Index = () => {
                 </p>
               </div>
             </div>
-            <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
-              <LogOut className="h-4 w-4" />
-              <span className="hidden sm:inline">Logout</span>
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSharePortalLink}
+                className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share Portal'}</span>
+              </Button>
+              <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
           </div>
           
           <ManagementCards 
