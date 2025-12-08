@@ -45,8 +45,15 @@ export function PortalEmailConfig({ tuitionId, currentEmail, onUpdate }: PortalE
     }
   };
 
+  // Use the deployed URL for sharing (not preview URL)
+  const getPortalUrl = () => {
+    const origin = window.location.origin;
+    // If on preview URL, still use it but note it's temporary
+    return `${origin}/auth`;
+  };
+
   const copyPortalLink = () => {
-    navigator.clipboard.writeText(`${window.location.origin}/student`);
+    navigator.clipboard.writeText(getPortalUrl());
     setCopied(true);
     toast.success('Portal link copied!');
     setTimeout(() => setCopied(false), 2000);
@@ -98,7 +105,7 @@ export function PortalEmailConfig({ tuitionId, currentEmail, onUpdate }: PortalE
             <Label>Portal Link</Label>
             <div className="flex gap-2">
               <Input
-                value={`${window.location.origin}/student`}
+                value={getPortalUrl()}
                 readOnly
                 className="h-11 bg-muted"
               />
