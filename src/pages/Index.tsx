@@ -3,14 +3,16 @@ import { useAuth } from '@/components/AuthProvider';
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useTuitionInfo } from "@/hooks/useTuitionInfo";
 import { useTermExamData } from "@/hooks/useTermExamData";
+import { useUserTuition } from "@/hooks/useUserTuition";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentTests } from "@/components/RecentTests";
 import { FeatureGate } from "@/components/FeatureGate";
+import { PortalEmailConfig } from "@/components/PortalEmailConfig";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Building2, LogOut, Share2, Copy, Check } from "lucide-react";
+import { Loader2, Building2, LogOut, Share2, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import LeaderboardPage from './Leaderboard';
@@ -23,7 +25,8 @@ import StudentsPage from './Students';
 
 const Index = () => {
   const { user, signOut, loading: authLoading } = useAuth();
-  const { tuition } = useTuitionInfo();
+  const { tuition, refetch: refetchTuition } = useTuitionInfo();
+  const { tuitionId } = useUserTuition();
   const [copied, setCopied] = useState(false);
   const {
     termExams,
@@ -110,6 +113,13 @@ const Index = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {tuitionId && (
+                <PortalEmailConfig
+                  tuitionId={tuitionId}
+                  currentEmail={tuition?.portal_email}
+                  onUpdate={refetchTuition}
+                />
+              )}
               <Button 
                 variant="outline" 
                 size="sm" 

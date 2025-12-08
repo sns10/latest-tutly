@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useStudentData } from '@/hooks/useStudentData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { useStudentLeaderboard } from '@/hooks/useStudentLeaderboard';
@@ -10,14 +11,31 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { StudentPortalLeaderboard } from '@/components/StudentPortalLeaderboard';
 import { StudentPortalAuth } from '@/components/StudentPortalAuth';
-import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut, Trophy } from 'lucide-react';
+import { StudentPortalSelector } from '@/components/StudentPortalSelector';
+import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut, Trophy, ArrowLeft } from 'lucide-react';
 
 export default function Student() {
-  const { user, loading: authLoading } = useAuth();
-  const { student, attendance, testResults, tests, fees, subjects, announcements, loading } = useStudentData();
+  const { user, loading: authLoading, signOut } = useAuth();
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+  
+  const { 
+    student, 
+    allStudents, 
+    tuition: sharedTuition,
+    isSharedAccess,
+    attendance, 
+    testResults, 
+    tests, 
+    fees, 
+    subjects, 
+    announcements, 
+    loading 
+  } = useStudentData(selectedStudentId);
+  
   const { tuition } = useTuitionInfo();
-  const { leaderboardStudents, loading: leaderboardLoading } = useStudentLeaderboard(student?.tuition_id || null);
-  const { signOut } = useAuth();
+  const { leaderboardStudents, loading: leaderboardLoading } = useStudentLeaderboard(
+    student?.tuition_id || sharedTuition?.id || null
+  );
 
   // Show auth screen if not logged in
   if (authLoading) {
@@ -37,6 +55,24 @@ export default function Student() {
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
+    );
+  }
+
+  // Shared access mode - show student selector if no student selected
+  if (isSharedAccess && !selectedStudentId) {
+    return (
+      <StudentPortalSelector
+        students={allStudents.map(s => ({
+          id: s.id,
+          name: s.name,
+          class: s.class,
+          avatar: s.avatar,
+          division: s.divisions
+        }))}
+        tuitionName={sharedTuition?.name || 'Student Portal'}
+        onSelectStudent={(s) => setSelectedStudentId(s.id)}
+        onSignOut={signOut}
+      />
     );
   }
 
@@ -95,16 +131,28 @@ export default function Student() {
   const paidFees = fees.filter(f => f.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
   const pendingFees = fees.filter(f => f.status === 'unpaid' || f.status === 'overdue');
 
+  const displayTuition = sharedTuition || tuition;
+
   return (
     <div className="container mx-auto p-4 md:p-6 max-w-7xl">
       {/* Platform Header */}
       <div className="flex items-center justify-between mb-6 pb-4 border-b">
         <div className="flex items-center gap-3">
+          {isSharedAccess && (
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSelectedStudentId(null)}
+              className="mr-2"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+          )}
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
             <Building2 className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-gray-900">{tuition?.name || 'Student Portal'}</h2>
+            <h2 className="text-lg font-bold text-gray-900">{displayTuition?.name || 'Student Portal'}</h2>
             <p className="text-xs text-gray-500">
               Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
             </p>
