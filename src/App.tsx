@@ -50,7 +50,7 @@ function AppContent() {
               <Route 
                 path="/student" 
                 element={
-                  <ProtectedRoute allowedRoles={['student', 'parent']}>
+                  <ProtectedRoute allowedRoles={['student', 'parent']} allowPortalUsers={true}>
                     <Student />
                   </ProtectedRoute>
                 } 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './AuthProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Navigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Loader2, Building2 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 export function AuthPage() {
   const { user, signIn, signUp, signOut, loading } = useAuth();
@@ -16,6 +17,39 @@ export function AuthPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPortalUser, setIsPortalUser] = useState<boolean | null>(null);
+  const [checkingPortal, setCheckingPortal] = useState(false);
+
+  // Check if user is a portal user (their email matches a tuition's portal_email)
+  useEffect(() => {
+    const checkPortalUser = async () => {
+      if (!user?.email) {
+        setIsPortalUser(null);
+        return;
+      }
+
+      setCheckingPortal(true);
+      try {
+        const { data, error } = await supabase
+          .from('tuitions')
+          .select('id')
+          .eq('portal_email', user.email.toLowerCase())
+          .limit(1);
+
+        if (!error && data && data.length > 0) {
+          setIsPortalUser(true);
+        } else {
+          setIsPortalUser(false);
+        }
+      } catch (err) {
+        setIsPortalUser(false);
+      } finally {
+        setCheckingPortal(false);
+      }
+    };
+
+    checkPortalUser();
+  }, [user?.email]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +103,20 @@ export function AuthPage() {
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
       );
+    }
+    
+    // Check if still determining portal user status
+    if (checkingPortal) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      );
+    }
+
+    // If user is a portal user, redirect to student page
+    if (isPortalUser === true) {
+      return <Navigate to="/student" replace />;
     }
     
     // Redirect based on role
