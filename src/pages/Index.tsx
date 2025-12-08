@@ -24,6 +24,7 @@ import StudentsPage from './Students';
 const Index = () => {
   const { user, signOut, loading: authLoading } = useAuth();
   const { tuition } = useTuitionInfo();
+  const [copied, setCopied] = useState(false);
   const {
     termExams,
     termExamSubjects,
@@ -67,6 +68,14 @@ const Index = () => {
     updateClassFee,
   } = useSupabaseData();
 
+  const handleSharePortalLink = () => {
+    const portalUrl = `${window.location.origin}/student`;
+    navigator.clipboard.writeText(portalUrl);
+    setCopied(true);
+    toast.success('Student portal link copied to clipboard!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   if (authLoading || loading || termExamLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -81,16 +90,6 @@ const Index = () => {
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
-
-  const [copied, setCopied] = useState(false);
-
-  const handleSharePortalLink = () => {
-    const portalUrl = `${window.location.origin}/student`;
-    navigator.clipboard.writeText(portalUrl);
-    setCopied(true);
-    toast.success('Student portal link copied to clipboard!');
-    setTimeout(() => setCopied(false), 2000);
-  };
 
   return (
     <Routes>
