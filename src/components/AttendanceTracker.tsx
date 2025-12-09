@@ -11,7 +11,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { AttendanceStats } from './attendance/AttendanceStats';
 import { StudentAttendanceList } from './attendance/StudentAttendanceList';
 import { ReportExporter } from './ReportExporter';
-import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp } from 'lucide-react';
+import { WhatsAppMessageDialog } from './attendance/WhatsAppMessageDialog';
+import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -56,6 +57,7 @@ export function AttendanceTracker({
   const [todaysClassesOpen, setTodaysClassesOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
   const formatDate = (date: Date) => date.toISOString().split('T')[0];
   const selectedDateStr = formatDate(selectedDate);
@@ -222,6 +224,14 @@ export function AttendanceTracker({
     };
   }, [filteredStudents, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
+  // Get absentees for WhatsApp message
+  const absentees = useMemo(() => {
+    return filteredStudents.filter(student => {
+      const studentAttendance = getAttendanceForStudent(student.id);
+      return studentAttendance?.status === 'absent';
+    });
+  }, [filteredStudents, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+
   const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
     onMarkAttendance(studentId, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
@@ -322,6 +332,17 @@ export function AttendanceTracker({
             />
           </div>
         </div>
+
+        {/* Prepare WhatsApp Message - Show when class selected and attendance marked */}
+        {selectedClass && stats.absent > 0 && (
+          <Button
+            onClick={() => setWhatsappDialogOpen(true)}
+            className="w-full h-10 gap-2 bg-green-600 hover:bg-green-700"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Prepare Group Message ({stats.absent} absent)
+          </Button>
+        )}
 
         {/* Compact Filters Row */}
         <Card className="bg-white shadow-sm border-slate-200">
@@ -584,6 +605,18 @@ export function AttendanceTracker({
           )}
         </div>
       </div>
+
+      {/* WhatsApp Message Dialog */}
+      <WhatsAppMessageDialog
+        open={whatsappDialogOpen}
+        onOpenChange={setWhatsappDialogOpen}
+        absentees={absentees}
+        selectedClass={selectedClass}
+        selectedDivision={divisions.find(d => d.id === selectedDivision)?.name}
+        selectedDate={selectedDate}
+        subject={subjects.find(s => s.id === selectedSubject)}
+        faculty={faculty.find(f => f.id === selectedFaculty)}
+      />
     </div>
   );
 }
