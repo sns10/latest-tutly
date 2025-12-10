@@ -232,6 +232,14 @@ export function AttendanceTracker({
     });
   }, [filteredStudents, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
+  // Get late students for WhatsApp message
+  const lateStudents = useMemo(() => {
+    return filteredStudents.filter(student => {
+      const studentAttendance = getAttendanceForStudent(student.id);
+      return studentAttendance?.status === 'late';
+    });
+  }, [filteredStudents, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+
   const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
     onMarkAttendance(studentId, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
@@ -611,6 +619,7 @@ export function AttendanceTracker({
         open={whatsappDialogOpen}
         onOpenChange={setWhatsappDialogOpen}
         absentees={absentees}
+        lateStudents={lateStudents}
         selectedClass={selectedClass}
         selectedDivision={divisions.find(d => d.id === selectedDivision)?.name}
         selectedDate={selectedDate}
