@@ -10,6 +10,7 @@ interface WhatsAppMessageDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   absentees: Student[];
+  lateStudents: Student[];
   selectedClass: string;
   selectedDivision?: string;
   selectedDate: Date;
@@ -21,6 +22,7 @@ export function WhatsAppMessageDialog({
   open,
   onOpenChange,
   absentees,
+  lateStudents,
   selectedClass,
   selectedDivision,
   selectedDate,
@@ -53,15 +55,29 @@ export function WhatsAppMessageDialog({
       header += `\n👨‍🏫 Faculty: ${faculty.name}`;
     }
     
-    if (absentees.length === 0) {
-      return `${header}\n\n✅ *All students present today!*`;
+    if (absentees.length === 0 && lateStudents.length === 0) {
+      return `${header}\n\n✅ *All students present on time!*`;
     }
     
-    const absenteeList = absentees
-      .map((s, idx) => `${idx + 1}. ${s.name}`)
-      .join('\n');
+    let message = header;
     
-    return `${header}\n\n❌ *Absent Students (${absentees.length}):*\n${absenteeList}\n\n_Please ensure regular attendance._`;
+    if (absentees.length > 0) {
+      const absenteeList = absentees
+        .map((s, idx) => `${idx + 1}. ${s.name}`)
+        .join('\n');
+      message += `\n\n❌ *Absent Students (${absentees.length}):*\n${absenteeList}`;
+    }
+    
+    if (lateStudents.length > 0) {
+      const lateList = lateStudents
+        .map((s, idx) => `${idx + 1}. ${s.name}`)
+        .join('\n');
+      message += `\n\n⏰ *Late Students (${lateStudents.length}):*\n${lateList}`;
+    }
+    
+    message += '\n\n_Please ensure regular and punctual attendance._';
+    
+    return message;
   };
 
   const message = buildMessage();
