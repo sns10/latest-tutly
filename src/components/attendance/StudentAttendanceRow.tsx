@@ -15,8 +15,8 @@ export function StudentAttendanceRow({ student, studentAttendance, onMarkAttenda
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 border rounded-lg">
       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs sm:text-sm shrink-0">
-          {student.name.split(' ').map(n => n[0]).join('')}
+        <div className="h-7 w-7 sm:h-8 sm:w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs sm:text-sm font-bold shrink-0">
+          {student.rollNo || '-'}
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-medium text-sm sm:text-base truncate">{student.name}</div>

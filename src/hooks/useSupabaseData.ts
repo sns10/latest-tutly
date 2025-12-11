@@ -111,6 +111,7 @@ export function useSupabaseData() {
       } : undefined,
       avatar: student.avatar || '',
       email: (student as any).email || undefined,
+      rollNo: (student as any).roll_no || undefined,
       team: student.team as TeamName | null,
       totalXp: student.total_xp,
       xp: {
@@ -140,6 +141,14 @@ export function useSupabaseData() {
         };
       }),
     }));
+
+    // Sort by roll number (students with roll numbers first, then by name alphabetically)
+    formattedStudents.sort((a, b) => {
+      if (a.rollNo && b.rollNo) return a.rollNo - b.rollNo;
+      if (a.rollNo && !b.rollNo) return -1;
+      if (!a.rollNo && b.rollNo) return 1;
+      return a.name.localeCompare(b.name);
+    });
 
     setStudents(formattedStudents);
   };
@@ -358,6 +367,16 @@ export function useSupabaseData() {
       }
     }
 
+    // Use provided roll number or calculate next one for this class/division
+    let rollNoToUse = newStudent.rollNo;
+    if (!rollNoToUse) {
+      const existingStudents = students.filter(
+        s => s.class === newStudent.class && s.divisionId === divisionIdToUse
+      );
+      const maxRollNo = existingStudents.reduce((max, s) => Math.max(max, s.rollNo || 0), 0);
+      rollNoToUse = maxRollNo + 1;
+    }
+
     const { data, error } = await supabase
       .from('students')
       .insert({
@@ -366,6 +385,7 @@ export function useSupabaseData() {
         division_id: divisionIdToUse,
         avatar: newStudent.avatar,
         tuition_id: tuitionId!,
+        roll_no: rollNoToUse,
       })
       .select()
       .single();

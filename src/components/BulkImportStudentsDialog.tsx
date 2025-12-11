@@ -41,9 +41,9 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
 
   const downloadTemplate = () => {
     const templateData = [
-      { Name: "John Doe", Class: "8th", Division: "A" },
-      { Name: "Jane Smith", Class: "9th", Division: "B" },
-      { Name: "Bob Johnson", Class: "12th", Division: "A" },
+      { "Roll No": 1, Name: "John Doe", Class: "8th", Division: "A" },
+      { "Roll No": 2, Name: "Jane Smith", Class: "9th", Division: "B" },
+      { "Roll No": "", Name: "Bob Johnson", Class: "12th", Division: "A" },
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
@@ -133,11 +133,15 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         if (dbName.replace('division', '').trim() === divisionName) return true;
         return false;
       });
+
+      // Parse roll number - can be empty
+      const rollNo = row['Roll No'] ? parseInt(String(row['Roll No']), 10) : undefined;
       
       return {
         name: row.Name.trim(),
         class: studentClass,
         divisionId: matchingDivision?.id,
+        rollNo: !isNaN(rollNo as number) ? rollNo : undefined,
         avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
       };
     });
@@ -233,6 +237,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                 <table className="w-full text-sm">
                   <thead className="bg-muted">
                     <tr>
+                      <th className="p-2 text-left">Roll No</th>
                       <th className="p-2 text-left">Name</th>
                       <th className="p-2 text-left">Class</th>
                       <th className="p-2 text-left">Division</th>
@@ -241,6 +246,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                   <tbody>
                     {previewData.slice(0, 10).map((row, index) => (
                       <tr key={index} className="border-t">
+                        <td className="p-2">{row['Roll No'] || 'Auto'}</td>
                         <td className="p-2">{row.Name}</td>
                         <td className="p-2">{row.Class}</td>
                         <td className="p-2">{row.Division || '-'}</td>
@@ -248,7 +254,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                     ))}
                     {previewData.length > 10 && (
                       <tr className="border-t">
-                        <td colSpan={3} className="p-2 text-center text-muted-foreground">
+                        <td colSpan={4} className="p-2 text-center text-muted-foreground">
                           ... and {previewData.length - 10} more
                         </td>
                       </tr>
