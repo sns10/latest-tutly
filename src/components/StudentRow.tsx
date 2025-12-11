@@ -57,7 +57,10 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
           <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm sm:text-lg text-foreground truncate">{student.name}</p>
+          <p className="font-semibold text-sm sm:text-lg text-foreground truncate">
+            {student.rollNo && <span className="text-muted-foreground mr-1">#{student.rollNo}</span>}
+            {student.name}
+          </p>
           <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5 sm:mt-1 flex-wrap">
             <p className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</p>
             {student.division && (

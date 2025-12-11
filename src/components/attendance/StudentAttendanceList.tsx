@@ -12,6 +12,14 @@ interface StudentAttendanceListProps {
 }
 
 export function StudentAttendanceList({ students, selectedDate, getAttendanceForStudent, onMarkAttendance }: StudentAttendanceListProps) {
+  // Sort students by roll number (students with roll numbers first, then alphabetically)
+  const sortedStudents = [...students].sort((a, b) => {
+    if (a.rollNo && b.rollNo) return a.rollNo - b.rollNo;
+    if (a.rollNo && !b.rollNo) return -1;
+    if (!a.rollNo && b.rollNo) return 1;
+    return a.name.localeCompare(b.name);
+  });
+
   return (
     <Card className="bg-white shadow-sm border-slate-200">
       <CardHeader>
@@ -21,8 +29,8 @@ export function StudentAttendanceList({ students, selectedDate, getAttendanceFor
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {students.length > 0 ? (
-            students.map((student) => {
+          {sortedStudents.length > 0 ? (
+            sortedStudents.map((student) => {
               const studentAttendance = getAttendanceForStudent(student.id);
               return (
                 <StudentAttendanceRow

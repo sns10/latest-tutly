@@ -43,6 +43,7 @@ export interface Student {
   division?: Division;
   avatar: string;
   email?: string;
+  rollNo?: number;
   xp: {
     blackout: number;
     futureMe: number;

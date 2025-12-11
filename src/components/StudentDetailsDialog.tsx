@@ -177,7 +177,10 @@ export function StudentDetailsDialog({
             ) : (
               <div className="flex-1">
                 <div className="flex items-center gap-2">
-                  <p className="text-lg font-bold">{student.name}</p>
+                  <p className="text-lg font-bold">
+                    {student.rollNo && <span className="text-muted-foreground mr-1">#{student.rollNo}</span>}
+                    {student.name}
+                  </p>
                   {onUpdateStudent && (
                     <Button size="icon" variant="ghost" onClick={handleStartEdit} className="h-6 w-6">
                       <Pencil className="h-3 w-3" />

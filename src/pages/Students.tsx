@@ -51,8 +51,13 @@ export default function StudentsPage() {
     return searchMatch && classMatch && divisionMatch;
   });
 
-  // Sort by name
-  const sortedStudents = [...filteredStudents].sort((a, b) => a.name.localeCompare(b.name));
+  // Sort by roll number (students with roll numbers first, then alphabetically)
+  const sortedStudents = [...filteredStudents].sort((a, b) => {
+    if (a.rollNo && b.rollNo) return a.rollNo - b.rollNo;
+    if (a.rollNo && !b.rollNo) return -1;
+    if (!a.rollNo && b.rollNo) return 1;
+    return a.name.localeCompare(b.name);
+  });
 
   const handleBulkImport = async (studentsToImport: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>[]) => {
     for (const student of studentsToImport) {
@@ -181,7 +186,10 @@ export default function StudentsPage() {
                     <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{student.name}</p>
+                    <p className="font-semibold text-sm truncate">
+                      {student.rollNo && <span className="text-muted-foreground mr-1">#{student.rollNo}</span>}
+                      {student.name}
+                    </p>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="text-xs text-muted-foreground">{student.class} Grade</span>
                       {student.division && (

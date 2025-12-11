@@ -673,6 +673,7 @@ export type Database = {
           email: string | null
           id: string
           name: string
+          roll_no: number | null
           team: string | null
           total_xp: number
           tuition_id: string
@@ -686,6 +687,7 @@ export type Database = {
           email?: string | null
           id?: string
           name: string
+          roll_no?: number | null
           team?: string | null
           total_xp?: number
           tuition_id: string
@@ -699,6 +701,7 @@ export type Database = {
           email?: string | null
           id?: string
           name?: string
+          roll_no?: number | null
           team?: string | null
           total_xp?: number
           tuition_id?: string
