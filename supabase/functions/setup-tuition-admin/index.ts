@@ -11,8 +11,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing environment variables')
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: { autoRefreshToken: false, persistSession: false }
@@ -20,23 +28,51 @@ Deno.serve(async (req) => {
 
     const { adminEmail, adminPassword, adminName, tuitionId } = await req.json()
 
+    console.log('Received request:', { adminEmail, adminName, tuitionId, hasPassword: !!adminPassword })
+
     if (!adminEmail || !tuitionId) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ error: 'Missing required fields: adminEmail and tuitionId are required' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Check if user already exists
-    const { data: existingUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-    
-    if (listError) {
-      console.error('Error listing users:', listError)
-      throw listError
+    // Check if user already exists by listing users and searching by email
+    let existingUser = null
+    let page = 1
+    const perPage = 1000
+
+    // Search through pages of users to find one with matching email
+    while (true) {
+      const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
+        page,
+        perPage
+      })
+
+      if (listError) {
+        console.error('Error listing users:', listError)
+        return new Response(
+          JSON.stringify({ error: `Failed to search for users: ${listError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const foundUser = usersData?.users?.find(u => u.email?.toLowerCase() === adminEmail.toLowerCase())
+      if (foundUser) {
+        existingUser = foundUser
+        break
+      }
+
+      // If we got fewer users than requested, we've reached the end
+      if (!usersData?.users || usersData.users.length < perPage) {
+        break
+      }
+
+      page++
     }
 
-    const existingUser = existingUsers.users.find(u => u.email === adminEmail)
     let userId: string
+    let isNewUser = false
 
     if (existingUser) {
       // User exists - use their ID
@@ -51,19 +87,38 @@ Deno.serve(async (req) => {
         )
       }
 
+      if (adminPassword.length < 6) {
+        return new Response(
+          JSON.stringify({ error: 'Password must be at least 6 characters' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: adminEmail,
         password: adminPassword,
         email_confirm: true,
-        user_metadata: { full_name: adminName }
+        user_metadata: { full_name: adminName || adminEmail }
       })
 
       if (createError) {
         console.error('Error creating user:', createError)
-        throw createError
+        return new Response(
+          JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      if (!newUser?.user?.id) {
+        console.error('User created but no ID returned')
+        return new Response(
+          JSON.stringify({ error: 'User created but no ID returned' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
       }
 
       userId = newUser.user.id
+      isNewUser = true
       console.log('Created new user:', userId)
     }
 
@@ -76,20 +131,25 @@ Deno.serve(async (req) => {
 
     if (setupError) {
       console.error('Error setting up tuition admin:', setupError)
-      throw setupError
+      return new Response(
+        JSON.stringify({ error: `Failed to assign admin role: ${setupError.message}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
+
+    console.log('Successfully set up tuition admin for user:', userId)
 
     return new Response(
       JSON.stringify({ 
         success: true, 
         userId,
-        isNewUser: !existingUser 
+        isNewUser 
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
 
   } catch (error: any) {
-    console.error('Error in setup-tuition-admin:', error)
+    console.error('Unexpected error in setup-tuition-admin:', error)
     return new Response(
       JSON.stringify({ error: error.message || 'Internal server error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
