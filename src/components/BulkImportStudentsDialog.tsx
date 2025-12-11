@@ -118,20 +118,24 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
 
     const studentsToImport = previewData.map(row => {
       // Find matching division by name and class - support flexible matching
-      const divisionName = row.Division?.trim()?.toLowerCase() || '';
+      const divisionName = row.Division?.toString().trim().toLowerCase() || '';
       const studentClass = row.Class as ClassName;
       
-      // Try exact match first, then flexible match (e.g., "Division B" -> "B", or "B" -> "Division B")
+      // Normalize division name - extract just the letter/number (e.g., "A" from "Division A" or just "A")
+      const normalizeDiv = (name: string): string => {
+        const lower = name.toLowerCase().trim();
+        // Remove "division" prefix and any extra spaces
+        return lower.replace(/^division\s*/i, '').trim();
+      };
+      
+      const normalizedInput = normalizeDiv(divisionName);
+      
+      // Try to find matching division for this class
       const matchingDivision = divisions.find(d => {
         if (d.class !== studentClass) return false;
-        const dbName = d.name.toLowerCase();
-        // Exact match
-        if (dbName === divisionName) return true;
-        // "Division B" matches "B"
-        if (divisionName.replace('division', '').trim() === dbName) return true;
-        // "B" matches "Division B"
-        if (dbName.replace('division', '').trim() === divisionName) return true;
-        return false;
+        const normalizedDbName = normalizeDiv(d.name);
+        // Compare normalized versions (e.g., "a" === "a")
+        return normalizedDbName === normalizedInput || d.name.toLowerCase() === divisionName;
       });
 
       // Parse roll number - can be empty
