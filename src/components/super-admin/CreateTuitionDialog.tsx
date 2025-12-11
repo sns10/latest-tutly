@@ -56,27 +56,31 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
       if (tuitionError) throw tuitionError;
 
       // 2. Call edge function to set up admin (handles both new and existing users)
-      const { data: setupData, error: setupError } = await supabase.functions.invoke('setup-tuition-admin', {
-        body: {
-          adminEmail: formData.adminEmail,
-          adminPassword: formData.adminPassword,
-          adminName: formData.adminName,
-          tuitionId: tuitionData.id,
-        },
-      });
+      try {
+        const { data: setupData, error: setupError } = await supabase.functions.invoke('setup-tuition-admin', {
+          body: {
+            adminEmail: formData.adminEmail,
+            adminPassword: formData.adminPassword,
+            adminName: formData.adminName,
+            tuitionId: tuitionData.id,
+          },
+        });
 
-      if (setupError) {
-        console.error('Setup error:', setupError);
-        // Tuition created but admin setup failed - inform user
-        toast.warning('Tuition created but admin setup failed. You may need to manually assign the admin.');
-      } else if (setupData?.error) {
-        console.error('Setup response error:', setupData.error);
-        toast.warning(`Tuition created. Admin setup issue: ${setupData.error}`);
-      } else {
-        const message = setupData?.isNewUser 
-          ? 'Tuition center and admin account created successfully!'
-          : 'Tuition center created and existing user assigned as admin!';
-        toast.success(message);
+        if (setupError) {
+          console.error('Setup error:', setupError);
+          toast.warning(`Tuition created but admin setup failed: ${setupError.message || 'Unknown error'}. You may need to manually assign the admin.`);
+        } else if (setupData?.error) {
+          console.error('Setup response error:', setupData.error);
+          toast.warning(`Tuition created. Admin setup issue: ${setupData.error}`);
+        } else {
+          const message = setupData?.isNewUser 
+            ? 'Tuition center and admin account created successfully!'
+            : 'Tuition center created and existing user assigned as admin!';
+          toast.success(message);
+        }
+      } catch (invokeError: any) {
+        console.error('Function invoke error:', invokeError);
+        toast.warning(`Tuition created but admin setup failed: ${invokeError.message || 'Function invocation error'}. You may need to manually assign the admin.`);
       }
 
       onSuccess();
