@@ -15,6 +15,7 @@ export default function LeaderboardPage() {
     loading,
     addStudent,
     addXp,
+    reduceXp,
     removeStudent,
     buyReward,
     useReward,
@@ -42,6 +43,7 @@ export default function LeaderboardPage() {
         faculty={faculty}
         onAddStudent={addStudent}
         onAddXp={addXp}
+        onReduceXp={reduceXp}
         onRemoveStudent={removeStudent}
         onBuyReward={buyReward}
         onUseReward={useReward}

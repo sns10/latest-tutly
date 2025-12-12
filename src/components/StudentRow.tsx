@@ -10,8 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Gift, Users } from "lucide-react";
-import { XP_STORE_ITEMS } from "@/config/rewards";
+import { Plus, Minus, Trash2, Users, Flame } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ReportExporter } from "./ReportExporter";
 
@@ -19,6 +18,7 @@ interface StudentRowProps {
   student: Student;
   rank: number;
   onAddXp: (studentId: string, category: XPCategory, amount: number) => void;
+  onReduceXp: (studentId: string, amount: number) => void;
   onRemoveStudent: (studentId: string) => void;
   onBuyReward: (studentId: string, reward: Reward) => void;
   onUseReward: (studentId: string, rewardInstanceId: string) => void;
@@ -41,7 +41,7 @@ const xpCategoryDetails = {
 
 const teamNames: TeamName[] = ["Alpha", "Bravo", "Charlie"];
 
-export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyReward, onUseReward, onAssignTeam, onViewDetails }: StudentRowProps) {
+export function StudentRow({ student, rank, onAddXp, onReduceXp, onRemoveStudent, onBuyReward, onUseReward, onAssignTeam, onViewDetails }: StudentRowProps) {
   return (
     <div 
       className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 transition-all border border-transparent hover:border-primary/50 cursor-pointer"
@@ -68,6 +68,21 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
             )}
             {student.team && (
                <Badge variant="outline" className="border-primary/20 font-semibold text-xs">{student.team}</Badge>
+            )}
+            {student.attendanceStreak !== undefined && student.attendanceStreak > 0 && (
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Badge variant="outline" className="border-orange-500/30 bg-orange-500/10 text-orange-500 font-semibold text-xs gap-1">
+                      <Flame className="h-3 w-3" />
+                      {student.attendanceStreak}
+                    </Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="border-primary/30 bg-background">
+                    <p>{student.attendanceStreak} day attendance streak!</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
 
             <Popover>
@@ -177,36 +192,21 @@ export function StudentRow({ student, rank, onAddXp, onRemoveStudent, onBuyRewar
         
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 text-amber-400 hover:bg-amber-400/10 hover:text-amber-400">
-              <Gift className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10 text-red-400 hover:bg-red-400/10 hover:text-red-400">
+              <Minus className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 border-primary/50" side="left">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <h4 className="font-medium leading-none font-display text-primary">XP Store</h4>
-                <p className="text-sm text-muted-foreground">
-                  Redeem XP for cool rewards!
-                </p>
-              </div>
-              <div className="grid gap-3">
-                {XP_STORE_ITEMS.map((item) => (
-                  <div key={item.id} className="grid grid-cols-[1fr_auto] items-center gap-4">
-                    <div>
-                      <p className="font-semibold">{item.emoji} {item.name}</p>
-                      <p className="text-xs text-muted-foreground">{item.description}</p>
-                    </div>
-                    <Button
-                      onClick={() => onBuyReward(student.id, item)}
-                      disabled={student.totalXp < item.cost}
-                      size="sm"
-                      className="font-bold"
-                    >
-                      {item.cost} <span className="text-xs ml-1 font-sans text-primary-foreground/70">XP</span>
-                    </Button>
-                  </div>
-                ))}
-              </div>
+          <PopoverContent className="w-auto p-2 border-primary/50">
+            <div className="flex gap-2">
+              <Button onClick={() => onReduceXp(student.id, 5)} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold text-xs sm:text-sm">
+                -5
+              </Button>
+              <Button onClick={() => onReduceXp(student.id, 10)} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold text-xs sm:text-sm">
+                -10
+              </Button>
+              <Button onClick={() => onReduceXp(student.id, 20)} className="bg-red-500/20 text-red-400 hover:bg-red-500/30 font-bold text-xs sm:text-sm">
+                -20
+              </Button>
             </div>
           </PopoverContent>
         </Popover>

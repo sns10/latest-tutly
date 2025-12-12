@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { Student, Division } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, Search, Users, GraduationCap } from 'lucide-react';
+import { Loader2, Search, Users, GraduationCap, Flame } from 'lucide-react';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
 import { BulkImportStudentsDialog } from '@/components/BulkImportStudentsDialog';
 import { StudentDetailsDialog } from '@/components/StudentDetailsDialog';
+import { useAttendanceStreak } from '@/hooks/useAttendanceStreak';
 
 export default function StudentsPage() {
   const { 
@@ -51,13 +52,21 @@ export default function StudentsPage() {
     return searchMatch && classMatch && divisionMatch;
   });
 
+  // Calculate attendance streaks
+  const streaks = useAttendanceStreak(attendance);
+
   // Sort by roll number (students with roll numbers first, then alphabetically)
-  const sortedStudents = [...filteredStudents].sort((a, b) => {
-    if (a.rollNo && b.rollNo) return a.rollNo - b.rollNo;
-    if (a.rollNo && !b.rollNo) return -1;
-    if (!a.rollNo && b.rollNo) return 1;
-    return a.name.localeCompare(b.name);
-  });
+  // and add attendance streak
+  const sortedStudents = useMemo(() => {
+    return [...filteredStudents]
+      .map(s => ({ ...s, attendanceStreak: streaks[s.id] || 0 }))
+      .sort((a, b) => {
+        if (a.rollNo && b.rollNo) return a.rollNo - b.rollNo;
+        if (a.rollNo && !b.rollNo) return -1;
+        if (!a.rollNo && b.rollNo) return 1;
+        return a.name.localeCompare(b.name);
+      });
+  }, [filteredStudents, streaks]);
 
   const handleBulkImport = async (studentsToImport: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>[]) => {
     for (const student of studentsToImport) {
@@ -197,11 +206,19 @@ export default function StudentsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="text-right">
+                  <div className="text-right flex flex-col items-end gap-1">
                     <p className="font-bold text-sm text-primary">{student.totalXp} XP</p>
-                    {student.team && (
-                      <Badge variant="secondary" className="text-xs">{student.team}</Badge>
-                    )}
+                    <div className="flex items-center gap-1">
+                      {student.attendanceStreak > 0 && (
+                        <Badge variant="outline" className="border-orange-500/30 bg-orange-500/10 text-orange-500 text-xs gap-1">
+                          <Flame className="h-3 w-3" />
+                          {student.attendanceStreak}
+                        </Badge>
+                      )}
+                      {student.team && (
+                        <Badge variant="secondary" className="text-xs">{student.team}</Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

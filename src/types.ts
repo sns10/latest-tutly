@@ -53,6 +53,7 @@ export interface Student {
   purchasedRewards: PurchasedReward[];
   team: TeamName | null;
   badges: Badge[];
+  attendanceStreak?: number;
 }
 
 export interface WeeklyTest {
