@@ -314,30 +314,69 @@ export function AttendanceTracker({
       )}
 
       <div className="p-4 max-w-3xl mx-auto space-y-4">
-        {/* Header */}
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-foreground">Attendance</h1>
-            <p className="text-muted-foreground text-xs">{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</p>
+        {/* Header with Date Navigation */}
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <h1 className="text-xl font-bold text-foreground">Attendance</h1>
+              <p className="text-muted-foreground text-xs">{selectedDate.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            </div>
+            <div className="flex gap-2">
+              {isManualMode && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={handleRefreshDetection}
+                  className="gap-1 h-8 text-xs"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  Auto
+                </Button>
+              )}
+              <ReportExporter
+                type="absentees"
+                label="PDF"
+                classValue={selectedClass || undefined}
+                startDate={selectedDateStr}
+              />
+            </div>
           </div>
-          <div className="flex gap-2">
-            {isManualMode && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleRefreshDetection}
-                className="gap-1 h-8 text-xs"
-              >
-                <RefreshCw className="h-3 w-3" />
-                Auto
-              </Button>
-            )}
-            <ReportExporter
-              type="absentees"
-              label="PDF"
-              classValue={selectedClass || undefined}
-              startDate={selectedDateStr}
-            />
+
+          {/* Date Navigation Buttons */}
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const prev = new Date(selectedDate);
+                prev.setDate(prev.getDate() - 1);
+                setSelectedDate(prev);
+              }}
+              className="h-8 text-xs flex-1"
+            >
+              ← Previous
+            </Button>
+            <Button
+              variant={formatDate(selectedDate) === formatDate(new Date()) ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedDate(new Date())}
+              className="h-8 text-xs flex-1"
+            >
+              Today
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const next = new Date(selectedDate);
+                next.setDate(next.getDate() + 1);
+                setSelectedDate(next);
+              }}
+              className="h-8 text-xs flex-1"
+              disabled={formatDate(selectedDate) >= formatDate(new Date())}
+            >
+              Next →
+            </Button>
           </div>
         </div>
 
