@@ -543,6 +543,44 @@ export function useSupabaseData() {
     await fetchStudents();
   };
 
+  const reduceXp = async (studentId: string, amount: number) => {
+    // Get current total XP
+    const { data: studentData, error: fetchError } = await supabase
+      .from('students')
+      .select('total_xp')
+      .eq('id', studentId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching student:', fetchError);
+      toast.error('Failed to reduce XP');
+      return;
+    }
+
+    const currentXp = studentData?.total_xp || 0;
+    const newTotalXp = Math.max(0, currentXp - amount); // Don't go below 0
+
+    const { error } = await supabase
+      .from('students')
+      .update({
+        total_xp: newTotalXp,
+      })
+      .eq('id', studentId);
+
+    if (error) {
+      console.error('Error reducing XP:', error);
+      toast.error('Failed to reduce XP');
+      return;
+    }
+
+    const student = students.find(s => s.id === studentId);
+    if (student) {
+      toast.success(`${student.name} lost -${amount} XP`);
+    }
+
+    await fetchStudents();
+  };
+
   const awardXP = async (studentId: string, amount: number, reason: string) => {
     // Get current total XP
     const { data: studentData, error: fetchError } = await supabase
@@ -1454,6 +1492,7 @@ export function useSupabaseData() {
     deleteWeeklyTest,
     addTestResult,
     addXp,
+    reduceXp,
     awardXP,
     removeStudent,
     assignTeam,

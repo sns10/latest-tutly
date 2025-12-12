@@ -1,14 +1,14 @@
-
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Student, XPCategory, TeamName, Division, StudentAttendance, StudentTestResult, WeeklyTest, StudentFee, Subject, Faculty } from "@/types";
 import { StudentRow } from "./StudentRow";
 import { AddStudentDialog } from "./AddStudentDialog";
 import { BulkImportStudentsDialog } from "./BulkImportStudentsDialog";
 import { StudentDetailsDialog } from "./StudentDetailsDialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Users, Trophy, Star, Plus } from "lucide-react";
+import { Users, Trophy, Star, Search } from "lucide-react";
+import { useAttendanceStreak } from "@/hooks/useAttendanceStreak";
 
 interface LeaderboardProps {
   students: Student[];
@@ -21,6 +21,7 @@ interface LeaderboardProps {
   faculty?: Faculty[];
   onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => void;
   onAddXp: (studentId: string, category: XPCategory, amount: number) => void;
+  onReduceXp: (studentId: string, amount: number) => void;
   onRemoveStudent: (studentId: string) => void;
   onBuyReward: (studentId: string, reward: any) => void;
   onUseReward: (studentId: string, rewardInstanceId: string) => void;
@@ -37,7 +38,8 @@ export function Leaderboard({
   subjects = [],
   faculty = [],
   onAddStudent,
-  onAddXp, 
+  onAddXp,
+  onReduceXp,
   onRemoveStudent, 
   onBuyReward, 
   onUseReward,
@@ -46,7 +48,11 @@ export function Leaderboard({
   const [classFilter, setClassFilter] = useState("All");
   const [divisionFilter, setDivisionFilter] = useState("All");
   const [teamFilter, setTeamFilter] = useState("All");
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  // Calculate attendance streaks
+  const streaks = useAttendanceStreak(attendance);
 
   // Get divisions for selected class
   const availableDivisions = classFilter === "All" 
@@ -58,11 +64,16 @@ export function Leaderboard({
     const classMatch = classFilter === "All" || student.class === classFilter;
     const divisionMatch = divisionFilter === "All" || student.divisionId === divisionFilter;
     const teamMatch = teamFilter === "All" || student.team === teamFilter;
-    return classMatch && divisionMatch && teamMatch;
+    const searchMatch = !searchQuery || student.name.toLowerCase().includes(searchQuery.toLowerCase());
+    return classMatch && divisionMatch && teamMatch && searchMatch;
   });
 
-  // Sort by total XP
-  const sortedStudents = [...filteredStudents].sort((a, b) => b.totalXp - a.totalXp);
+  // Add attendance streak to students and sort by total XP
+  const sortedStudents = useMemo(() => {
+    return [...filteredStudents]
+      .map(s => ({ ...s, attendanceStreak: streaks[s.id] || 0 }))
+      .sort((a, b) => b.totalXp - a.totalXp);
+  }, [filteredStudents, streaks]);
 
   const handleBulkImport = async (studentsToImport: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>[]) => {
     for (const student of studentsToImport) {
@@ -171,8 +182,19 @@ export function Leaderboard({
 
       {/* Student List */}
       <Card>
-        <CardHeader>
-          <CardTitle>Students</CardTitle>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <CardTitle>Students</CardTitle>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search students..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           {sortedStudents.length === 0 ? (
@@ -193,6 +215,7 @@ export function Leaderboard({
                   student={student}
                   rank={index + 1}
                   onAddXp={onAddXp}
+                  onReduceXp={onReduceXp}
                   onRemoveStudent={onRemoveStudent}
                   onBuyReward={onBuyReward}
                   onUseReward={onUseReward}
