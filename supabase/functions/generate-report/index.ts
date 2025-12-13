@@ -274,7 +274,7 @@ async function generateStudentReport(supabase: any, studentId: string): Promise<
   // Fetch student details
   const { data: student, error: studentError } = await supabase
     .from('students')
-    .select('*')
+    .select('*, divisions(name)')
     .eq('id', studentId)
     .single();
 
@@ -282,24 +282,94 @@ async function generateStudentReport(supabase: any, studentId: string): Promise<
 
   // Title
   doc.setFontSize(20);
-  doc.text('Student Report', 105, 20, { align: 'center' });
+  doc.text('Student Report Card', 105, 20, { align: 'center' });
   
   doc.setFontSize(14);
-  doc.text(student.name, 105, 30, { align: 'center' });
-  doc.setFontSize(12);
-  doc.text(`Class: ${student.class} | Team: ${student.team || 'Not assigned'}`, 105, 37, { align: 'center' });
+  doc.text(student.name, 105, 32, { align: 'center' });
+  doc.setFontSize(11);
+  doc.text(`Class: ${student.class} ${student.divisions?.name ? `| Division: ${student.divisions.name}` : ''} ${student.roll_no ? `| Roll No: ${student.roll_no}` : ''}`, 105, 40, { align: 'center' });
 
-  let y = 50;
+  let y = 55;
 
   // XP Section
-  doc.setFontSize(14);
+  doc.setFontSize(12);
   doc.setFont(undefined, 'bold');
-  doc.text('XP Summary', 15, y);
-  y += 7;
+  doc.text('Performance Summary', 15, y);
+  y += 8;
   doc.setFont(undefined, 'normal');
   doc.setFontSize(10);
-  doc.text(`Total XP: ${student.total_xp}`, 15, y);
-  y += 15;
+  doc.text(`Total XP: ${student.total_xp} points`, 15, y);
+  y += 12;
+
+  // Fetch attendance records
+  const { data: attendance } = await supabase
+    .from('student_attendance')
+    .select('date, status')
+    .eq('student_id', studentId)
+    .order('date', { ascending: false });
+
+  // Attendance Summary
+  if (attendance && attendance.length > 0) {
+    const present = attendance.filter((a: any) => a.status === 'present').length;
+    const absent = attendance.filter((a: any) => a.status === 'absent').length;
+    const late = attendance.filter((a: any) => a.status === 'late').length;
+    const excused = attendance.filter((a: any) => a.status === 'excused').length;
+    const total = attendance.length;
+    const attendanceRate = ((present / total) * 100).toFixed(1);
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Attendance Summary', 15, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.setFont(undefined, 'normal');
+    
+    // Create a nice box for attendance stats
+    doc.setDrawColor(200, 200, 200);
+    doc.rect(15, y, 180, 18);
+    
+    const statWidth = 45;
+    doc.text(`Present: ${present}`, 20, y + 7);
+    doc.text(`Absent: ${absent}`, 20 + statWidth, y + 7);
+    doc.text(`Late: ${late}`, 20 + statWidth * 2, y + 7);
+    doc.text(`Excused: ${excused}`, 20 + statWidth * 3, y + 7);
+    doc.setFont(undefined, 'bold');
+    doc.text(`Attendance Rate: ${attendanceRate}%`, 20, y + 14);
+    doc.setFont(undefined, 'normal');
+    
+    y += 25;
+
+    // Attendance Calendar (last 30 days)
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Recent Attendance (Last 30 Records)', 15, y);
+    y += 8;
+
+    doc.setFontSize(8);
+    doc.setFont(undefined, 'normal');
+    
+    const recentAttendance = attendance.slice(0, 30);
+    let col = 0;
+    const colWidth = 36;
+    const rowHeight = 6;
+    
+    recentAttendance.forEach((record: any, index: number) => {
+      const x = 15 + (col * colWidth);
+      const statusSymbol = record.status === 'present' ? 'P' : 
+                          record.status === 'absent' ? 'A' : 
+                          record.status === 'late' ? 'L' : 'E';
+      doc.text(`${record.date}: ${statusSymbol}`, x, y);
+      col++;
+      if (col >= 5) {
+        col = 0;
+        y += rowHeight;
+      }
+    });
+    
+    if (col !== 0) y += rowHeight;
+    y += 5;
+  }
 
   // Fetch test results
   const { data: testResults } = await supabase
@@ -312,69 +382,110 @@ async function generateStudentReport(supabase: any, studentId: string): Promise<
     .order('created_at', { ascending: false });
 
   if (testResults && testResults.length > 0) {
-    doc.setFontSize(14);
-    doc.setFont(undefined, 'bold');
-    doc.text('Recent Test Performance', 15, y);
-    y += 10;
-
-    doc.setFontSize(10);
-    doc.setFont(undefined, 'bold');
-    doc.text('Test', 15, y);
-    doc.text('Subject', 80, y);
-    doc.text('Marks', 130, y);
-    doc.text('Percentage', 160, y);
-    y += 7;
-    doc.line(15, y, 195, y);
-    y += 5;
-
-    doc.setFont(undefined, 'normal');
-    testResults.slice(0, 10).forEach((result: any) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-      const percentage = ((result.marks / result.weekly_tests.max_marks) * 100).toFixed(2);
-      doc.text(result.weekly_tests.name.substring(0, 30), 15, y);
-      doc.text(result.weekly_tests.subject, 80, y);
-      doc.text(`${result.marks}/${result.weekly_tests.max_marks}`, 130, y);
-      doc.text(`${percentage}%`, 160, y);
-      y += 7;
-    });
-  }
-
-  y += 10;
-
-  // Fetch attendance summary
-  const { data: attendance } = await supabase
-    .from('student_attendance')
-    .select('status')
-    .eq('student_id', studentId);
-
-  if (attendance && attendance.length > 0) {
-    const present = attendance.filter((a: any) => a.status === 'present').length;
-    const absent = attendance.filter((a: any) => a.status === 'absent').length;
-    const late = attendance.filter((a: any) => a.status === 'late').length;
-    const total = attendance.length;
-    const percentage = ((present / total) * 100).toFixed(2);
-
-    if (y > 250) {
+    // Check if we need a new page
+    if (y > 200) {
       doc.addPage();
       y = 20;
     }
 
-    doc.setFontSize(14);
+    doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
-    doc.text('Attendance Summary', 15, y);
+    doc.text('Test Performance', 15, y);
     y += 10;
+
+    // Calculate overall test statistics
+    const totalMarks = testResults.reduce((sum: number, r: any) => sum + r.marks, 0);
+    const maxMarks = testResults.reduce((sum: number, r: any) => sum + r.weekly_tests.max_marks, 0);
+    const overallPercentage = maxMarks > 0 ? ((totalMarks / maxMarks) * 100).toFixed(1) : 0;
 
     doc.setFontSize(10);
     doc.setFont(undefined, 'normal');
-    doc.text(`Total Days: ${total}`, 15, y);
-    doc.text(`Present: ${present}`, 70, y);
-    doc.text(`Absent: ${absent}`, 125, y);
-    doc.text(`Late: ${late}`, 180, y);
-    y += 7;
-    doc.text(`Attendance Rate: ${percentage}%`, 15, y);
+    doc.text(`Total Tests Taken: ${testResults.length} | Overall Score: ${totalMarks}/${maxMarks} (${overallPercentage}%)`, 15, y);
+    y += 8;
+
+    // Table headers
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('Test Name', 15, y);
+    doc.text('Subject', 75, y);
+    doc.text('Date', 115, y);
+    doc.text('Marks', 145, y);
+    doc.text('%', 175, y);
+    y += 5;
+    doc.line(15, y, 195, y);
+    y += 5;
+
+    doc.setFont(undefined, 'normal');
+    testResults.slice(0, 15).forEach((result: any) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+        // Repeat headers
+        doc.setFont(undefined, 'bold');
+        doc.text('Test Name', 15, y);
+        doc.text('Subject', 75, y);
+        doc.text('Date', 115, y);
+        doc.text('Marks', 145, y);
+        doc.text('%', 175, y);
+        y += 5;
+        doc.line(15, y, 195, y);
+        y += 5;
+        doc.setFont(undefined, 'normal');
+      }
+      
+      const percentage = ((result.marks / result.weekly_tests.max_marks) * 100).toFixed(1);
+      doc.text(result.weekly_tests.name.substring(0, 25), 15, y);
+      doc.text(result.weekly_tests.subject.substring(0, 15), 75, y);
+      doc.text(result.weekly_tests.test_date, 115, y);
+      doc.text(`${result.marks}/${result.weekly_tests.max_marks}`, 145, y);
+      doc.text(`${percentage}%`, 175, y);
+      y += 6;
+    });
+
+    // Subject-wise performance summary
+    if (y > 230) {
+      doc.addPage();
+      y = 20;
+    } else {
+      y += 10;
+    }
+
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text('Subject-wise Performance', 15, y);
+    y += 8;
+
+    // Group by subject
+    const subjectStats: Record<string, { total: number; max: number; count: number }> = {};
+    testResults.forEach((result: any) => {
+      const subject = result.weekly_tests.subject;
+      if (!subjectStats[subject]) {
+        subjectStats[subject] = { total: 0, max: 0, count: 0 };
+      }
+      subjectStats[subject].total += result.marks;
+      subjectStats[subject].max += result.weekly_tests.max_marks;
+      subjectStats[subject].count++;
+    });
+
+    doc.setFontSize(9);
+    doc.setFont(undefined, 'bold');
+    doc.text('Subject', 15, y);
+    doc.text('Tests', 75, y);
+    doc.text('Total Marks', 105, y);
+    doc.text('Average %', 155, y);
+    y += 5;
+    doc.line(15, y, 195, y);
+    y += 5;
+
+    doc.setFont(undefined, 'normal');
+    Object.entries(subjectStats).forEach(([subject, stats]) => {
+      const avg = ((stats.total / stats.max) * 100).toFixed(1);
+      doc.text(subject, 15, y);
+      doc.text(stats.count.toString(), 75, y);
+      doc.text(`${stats.total}/${stats.max}`, 105, y);
+      doc.text(`${avg}%`, 155, y);
+      y += 6;
+    });
   }
 
   // Footer

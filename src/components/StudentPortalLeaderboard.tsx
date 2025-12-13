@@ -2,10 +2,14 @@ import { Student } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Trophy, Medal, Award } from "lucide-react";
+import { Trophy, Medal, Award, Flame } from "lucide-react";
+
+interface LeaderboardStudent extends Omit<Student, 'tuitionId' | 'xp' | 'purchasedRewards' | 'team' | 'badges'> {
+  attendanceStreak?: number;
+}
 
 interface StudentPortalLeaderboardProps {
-  students: Student[];
+  students: LeaderboardStudent[];
   currentStudentId: string;
   classFilter?: string;
 }
@@ -113,6 +117,13 @@ export function StudentPortalLeaderboard({
                           <span className="text-xs ml-1">(You)</span>
                         )}
                       </p>
+                      {/* Streak Badge */}
+                      {student.attendanceStreak && student.attendanceStreak > 0 && (
+                        <Badge variant="outline" className="gap-1 bg-orange-50 text-orange-600 border-orange-200 text-xs shrink-0">
+                          <Flame className="h-3 w-3" />
+                          {student.attendanceStreak}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {student.class} Grade
