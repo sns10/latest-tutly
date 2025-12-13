@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, BarChart3 } from "lucide-react";
+import { Download, BarChart3, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ReportExporter } from "./ReportExporter";
 
@@ -18,16 +18,19 @@ interface TestResultsViewProps {
 export function TestResultsView({ tests, testResults, students }: TestResultsViewProps) {
   const [selectedClass, setSelectedClass] = useState<string>("All");
   const [selectedSubject, setSelectedSubject] = useState<string>("All");
+  const [selectedTest, setSelectedTest] = useState<string>("All");
 
   const classes = ["All", ...new Set(students.map(s => s.class))];
   const subjects = ["All", ...new Set(tests.map(t => t.subject))];
+  const testOptions = ["All", ...tests.map(t => t.id)];
 
   const filteredStudents = students.filter(student => 
     selectedClass === "All" || student.class === selectedClass
   );
 
   const filteredTests = tests.filter(test =>
-    selectedSubject === "All" || test.subject === selectedSubject
+    (selectedSubject === "All" || test.subject === selectedSubject) &&
+    (selectedTest === "All" || test.id === selectedTest)
   );
 
   const getStudentResults = (studentId: string) => {
@@ -58,14 +61,16 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
     return Math.round(totalPercentage / subjectResults.length);
   };
 
-  const exportResults = () => {
+  const exportResultsCSV = () => {
     const csvContent = [
-      ['Student Name', 'Class', ...filteredTests.map(t => `${t.name} (${t.subject})`)],
+      ['Student Name', 'Class', ...filteredTests.map(t => `${t.name} (${t.subject}) - Marks`), ...filteredTests.map(t => `${t.name} (${t.subject}) - Max`), ...filteredTests.map(t => `${t.name} (${t.subject}) - %`)],
       ...filteredStudents.map(student => {
         const results = getStudentResults(student.id);
         return [
           student.name,
           student.class,
+          ...results.map(r => r.result ? r.result.marks : 'N/A'),
+          ...results.map(r => r.test.maxMarks),
           ...results.map(r => r.percentage ? `${Math.round(r.percentage)}%` : 'N/A')
         ];
       })
@@ -101,10 +106,19 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
           <h3 className="text-base sm:text-xl font-semibold">Test Results & Reports</h3>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button onClick={exportResults} className="flex items-center gap-2 text-xs sm:text-sm" size="sm" variant="outline">
+          <Button onClick={exportResultsCSV} className="flex items-center gap-2 text-xs sm:text-sm" size="sm" variant="outline">
             <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Export CSV
           </Button>
+          {selectedTest !== "All" && (
+            <ReportExporter
+              type="test-marks"
+              testId={selectedTest}
+              label="Export PDF"
+              variant="outline"
+              size="sm"
+            />
+          )}
         </div>
       </div>
 
@@ -128,6 +142,18 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
           <SelectContent>
             {subjects.map(subject => (
               <SelectItem key={subject} value={subject}>{subject === "All" ? "All Subjects" : subject}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select value={selectedTest} onValueChange={setSelectedTest}>
+          <SelectTrigger className="w-full sm:w-48">
+            <SelectValue placeholder="Select test for PDF" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="All">All Tests (CSV only)</SelectItem>
+            {tests.map(test => (
+              <SelectItem key={test.id} value={test.id}>{test.name} - {test.subject}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -156,7 +182,10 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
       {/* Student Results Table */}
       <Card className="mt-4">
         <CardHeader className="p-3 sm:p-6">
-          <CardTitle className="text-base sm:text-lg">Individual Student Results</CardTitle>
+          <div className="flex justify-between items-center">
+            <CardTitle className="text-base sm:text-lg">Individual Student Results</CardTitle>
+            <p className="text-xs text-muted-foreground">Marks shown as obtained/max</p>
+          </div>
         </CardHeader>
         <CardContent className="p-3 sm:p-6">
           <div className="space-y-3 sm:space-y-4">
@@ -179,6 +208,13 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
                         <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
                         <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
                       </div>
+                      <ReportExporter
+                        type="student-report"
+                        studentId={student.id}
+                        label=""
+                        variant="ghost"
+                        size="icon"
+                      />
                     </div>
                     <div className="flex sm:flex-col items-center sm:items-end gap-2 sm:gap-0">
                       <div className="text-base sm:text-lg font-bold text-primary">
@@ -200,12 +236,12 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
                         <div className="text-right shrink-0">
                           {result ? (
                             <>
+                              <div className="font-semibold text-sm">
+                                {result.marks}/{test.maxMarks}
+                              </div>
                               <Badge variant={percentage! >= 80 ? "default" : percentage! >= 60 ? "secondary" : "destructive"} className="text-xs">
                                 {Math.round(percentage!)}%
                               </Badge>
-                              <div className="text-xs text-muted-foreground mt-1">
-                                {result.marks}/{test.maxMarks}
-                              </div>
                             </>
                           ) : (
                             <Badge variant="outline" className="text-xs">Not taken</Badge>
