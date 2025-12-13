@@ -40,6 +40,52 @@ export default function Student() {
     student?.tuition_id || sharedTuition?.id || null
   );
 
+  // Calculate attendance streak - must be before any returns
+  const attendanceStreak = useMemo(() => {
+    if (!attendance || attendance.length === 0) return 0;
+    
+    const presentDates = new Set<string>();
+    attendance.forEach(r => {
+      if (r.status === 'present') {
+        presentDates.add(r.date);
+      }
+    });
+
+    const dates = Array.from(presentDates).sort((a, b) => 
+      new Date(b).getTime() - new Date(a).getTime()
+    );
+
+    if (dates.length === 0) return 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const mostRecent = new Date(dates[0]);
+    mostRecent.setHours(0, 0, 0, 0);
+    
+    const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 1) return 0;
+
+    let streak = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const date = new Date(dates[i]);
+      date.setHours(0, 0, 0, 0);
+      
+      const prevDate = new Date(dates[i - 1]);
+      prevDate.setHours(0, 0, 0, 0);
+      
+      const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diff === 1) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }, [attendance]);
+
   // Show auth screen if not logged in
   if (authLoading) {
     return (
@@ -118,50 +164,6 @@ export default function Student() {
   const totalAttendanceDays = attendance.length;
   const presentDays = attendance.filter(a => a.status === 'present').length;
   const attendanceRate = totalAttendanceDays > 0 ? (presentDays / totalAttendanceDays) * 100 : 0;
-
-  // Calculate attendance streak
-  const attendanceStreak = useMemo(() => {
-    const presentDates = new Set<string>();
-    attendance.forEach(r => {
-      if (r.status === 'present') {
-        presentDates.add(r.date);
-      }
-    });
-
-    const dates = Array.from(presentDates).sort((a, b) => 
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-
-    if (dates.length === 0) return 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const mostRecent = new Date(dates[0]);
-    mostRecent.setHours(0, 0, 0, 0);
-    
-    const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysDiff > 1) return 0;
-
-    let streak = 1;
-    for (let i = 1; i < dates.length; i++) {
-      const date = new Date(dates[i]);
-      date.setHours(0, 0, 0, 0);
-      
-      const prevDate = new Date(dates[i - 1]);
-      prevDate.setHours(0, 0, 0, 0);
-      
-      const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-      
-      if (diff === 1) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-
-    return streak;
-  }, [attendance]);
 
   // Group attendance by subject
   const attendanceBySubject = attendance.reduce((acc, record) => {
