@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStudentData } from '@/hooks/useStudentData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { useStudentLeaderboard } from '@/hooks/useStudentLeaderboard';
@@ -12,7 +12,9 @@ import { Button } from '@/components/ui/button';
 import { StudentPortalLeaderboard } from '@/components/StudentPortalLeaderboard';
 import { StudentPortalAuth } from '@/components/StudentPortalAuth';
 import { StudentPortalSelector } from '@/components/StudentPortalSelector';
-import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut, Trophy, ArrowLeft } from 'lucide-react';
+import { AttendanceCalendar } from '@/components/student-portal/AttendanceCalendar';
+import { HomeworkSection } from '@/components/student-portal/HomeworkSection';
+import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut, Trophy, ArrowLeft, Flame, BookOpen } from 'lucide-react';
 
 export default function Student() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -29,6 +31,7 @@ export default function Student() {
     fees, 
     subjects, 
     announcements, 
+    homework,
     loading 
   } = useStudentData(selectedStudentId);
   
@@ -116,6 +119,50 @@ export default function Student() {
   const presentDays = attendance.filter(a => a.status === 'present').length;
   const attendanceRate = totalAttendanceDays > 0 ? (presentDays / totalAttendanceDays) * 100 : 0;
 
+  // Calculate attendance streak
+  const attendanceStreak = useMemo(() => {
+    const presentDates = new Set<string>();
+    attendance.forEach(r => {
+      if (r.status === 'present') {
+        presentDates.add(r.date);
+      }
+    });
+
+    const dates = Array.from(presentDates).sort((a, b) => 
+      new Date(b).getTime() - new Date(a).getTime()
+    );
+
+    if (dates.length === 0) return 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const mostRecent = new Date(dates[0]);
+    mostRecent.setHours(0, 0, 0, 0);
+    
+    const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
+    if (daysDiff > 1) return 0;
+
+    let streak = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const date = new Date(dates[i]);
+      date.setHours(0, 0, 0, 0);
+      
+      const prevDate = new Date(dates[i - 1]);
+      prevDate.setHours(0, 0, 0, 0);
+      
+      const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+      
+      if (diff === 1) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+
+    return streak;
+  }, [attendance]);
+
   // Group attendance by subject
   const attendanceBySubject = attendance.reduce((acc, record) => {
     const subjectId = record.subject_id || 'general';
@@ -170,8 +217,16 @@ export default function Student() {
           <AvatarImage src={student.avatar || undefined} />
           <AvatarFallback>{student.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
         </Avatar>
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold">{student.name}</h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-2xl md:text-3xl font-bold">{student.name}</h1>
+            {attendanceStreak > 0 && (
+              <Badge variant="secondary" className="gap-1 bg-orange-100 text-orange-700 border-orange-300">
+                <Flame className="h-3 w-3" />
+                {attendanceStreak} day streak
+              </Badge>
+            )}
+          </div>
           <p className="text-muted-foreground">Class: {student.class}</p>
         </div>
       </div>
@@ -225,14 +280,17 @@ export default function Student() {
 
       {/* Tabs */}
       <Tabs defaultValue="tests" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="tests">Tests</TabsTrigger>
           <TabsTrigger value="attendance">Attendance</TabsTrigger>
+          <TabsTrigger value="homework" className="flex items-center gap-1">
+            <BookOpen className="h-3 w-3 hidden sm:inline" />
+            <span>HW</span>
+          </TabsTrigger>
           <TabsTrigger value="fees">Fees</TabsTrigger>
           <TabsTrigger value="leaderboard" className="flex items-center gap-1">
             <Trophy className="h-3 w-3" />
-            <span className="hidden sm:inline">Leaderboard</span>
-            <span className="sm:hidden">Rank</span>
+            <span className="hidden sm:inline">Rank</span>
           </TabsTrigger>
           <TabsTrigger value="announcements">News</TabsTrigger>
         </TabsList>
@@ -270,38 +328,49 @@ export default function Student() {
 
         {/* Attendance Tab */}
         <TabsContent value="attendance">
-          <Card>
-            <CardHeader>
-              <CardTitle>Subject-wise Attendance</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {Object.keys(attendanceBySubject).length > 0 ? (
-                <div className="space-y-3">
-                  {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
-                    const subject = subjects.find(s => s.id === subjectId);
-                    const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
-                    return (
-                      <div key={subjectId} className="p-3 border rounded">
-                        <div className="flex justify-between items-center mb-2">
-                          <div className="font-medium">{subject?.name || 'General'}</div>
-                          <Badge variant={rate >= 75 ? 'default' : rate >= 60 ? 'secondary' : 'destructive'}>
-                            {rate.toFixed(1)}%
-                          </Badge>
+          <div className="space-y-6">
+            {/* Attendance Calendar */}
+            <AttendanceCalendar attendance={attendance} />
+            
+            {/* Subject-wise Attendance */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Subject-wise Attendance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(attendanceBySubject).length > 0 ? (
+                  <div className="space-y-3">
+                    {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
+                      const subject = subjects.find(s => s.id === subjectId);
+                      const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                      return (
+                        <div key={subjectId} className="p-3 border rounded">
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="font-medium">{subject?.name || 'General'}</div>
+                            <Badge variant={rate >= 75 ? 'default' : rate >= 60 ? 'secondary' : 'destructive'}>
+                              {rate.toFixed(1)}%
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                            <span>Present: {stats.present}</span>
+                            <span>Total: {stats.total}</span>
+                          </div>
+                          <Progress value={rate} className="h-2" />
                         </div>
-                        <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                          <span>Present: {stats.present}</span>
-                          <span>Total: {stats.total}</span>
-                        </div>
-                        <Progress value={rate} className="h-2" />
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No attendance records yet</p>
-              )}
-            </CardContent>
-          </Card>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No attendance records yet</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Homework Tab */}
+        <TabsContent value="homework">
+          <HomeworkSection homework={homework} subjects={subjects} />
         </TabsContent>
 
         {/* Fees Tab */}
