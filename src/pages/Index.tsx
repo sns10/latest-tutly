@@ -10,6 +10,7 @@ import { QuickActions } from "@/components/QuickActions";
 import { RecentTests } from "@/components/RecentTests";
 import { FeatureGate } from "@/components/FeatureGate";
 import { PortalEmailConfig } from "@/components/PortalEmailConfig";
+import { HomeworkManager } from "@/components/HomeworkManager";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, Building2, LogOut, Share2, Check } from "lucide-react";
@@ -159,6 +160,9 @@ const Index = () => {
             onAddTestResult={addTestResult}
             onAwardXP={awardXP}
           />
+
+          {/* Homework Manager */}
+          <HomeworkManager />
 
           <Card className="bg-white border border-gray-100 shadow-sm">
             <CardHeader className="pb-2 sm:pb-3">

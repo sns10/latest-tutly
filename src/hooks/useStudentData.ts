@@ -11,7 +11,7 @@ type WeeklyTest = Tables<'weekly_tests'>;
 type Subject = Tables<'subjects'>;
 type Announcement = Tables<'announcements'>;
 type Tuition = Tables<'tuitions'>;
-
+type Homework = Tables<'homework'>;
 interface Division {
   id: string;
   name: string;
@@ -33,6 +33,7 @@ export function useStudentData(selectedStudentId?: string | null) {
   const [fees, setFees] = useState<StudentFee[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [homework, setHomework] = useState<Homework[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -131,7 +132,8 @@ export function useStudentData(selectedStudentId?: string | null) {
         testsRes,
         feesRes,
         subjectsRes,
-        announcementsRes
+        announcementsRes,
+        homeworkRes
       ] = await Promise.all([
         supabase
           .from('student_attendance')
@@ -162,7 +164,13 @@ export function useStudentData(selectedStudentId?: string | null) {
           .select('*')
           .eq('tuition_id', studentData.tuition_id)
           .or(`target_class.eq.${studentData.class},target_class.is.null`)
-          .order('published_at', { ascending: false })
+          .order('published_at', { ascending: false }),
+        supabase
+          .from('homework')
+          .select('*')
+          .eq('tuition_id', studentData.tuition_id)
+          .eq('class', studentData.class)
+          .order('due_date', { ascending: true })
       ]);
 
       if (attendanceRes.data) setAttendance(attendanceRes.data);
@@ -171,6 +179,7 @@ export function useStudentData(selectedStudentId?: string | null) {
       if (feesRes.data) setFees(feesRes.data);
       if (subjectsRes.data) setSubjects(subjectsRes.data);
       if (announcementsRes.data) setAnnouncements(announcementsRes.data);
+      if (homeworkRes.data) setHomework(homeworkRes.data);
     };
 
     fetchStudentData();
@@ -187,6 +196,7 @@ export function useStudentData(selectedStudentId?: string | null) {
     fees,
     subjects,
     announcements,
+    homework,
     loading
   };
 }

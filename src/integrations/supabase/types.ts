@@ -306,6 +306,57 @@ export type Database = {
           },
         ]
       }
+      homework: {
+        Row: {
+          class: string
+          created_at: string
+          description: string | null
+          due_date: string
+          id: string
+          subject_id: string | null
+          title: string
+          tuition_id: string
+          updated_at: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          description?: string | null
+          due_date: string
+          id?: string
+          subject_id?: string | null
+          title: string
+          tuition_id: string
+          updated_at?: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string
+          id?: string
+          subject_id?: string | null
+          title?: string
+          tuition_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "homework_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "homework_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
