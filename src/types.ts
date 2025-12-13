@@ -41,6 +41,7 @@ export interface Student {
   class: ClassName;
   divisionId?: string;
   division?: Division;
+  tuitionId?: string;
   avatar: string;
   email?: string;
   rollNo?: number;

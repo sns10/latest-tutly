@@ -33,7 +33,7 @@ interface StudentDetailsDialogProps {
   onOpenChange: (open: boolean) => void;
   onRemoveStudent: (studentId: string) => void;
   onUpdateStudent?: (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null }) => void;
-  onAssignStudentEmail?: (studentId: string, email: string) => Promise<boolean>;
+  onStudentDataUpdated?: () => void;
 }
 
 const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
@@ -51,7 +51,7 @@ export function StudentDetailsDialog({
   onOpenChange,
   onRemoveStudent,
   onUpdateStudent,
-  onAssignStudentEmail,
+  onStudentDataUpdated,
 }: StudentDetailsDialogProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [showEmailDialog, setShowEmailDialog] = useState(false);
@@ -360,12 +360,10 @@ export function StudentDetailsDialog({
         {/* Actions */}
         <div className="flex flex-wrap justify-between gap-2 mt-4 pt-4 border-t">
           <div className="flex items-center gap-2">
-            {onAssignStudentEmail && (
-              <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(true)} className="gap-2">
-                <Mail className="h-4 w-4" />
-                {student.email ? 'Update Portal Access' : 'Enable Portal Access'}
-              </Button>
-            )}
+            <Button variant="outline" size="sm" onClick={() => setShowEmailDialog(true)} className="gap-2">
+              <Mail className="h-4 w-4" />
+              {student.email ? 'Update Portal Access' : 'Enable Portal Access'}
+            </Button>
             {student.email && (
               <Badge variant="secondary" className="gap-1">
                 <UserCheck className="h-3 w-3" />
@@ -386,14 +384,14 @@ export function StudentDetailsDialog({
       </DialogContent>
 
       {/* Email Assignment Dialog */}
-      {onAssignStudentEmail && (
-        <AssignStudentEmailDialog
-          student={student}
-          open={showEmailDialog}
-          onOpenChange={setShowEmailDialog}
-          onAssignEmail={onAssignStudentEmail}
-        />
-      )}
+      <AssignStudentEmailDialog
+        student={student}
+        open={showEmailDialog}
+        onOpenChange={setShowEmailDialog}
+        onSuccess={() => {
+          onStudentDataUpdated?.();
+        }}
+      />
     </Dialog>
   );
 }
