@@ -1,1 +1,10 @@
 project_id = "vbabuyyvgltbleinopkn"
+
+[functions.generate-report]
+verify_jwt = true
+
+[functions.setup-tuition-admin]
+verify_jwt = false
+
+[functions.create-student-user]
+verify_jwt = true

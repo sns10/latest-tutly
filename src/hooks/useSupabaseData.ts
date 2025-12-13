@@ -109,6 +109,7 @@ export function useSupabaseData() {
         name: student.division.name,
         createdAt: new Date().toISOString(),
       } : undefined,
+      tuitionId: student.tuition_id,
       avatar: student.avatar || '',
       email: (student as any).email || undefined,
       rollNo: (student as any).roll_no || undefined,

@@ -354,6 +354,7 @@ export default function Student() {
                 class: s.class,
                 avatar: s.avatar,
                 totalXp: s.totalXp,
+                tuitionId: student.tuition_id,
                 division: s.division ? { id: s.division.id, name: s.division.name, class: s.class, createdAt: '' } : undefined,
                 divisionId: s.division?.id,
                 xp: { blackout: 0, futureMe: 0, recallWar: 0 },

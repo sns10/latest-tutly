@@ -242,7 +242,10 @@ export default function StudentsPage() {
           onOpenChange={(open) => !open && setSelectedStudent(null)}
           onRemoveStudent={removeStudent}
           onUpdateStudent={updateStudent}
-          onAssignStudentEmail={assignStudentEmail}
+          onStudentDataUpdated={() => {
+            // Refresh student data after portal access is enabled
+            setSelectedStudent(null);
+          }}
         />
       )}
     </div>

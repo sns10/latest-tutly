@@ -18,38 +18,53 @@ export function AuthPage() {
   const [password, setPassword] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isPortalUser, setIsPortalUser] = useState<boolean | null>(null);
+  const [isLinkedStudent, setIsLinkedStudent] = useState<boolean | null>(null);
   const [checkingPortal, setCheckingPortal] = useState(false);
 
-  // Check if user is a portal user (their email matches a tuition's portal_email)
+  // Check if user is a portal user (shared portal email) or a linked student account
   useEffect(() => {
-    const checkPortalUser = async () => {
-      if (!user?.email) {
+    const checkUserAccess = async () => {
+      if (!user?.email || !user?.id) {
         setIsPortalUser(null);
+        setIsLinkedStudent(null);
         return;
       }
 
       setCheckingPortal(true);
       try {
-        const { data, error } = await supabase
+        // Check if this is a shared portal email
+        const { data: tuitionData } = await supabase
           .from('tuitions')
           .select('id')
           .eq('portal_email', user.email.toLowerCase())
           .limit(1);
 
-        if (!error && data && data.length > 0) {
+        if (tuitionData && tuitionData.length > 0) {
           setIsPortalUser(true);
+          setIsLinkedStudent(false);
         } else {
           setIsPortalUser(false);
+          
+          // Check if user has a linked student account (via user_id or email)
+          const { data: studentData } = await supabase
+            .from('students')
+            .select('id')
+            .or(`user_id.eq.${user.id},email.eq.${user.email.toLowerCase()}`)
+            .limit(1);
+
+          setIsLinkedStudent(studentData && studentData.length > 0);
         }
       } catch (err) {
+        console.error('Error checking user access:', err);
         setIsPortalUser(false);
+        setIsLinkedStudent(false);
       } finally {
         setCheckingPortal(false);
       }
     };
 
-    checkPortalUser();
-  }, [user?.email]);
+    checkUserAccess();
+  }, [user?.email, user?.id]);
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,8 +129,8 @@ export function AuthPage() {
       );
     }
 
-    // If user is a portal user, redirect to student page
-    if (isPortalUser === true) {
+    // If user is a portal user or has a linked student account, redirect to student page
+    if (isPortalUser === true || isLinkedStudent === true) {
       return <Navigate to="/student" replace />;
     }
     
