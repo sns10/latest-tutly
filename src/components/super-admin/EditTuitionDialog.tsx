@@ -27,6 +27,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
     email: '',
     phone: '',
     address: '',
+    logo_url: '',
     is_active: true,
     subscription_status: 'active',
   });
@@ -39,6 +40,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
         email: tuition.email || '',
         phone: tuition.phone || '',
         address: tuition.address || '',
+        logo_url: tuition.logo_url || '',
         is_active: tuition.is_active ?? true,
         subscription_status: tuition.subscription_status || 'active',
       });
@@ -71,6 +73,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
           email: formData.email,
           phone: formData.phone,
           address: formData.address,
+          logo_url: formData.logo_url || null,
           is_active: formData.is_active,
           subscription_status: formData.subscription_status,
           features: enabledFeatures,
@@ -140,6 +143,18 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
               onChange={(e) => setFormData({ ...formData, address: e.target.value })}
               rows={2}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="logo_url">Logo URL</Label>
+            <Input
+              id="logo_url"
+              type="url"
+              placeholder="https://example.com/logo.png"
+              value={formData.logo_url}
+              onChange={(e) => setFormData({ ...formData, logo_url: e.target.value })}
+            />
+            <p className="text-xs text-muted-foreground">Enter a URL to your tuition center's logo image</p>
           </div>
 
           <div className="space-y-2">

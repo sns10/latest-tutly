@@ -5,7 +5,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, GraduationCap, LogOut, Building2 } from 'lucide-react';
+import { TuitionBranding } from '@/components/TuitionBranding';
+import { Search, GraduationCap, LogOut } from 'lucide-react';
 
 interface Student {
   id: string;
@@ -18,13 +19,15 @@ interface Student {
 interface StudentPortalSelectorProps {
   students: Student[];
   tuitionName: string;
+  tuitionLogo?: string | null;
   onSelectStudent: (student: Student) => void;
   onSignOut: () => void;
 }
 
 export function StudentPortalSelector({ 
   students, 
-  tuitionName, 
+  tuitionName,
+  tuitionLogo, 
   onSelectStudent, 
   onSignOut 
 }: StudentPortalSelectorProps) {
@@ -53,20 +56,17 @@ export function StudentPortalSelector({
   });
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-3 sm:p-4">
       <div className="max-w-2xl mx-auto">
         {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-              <Building2 className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-900">{tuitionName}</h2>
-              <p className="text-xs text-gray-500">Student Portal</p>
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={onSignOut} className="gap-2">
+        <div className="flex items-center justify-between mb-4 sm:mb-6 gap-2">
+          <TuitionBranding 
+            name={tuitionName} 
+            logoUrl={tuitionLogo}
+            showPoweredBy={false}
+            size="sm"
+          />
+          <Button variant="outline" size="sm" onClick={onSignOut} className="gap-2 flex-shrink-0">
             <LogOut className="h-4 w-4" />
             <span className="hidden sm:inline">Logout</span>
           </Button>
