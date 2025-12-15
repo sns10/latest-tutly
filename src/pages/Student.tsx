@@ -14,7 +14,8 @@ import { StudentPortalAuth } from '@/components/StudentPortalAuth';
 import { StudentPortalSelector } from '@/components/StudentPortalSelector';
 import { AttendanceCalendar } from '@/components/student-portal/AttendanceCalendar';
 import { HomeworkSection } from '@/components/student-portal/HomeworkSection';
-import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, Building2, LogOut, Trophy, ArrowLeft, Flame, BookOpen } from 'lucide-react';
+import { TuitionBranding } from '@/components/TuitionBranding';
+import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, LogOut, Trophy, ArrowLeft, Flame } from 'lucide-react';
 
 export default function Student() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -119,6 +120,7 @@ export default function Student() {
           division: s.divisions
         }))}
         tuitionName={sharedTuition?.name || 'Student Portal'}
+        tuitionLogo={sharedTuition?.logo_url}
         onSelectStudent={(s) => setSelectedStudentId(s.id)}
         onSignOut={signOut}
       />
@@ -183,31 +185,27 @@ export default function Student() {
   const displayTuition = sharedTuition || tuition;
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-7xl">
+    <div className="container mx-auto p-3 sm:p-4 md:p-6 max-w-7xl">
       {/* Platform Header */}
-      <div className="flex items-center justify-between mb-6 pb-4 border-b">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between mb-4 sm:mb-6 pb-3 sm:pb-4 border-b gap-2">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {isSharedAccess && (
             <Button
               variant="ghost"
               size="icon"
               onClick={() => setSelectedStudentId(null)}
-              className="mr-2"
+              className="flex-shrink-0"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-            <Building2 className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900">{displayTuition?.name || 'Student Portal'}</h2>
-            <p className="text-xs text-gray-500">
-              Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
-            </p>
-          </div>
+          <TuitionBranding 
+            name={displayTuition?.name || 'Student Portal'} 
+            logoUrl={displayTuition?.logo_url}
+            size="sm"
+          />
         </div>
-        <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
+        <Button variant="outline" size="sm" onClick={signOut} className="gap-2 flex-shrink-0">
           <LogOut className="h-4 w-4" />
           <span className="hidden sm:inline">Logout</span>
         </Button>
@@ -281,20 +279,20 @@ export default function Student() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="tests" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="tests">Tests</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          <TabsTrigger value="homework" className="flex items-center gap-1">
-            <BookOpen className="h-3 w-3 hidden sm:inline" />
-            <span>HW</span>
+      <Tabs defaultValue="tests" className="space-y-3 sm:space-y-4">
+        <TabsList className="grid w-full grid-cols-6 h-auto p-1">
+          <TabsTrigger value="tests" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">Tests</TabsTrigger>
+          <TabsTrigger value="attendance" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
+            <span className="hidden sm:inline">Attendance</span>
+            <span className="sm:hidden">Att.</span>
           </TabsTrigger>
-          <TabsTrigger value="fees">Fees</TabsTrigger>
-          <TabsTrigger value="leaderboard" className="flex items-center gap-1">
-            <Trophy className="h-3 w-3" />
+          <TabsTrigger value="homework" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">HW</TabsTrigger>
+          <TabsTrigger value="fees" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">Fees</TabsTrigger>
+          <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
+            <Trophy className="h-3 w-3 sm:hidden" />
             <span className="hidden sm:inline">Rank</span>
           </TabsTrigger>
-          <TabsTrigger value="announcements">News</TabsTrigger>
+          <TabsTrigger value="announcements" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">News</TabsTrigger>
         </TabsList>
 
         {/* Tests Tab */}

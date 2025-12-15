@@ -13,7 +13,8 @@ import { PortalEmailConfig } from "@/components/PortalEmailConfig";
 import { HomeworkManager } from "@/components/HomeworkManager";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Building2, LogOut, Share2, Check } from "lucide-react";
+import { TuitionBranding } from "@/components/TuitionBranding";
+import { Loader2, LogOut, Share2, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import LeaderboardPage from './Leaderboard';
@@ -99,20 +100,11 @@ const Index = () => {
     <Routes>
       <Route path="/" element={
         <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-600 to-purple-600 rounded-lg flex items-center justify-center shadow-md">
-                <Building2 className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-                  {tuition?.name || 'Dashboard'}
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-500">
-                  Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
-                </p>
-              </div>
-            </div>
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <TuitionBranding 
+              name={tuition?.name || 'Dashboard'} 
+              logoUrl={tuition?.logo_url}
+            />
             <div className="flex items-center gap-2">
               {tuitionId && (
                 <PortalEmailConfig
