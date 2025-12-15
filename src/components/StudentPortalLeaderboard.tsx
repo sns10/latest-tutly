@@ -118,8 +118,11 @@ export function StudentPortalLeaderboard({
                         )}
                       </p>
                       {/* Streak Badge */}
-                      {student.attendanceStreak && student.attendanceStreak > 0 && (
-                        <Badge variant="outline" className="gap-1 bg-orange-50 text-orange-600 border-orange-200 text-xs shrink-0">
+                      {student.attendanceStreak !== undefined && (
+                        <Badge
+                          variant="outline"
+                          className="gap-1 bg-orange-50 text-orange-600 border-orange-200 text-xs shrink-0"
+                        >
                           <Flame className="h-3 w-3" />
                           {student.attendanceStreak}
                         </Badge>
