@@ -48,6 +48,7 @@ export function AttendanceTracker({
   const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
   const [selectedFaculty, setSelectedFaculty] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   
   const [searchQuery, setSearchQuery] = useState('');
   const [isManualMode, setIsManualMode] = useState(false);
@@ -125,13 +126,25 @@ export function AttendanceTracker({
   }, [divisions, selectedClass]);
 
   // Filter students by class, division and search query
-  const filteredStudents = useMemo(() => {
+  const filteredStudentsBase = useMemo(() => {
     if (!selectedClass) return [];
     return students
       .filter(s => s.class === selectedClass)
       .filter(s => !selectedDivision || s.divisionId === selectedDivision)
       .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
   }, [students, selectedClass, selectedDivision, searchQuery]);
+
+
+  // Apply status filter
+  const filteredStudents = useMemo(() => {
+    if (statusFilter === 'all') return filteredStudentsBase;
+    
+    return filteredStudentsBase.filter(student => {
+      const studentAttendance = getAttendanceForStudent(student.id);
+      if (statusFilter === 'unmarked') return !studentAttendance;
+      return studentAttendance?.status === statusFilter;
+    });
+  }, [filteredStudentsBase, statusFilter, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Get attendance for selected date - must match exact subject/faculty context
   const getAttendanceForStudent = (studentId: string) => {
@@ -197,12 +210,12 @@ export function AttendanceTracker({
     return faculty.filter(f => f.subjects?.some(s => s.id === selectedSubject));
   }, [faculty, selectedSubject]);
 
-  // Calculate attendance statistics - must match exact subject/faculty context
+  // Calculate attendance statistics - must match exact subject/faculty context (use base to count all)
   const stats = useMemo(() => {
-    const totalStudents = filteredStudents.length;
+    const totalStudents = filteredStudentsBase.length;
     const dateAttendance = attendance.filter(a => {
       if (a.date !== selectedDateStr) return false;
-      if (!filteredStudents.some(s => s.id === a.studentId)) return false;
+      if (!filteredStudentsBase.some(s => s.id === a.studentId)) return false;
       
       // Match exact subject/faculty context
       const subjectMatches = selectedSubject 
@@ -222,23 +235,23 @@ export function AttendanceTracker({
       late: dateAttendance.filter(a => a.status === 'late').length,
       excused: dateAttendance.filter(a => a.status === 'excused').length,
     };
-  }, [filteredStudents, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudentsBase, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Get absentees for WhatsApp message
   const absentees = useMemo(() => {
-    return filteredStudents.filter(student => {
+    return filteredStudentsBase.filter(student => {
       const studentAttendance = getAttendanceForStudent(student.id);
       return studentAttendance?.status === 'absent';
     });
-  }, [filteredStudents, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudentsBase, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Get late students for WhatsApp message
   const lateStudents = useMemo(() => {
-    return filteredStudents.filter(student => {
+    return filteredStudentsBase.filter(student => {
       const studentAttendance = getAttendanceForStudent(student.id);
       return studentAttendance?.status === 'late';
     });
-  }, [filteredStudents, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudentsBase, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
@@ -253,7 +266,7 @@ export function AttendanceTracker({
   const handleBulkAttendance = (status: 'present' | 'absent' | 'late' | 'excused') => {
     let markedCount = 0;
     
-    filteredStudents.forEach(student => {
+    filteredStudentsBase.forEach(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
       if (!existingAttendance) {
         onMarkAttendance(student.id, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
@@ -391,6 +404,15 @@ export function AttendanceTracker({
           </Button>
         )}
 
+        {/* Attendance Summary - Inline when class selected */}
+        {selectedClass && (
+          <Card className="bg-white shadow-sm border-slate-200">
+            <CardContent className="p-3">
+              <AttendanceStats stats={stats} />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Compact Filters Row */}
         <Card className="bg-white shadow-sm border-slate-200">
           <CardContent className="p-3 space-y-3">
@@ -401,6 +423,7 @@ export function AttendanceTracker({
                 setSelectedDivision('');
                 setSelectedSubject('');
                 setSelectedFaculty('');
+                setStatusFilter('all');
               }}>
                 <SelectTrigger className="bg-white h-9 text-sm">
                   <SelectValue placeholder="Select class" />
@@ -474,6 +497,28 @@ export function AttendanceTracker({
               </Select>
             </div>
 
+            {/* Row 3: Status Filter */}
+            <div className="flex gap-1 flex-wrap">
+              {[
+                { value: 'all', label: 'All', count: filteredStudentsBase.length },
+                { value: 'present', label: 'Present', count: stats.present, color: 'bg-green-100 text-green-700' },
+                { value: 'absent', label: 'Absent', count: stats.absent, color: 'bg-red-100 text-red-700' },
+                { value: 'late', label: 'Late', count: stats.late, color: 'bg-yellow-100 text-yellow-700' },
+                { value: 'unmarked', label: 'Unmarked', count: filteredStudentsBase.length - (stats.present + stats.absent + stats.late + stats.excused) },
+              ].map(({ value, label, count, color }) => (
+                <Button
+                  key={value}
+                  variant={statusFilter === value ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setStatusFilter(value)}
+                  className={`h-7 text-xs px-2 gap-1 ${statusFilter === value ? '' : color || ''}`}
+                >
+                  {label}
+                  <span className="text-[10px] opacity-75">({count})</span>
+                </Button>
+              ))}
+            </div>
+
             {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -489,9 +534,9 @@ export function AttendanceTracker({
             <Button 
               onClick={() => handleBulkAttendance('present')} 
               className="w-full bg-green-600 hover:bg-green-700 h-9 text-sm font-medium" 
-              disabled={!selectedClass || filteredStudents.length === 0}
+              disabled={!selectedClass || filteredStudentsBase.length === 0}
             >
-              Mark All Present ({filteredStudents.length})
+              Mark All Present ({filteredStudentsBase.length})
             </Button>
           </CardContent>
         </Card>
@@ -616,35 +661,6 @@ export function AttendanceTracker({
                         <p className="text-xs text-muted-foreground truncate">{entry.faculty?.name}</p>
                       </button>
                     ))}
-                  </div>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          )}
-
-          {/* Attendance Summary - Collapsible */}
-          {selectedClass && (
-            <Collapsible open={statsOpen} onOpenChange={setStatsOpen}>
-              <Card className="bg-white shadow-sm border-slate-200 overflow-hidden">
-                <CollapsibleTrigger asChild>
-                  <button className="w-full p-3 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                    <div className="flex items-center gap-2">
-                      <Users className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">Summary</span>
-                      <span className="text-xs text-muted-foreground">
-                        {stats.present}P / {stats.absent}A / {stats.late}L
-                      </span>
-                    </div>
-                    {statsOpen ? (
-                      <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <div className="px-3 pb-3 border-t border-slate-100">
-                    <AttendanceStats stats={stats} />
                   </div>
                 </CollapsibleContent>
               </Card>

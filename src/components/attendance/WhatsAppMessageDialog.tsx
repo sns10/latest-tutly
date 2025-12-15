@@ -101,7 +101,7 @@ export function WhatsAppMessageDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md mx-auto bg-white">
+      <DialogContent className="max-w-md mx-auto bg-white max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold flex items-center gap-2">
             <MessageCircle className="h-5 w-5 text-green-600" />
@@ -109,10 +109,10 @@ export function WhatsAppMessageDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Message Preview */}
-          <Card className="bg-slate-50 border-slate-200">
-            <CardContent className="p-3">
+        <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
+          {/* Message Preview - Scrollable */}
+          <Card className="bg-slate-50 border-slate-200 flex-1 overflow-hidden">
+            <CardContent className="p-3 h-full max-h-[40vh] overflow-y-auto">
               <pre className="text-sm whitespace-pre-wrap font-sans text-foreground leading-relaxed">
                 {message}
               </pre>
@@ -120,7 +120,7 @@ export function WhatsAppMessageDialog({
           </Card>
 
           {/* Action Buttons */}
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 shrink-0">
             <Button
               onClick={handleCopy}
               variant="outline"
@@ -148,7 +148,7 @@ export function WhatsAppMessageDialog({
             </Button>
           </div>
 
-          <p className="text-xs text-muted-foreground text-center">
+          <p className="text-xs text-muted-foreground text-center shrink-0">
             Copy the message and paste it into your class WhatsApp group
           </p>
         </div>
