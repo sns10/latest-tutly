@@ -125,27 +125,6 @@ export function AttendanceTracker({
     return divisions.filter(d => d.class === selectedClass);
   }, [divisions, selectedClass]);
 
-  // Filter students by class, division and search query
-  const filteredStudentsBase = useMemo(() => {
-    if (!selectedClass) return [];
-    return students
-      .filter(s => s.class === selectedClass)
-      .filter(s => !selectedDivision || s.divisionId === selectedDivision)
-      .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [students, selectedClass, selectedDivision, searchQuery]);
-
-
-  // Apply status filter
-  const filteredStudents = useMemo(() => {
-    if (statusFilter === 'all') return filteredStudentsBase;
-    
-    return filteredStudentsBase.filter(student => {
-      const studentAttendance = getAttendanceForStudent(student.id);
-      if (statusFilter === 'unmarked') return !studentAttendance;
-      return studentAttendance?.status === statusFilter;
-    });
-  }, [filteredStudentsBase, statusFilter, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
-
   // Get attendance for selected date - must match exact subject/faculty context
   const getAttendanceForStudent = (studentId: string) => {
     return attendance.find(a => {
@@ -164,6 +143,26 @@ export function AttendanceTracker({
       return subjectMatches && facultyMatches;
     });
   };
+
+  // Filter students by class, division and search query
+  const filteredStudentsBase = useMemo(() => {
+    if (!selectedClass) return [];
+    return students
+      .filter(s => s.class === selectedClass)
+      .filter(s => !selectedDivision || s.divisionId === selectedDivision)
+      .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+  }, [students, selectedClass, selectedDivision, searchQuery]);
+
+  // Apply status filter
+  const filteredStudents = useMemo(() => {
+    if (statusFilter === 'all') return filteredStudentsBase;
+    
+    return filteredStudentsBase.filter(student => {
+      const studentAttendance = getAttendanceForStudent(student.id);
+      if (statusFilter === 'unmarked') return !studentAttendance;
+      return studentAttendance?.status === statusFilter;
+    });
+  }, [filteredStudentsBase, statusFilter, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Get today's scheduled classes from timetable
   const todaysClasses = useMemo(() => {
