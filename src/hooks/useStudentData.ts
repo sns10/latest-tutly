@@ -116,6 +116,18 @@ export function useStudentData(selectedStudentId?: string | null) {
         }
 
         setStudent(studentData);
+        
+        // Fetch tuition info for individual student access
+        const { data: studentTuitionData } = await supabase
+          .from('tuitions')
+          .select('*')
+          .eq('id', studentData.tuition_id)
+          .maybeSingle();
+        
+        if (studentTuitionData) {
+          setTuition(studentTuitionData);
+        }
+        
         await fetchStudentRelatedData(studentData);
 
       } catch (error) {
