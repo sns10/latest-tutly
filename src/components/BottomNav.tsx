@@ -15,7 +15,7 @@ const tuitionAdminItems: NavItem[] = [
   { title: 'Home', url: '/', icon: Home },
   { title: 'Board', url: '/leaderboard', icon: Trophy, featureKey: 'leaderboard' },
   { title: 'Schedule', url: '/timetable', icon: Clock, featureKey: 'timetable' },
-  { title: 'Reports', url: '/reports', icon: FileText },
+  { title: 'Reports', url: '/reports', icon: FileText, featureKey: 'reports' },
 ];
 
 const superAdminItems: NavItem[] = [

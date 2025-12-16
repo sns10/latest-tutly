@@ -13,6 +13,7 @@ import { StudentAttendanceList } from './attendance/StudentAttendanceList';
 import { ReportExporter } from './ReportExporter';
 import { WhatsAppMessageDialog } from './attendance/WhatsAppMessageDialog';
 import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -43,6 +44,7 @@ export function AttendanceTracker({
   divisions = [],
   onMarkAttendance 
 }: AttendanceTrackerProps) {
+  const { isFeatureEnabled } = useTuitionFeatures();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('');
@@ -392,8 +394,8 @@ export function AttendanceTracker({
           </div>
         </div>
 
-        {/* Prepare WhatsApp Message - Show when class selected and attendance marked */}
-        {selectedClass && stats.absent > 0 && (
+        {/* Prepare WhatsApp Message - Show when class selected, attendance marked, and feature enabled */}
+        {isFeatureEnabled('whatsapp_alerts') && selectedClass && stats.absent > 0 && (
           <Button
             onClick={() => setWhatsappDialogOpen(true)}
             className="w-full h-10 gap-2 bg-green-600 hover:bg-green-700"

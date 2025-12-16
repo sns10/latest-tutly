@@ -8,10 +8,11 @@ import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
-import { ALL_FEATURES, FeatureKey } from '@/hooks/useTuitionFeatures';
+import { ALL_FEATURES, FeatureKey, FeatureTier } from '@/hooks/useTuitionFeatures';
 
 interface EditTuitionDialogProps {
   open: boolean;
@@ -195,20 +196,47 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
               <Label>Feature Access</Label>
               <p className="text-xs text-muted-foreground">Enable or disable features for this tuition center</p>
             </div>
-            <ScrollArea className="h-[200px] border rounded-md p-3">
-              <div className="space-y-3">
-                {ALL_FEATURES.map((feature) => (
-                  <div key={feature.key} className="flex items-center justify-between">
-                    <Label htmlFor={feature.key} className="text-sm font-normal cursor-pointer">
-                      {feature.label}
-                    </Label>
-                    <Switch
-                      id={feature.key}
-                      checked={enabledFeatures.includes(feature.key)}
-                      onCheckedChange={() => toggleFeature(feature.key)}
-                    />
-                  </div>
-                ))}
+            <ScrollArea className="h-[280px] border rounded-md p-3">
+              <div className="space-y-4">
+                {(['core', 'standard', 'premium'] as FeatureTier[]).map((tier) => {
+                  const tierFeatures = ALL_FEATURES.filter(f => f.tier === tier);
+                  const tierColors = {
+                    core: 'bg-green-100 text-green-800',
+                    standard: 'bg-blue-100 text-blue-800',
+                    premium: 'bg-purple-100 text-purple-800',
+                  };
+                  return (
+                    <div key={tier} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className={tierColors[tier]}>
+                          {tier.charAt(0).toUpperCase() + tier.slice(1)}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {tierFeatures.length} features
+                        </span>
+                      </div>
+                      <div className="space-y-2 pl-2">
+                        {tierFeatures.map((feature) => (
+                          <div key={feature.key} className="flex items-center justify-between py-1">
+                            <div className="flex-1 min-w-0">
+                              <Label htmlFor={feature.key} className="text-sm font-normal cursor-pointer">
+                                {feature.label}
+                              </Label>
+                              {feature.description && (
+                                <p className="text-xs text-muted-foreground truncate">{feature.description}</p>
+                              )}
+                            </div>
+                            <Switch
+                              id={feature.key}
+                              checked={enabledFeatures.includes(feature.key)}
+                              onCheckedChange={() => toggleFeature(feature.key)}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </ScrollArea>
           </div>
