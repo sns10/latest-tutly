@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 import { Student, Division } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -33,6 +34,8 @@ export default function StudentsPage() {
     buyReward,
     useReward
   } = useSupabaseData();
+  
+  const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('All');
@@ -74,13 +77,16 @@ export default function StudentsPage() {
     }
   };
 
-  if (loading) {
+  if (loading || featuresLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   }
+
+  const showBulkImport = isFeatureEnabled('bulk_import');
+  const showGamification = isFeatureEnabled('gamification');
 
   return (
     <div className="w-full px-3 py-4 sm:px-6 space-y-4">
@@ -91,7 +97,7 @@ export default function StudentsPage() {
           <p className="text-xs sm:text-sm text-muted-foreground">Manage and view student details</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />
+          {showBulkImport && <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />}
           <AddStudentDialog divisions={divisions} onAddStudent={addStudent} />
         </div>
       </div>
@@ -177,7 +183,7 @@ export default function StudentsPage() {
               </p>
               {!searchQuery && (
                 <div className="flex flex-wrap justify-center gap-2">
-                  <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />
+                  {showBulkImport && <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />}
                   <AddStudentDialog divisions={divisions} onAddStudent={addStudent} />
                 </div>
               )}
@@ -207,9 +213,11 @@ export default function StudentsPage() {
                     </div>
                   </div>
                   <div className="text-right flex flex-col items-end gap-1">
-                    <p className="font-bold text-sm text-primary">{student.totalXp} XP</p>
+                    {showGamification && (
+                      <p className="font-bold text-sm text-primary">{student.totalXp} XP</p>
+                    )}
                     <div className="flex items-center gap-1">
-                      {student.attendanceStreak > 0 && (
+                      {showGamification && student.attendanceStreak > 0 && (
                         <Badge variant="outline" className="border-orange-500/30 bg-orange-500/10 text-orange-500 text-xs gap-1">
                           <Flame className="h-3 w-3" />
                           {student.attendanceStreak}

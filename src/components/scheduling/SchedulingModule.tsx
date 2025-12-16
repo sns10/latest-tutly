@@ -8,6 +8,7 @@ import { SpecialClassesList } from './SpecialClassesList';
 import { RoomOccupancyVisualizer } from './RoomOccupancyVisualizer';
 import { TimelineView } from './TimelineView';
 import { Calendar, Clock, DoorOpen, CalendarPlus, LayoutGrid } from 'lucide-react';
+import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 
 interface SchedulingModuleProps {
   timetable: Timetable[];
@@ -65,6 +66,7 @@ export function SchedulingModule({
   onUpdateRoom,
   onDeleteRoom,
 }: SchedulingModuleProps) {
+  const { isFeatureEnabled } = useTuitionFeatures();
   const [activeTab, setActiveTab] = useState('weekly');
   const [editingEntry, setEditingEntry] = useState<Timetable | null>(null);
 
@@ -109,14 +111,18 @@ export function SchedulingModule({
             <Calendar className="h-4 w-4 mr-2 hidden sm:inline" />
             Timeline
           </TabsTrigger>
-          <TabsTrigger value="rooms" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-            <DoorOpen className="h-4 w-4 mr-2 hidden sm:inline" />
-            Rooms
-          </TabsTrigger>
-          <TabsTrigger value="availability" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-            <LayoutGrid className="h-4 w-4 mr-2 hidden sm:inline" />
-            Availability
-          </TabsTrigger>
+          {isFeatureEnabled('scheduling') && (
+            <TabsTrigger value="rooms" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <DoorOpen className="h-4 w-4 mr-2 hidden sm:inline" />
+              Rooms
+            </TabsTrigger>
+          )}
+          {isFeatureEnabled('scheduling') && (
+            <TabsTrigger value="availability" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+              <LayoutGrid className="h-4 w-4 mr-2 hidden sm:inline" />
+              Availability
+            </TabsTrigger>
+          )}
         </TabsList>
 
         {/* Weekly Timetable */}
@@ -153,24 +159,28 @@ export function SchedulingModule({
           />
         </TabsContent>
 
-        {/* Room Management */}
-        <TabsContent value="rooms" className="mt-4">
-          <RoomManager
-            rooms={rooms}
-            timetable={timetable}
-            onAddRoom={onAddRoom}
-            onUpdateRoom={onUpdateRoom}
-            onDeleteRoom={onDeleteRoom}
-          />
-        </TabsContent>
+        {/* Room Management - Feature Gated */}
+        {isFeatureEnabled('scheduling') && (
+          <TabsContent value="rooms" className="mt-4">
+            <RoomManager
+              rooms={rooms}
+              timetable={timetable}
+              onAddRoom={onAddRoom}
+              onUpdateRoom={onUpdateRoom}
+              onDeleteRoom={onDeleteRoom}
+            />
+          </TabsContent>
+        )}
 
-        {/* Room Availability */}
-        <TabsContent value="availability" className="mt-4">
-          <RoomOccupancyVisualizer
-            rooms={rooms}
-            timetable={timetable}
-          />
-        </TabsContent>
+        {/* Room Availability - Feature Gated */}
+        {isFeatureEnabled('scheduling') && (
+          <TabsContent value="availability" className="mt-4">
+            <RoomOccupancyVisualizer
+              rooms={rooms}
+              timetable={timetable}
+            />
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -19,6 +19,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2, Search, BookOpen } from "lucide-react";
 import { ClassFeeManager } from "./ClassFeeManager";
 import { TermExamManager } from "./term-exams/TermExamManager";
+import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
 
 interface WeeklyTestManagerProps {
   tests: WeeklyTest[];
@@ -85,6 +86,7 @@ export function WeeklyTestManager({
   onAddTermExamResult,
   onBulkAddTermExamResults,
 }: WeeklyTestManagerProps) {
+  const { isFeatureEnabled } = useTuitionFeatures();
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
@@ -196,10 +198,12 @@ export function WeeklyTestManager({
               <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Fees</span>
             </TabsTrigger>
-            <TabsTrigger value="term-exams" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
-              <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Term Exams</span>
-            </TabsTrigger>
+            {isFeatureEnabled('term_exams') && (
+              <TabsTrigger value="term-exams" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+                <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Term Exams</span>
+              </TabsTrigger>
+            )}
           </TabsList>
         </div>
 

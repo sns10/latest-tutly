@@ -4,6 +4,7 @@ import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useTuitionInfo } from "@/hooks/useTuitionInfo";
 import { useTermExamData } from "@/hooks/useTermExamData";
 import { useUserTuition } from "@/hooks/useUserTuition";
+import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
 import { QuickActions } from "@/components/QuickActions";
@@ -30,6 +31,7 @@ const Index = () => {
   const { user, signOut, loading: authLoading } = useAuth();
   const { tuition, refetch: refetchTuition } = useTuitionInfo();
   const { tuitionId } = useUserTuition();
+  const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
   const [copied, setCopied] = useState(false);
   const {
     termExams,
@@ -82,7 +84,7 @@ const Index = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (authLoading || loading || termExamLoading) {
+  if (authLoading || loading || termExamLoading || featuresLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-2">
@@ -154,8 +156,9 @@ const Index = () => {
             onAwardXP={awardXP}
           />
 
-          {/* Homework Manager */}
-          <HomeworkManager />
+          {/* Homework Manager - Feature Gated */}
+          {isFeatureEnabled('homework') && <HomeworkManager />}
+
 
           <Card className="bg-white border border-gray-100 shadow-sm">
             <CardHeader className="pb-2 sm:pb-3">
@@ -225,7 +228,11 @@ const Index = () => {
       } />
       <Route path="/classes" element={<ClassesPage />} />
       <Route path="/students" element={<StudentsPage />} />
-      <Route path="/reports" element={<ReportsPage />} />
+      <Route path="/reports" element={
+        <FeatureGate featureKey="reports" featureName="Reports">
+          <ReportsPage />
+        </FeatureGate>
+      } />
     </Routes>
   );
 };

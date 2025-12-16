@@ -29,7 +29,7 @@ const tuitionAdminItems: MenuItem[] = [
   { title: 'Attendance', url: '/attendance', icon: CalendarDays, featureKey: 'attendance' },
   { title: 'Classes', url: '/classes', icon: Users },
   { title: 'Fees', url: '/fees', icon: DollarSign, featureKey: 'fees' },
-  { title: 'Reports', url: '/reports', icon: FileText },
+  { title: 'Reports', url: '/reports', icon: FileText, featureKey: 'reports' },
 ];
 
 const superAdminItems: MenuItem[] = [
