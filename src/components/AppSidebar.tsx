@@ -1,4 +1,4 @@
-import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield } from 'lucide-react';
+import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -29,6 +29,7 @@ const tuitionAdminItems: MenuItem[] = [
   { title: 'Attendance', url: '/attendance', icon: CalendarDays, featureKey: 'attendance' },
   { title: 'Classes', url: '/classes', icon: Users },
   { title: 'Fees', url: '/fees', icon: DollarSign, featureKey: 'fees' },
+  { title: 'Reports', url: '/reports', icon: FileText },
 ];
 
 const superAdminItems: MenuItem[] = [

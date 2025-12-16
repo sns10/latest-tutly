@@ -24,6 +24,7 @@ import AttendancePage from './Attendance';
 import TimetablePage from './Timetable';
 import ClassesPage from './Classes';
 import StudentsPage from './Students';
+import ReportsPage from './Reports';
 
 const Index = () => {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -224,6 +225,7 @@ const Index = () => {
       } />
       <Route path="/classes" element={<ClassesPage />} />
       <Route path="/students" element={<StudentsPage />} />
+      <Route path="/reports" element={<ReportsPage />} />
     </Routes>
   );
 };
