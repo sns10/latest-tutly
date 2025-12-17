@@ -21,9 +21,26 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
     
+    if (!supabaseUrl || !supabaseServiceKey) {
+      console.error('Missing environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Verify caller is authenticated
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     // Create admin client for user creation
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
@@ -32,26 +49,71 @@ const handler = async (req: Request): Promise<Response> => {
       }
     });
 
-    const { studentId, email, password, studentName, tuitionId }: CreateStudentUserRequest = await req.json();
+    // Verify the caller's JWT and role
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
-    console.log(`Creating user account for student: ${studentName} (${email})`);
+    if (authError || !callerUser) {
+      console.error('Auth verification failed:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Check if caller has tuition_admin or super_admin role
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role, tuition_id')
+      .eq('user_id', callerUser.id)
+      .in('role', ['tuition_admin', 'super_admin']);
+
+    if (roleError || !roleData || roleData.length === 0) {
+      console.error('Role check failed:', roleError);
+      return new Response(
+        JSON.stringify({ error: 'Insufficient permissions' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    const { studentId, email, password, studentName, tuitionId }: CreateStudentUserRequest = await req.json();
 
     // Validate inputs
     if (!studentId || !email || !password || !studentName || !tuitionId) {
-      console.error('Missing required fields');
       return new Response(
         JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
 
+    // Verify caller has permission for this tuition
+    const isSuperAdmin = roleData.some(r => r.role === 'super_admin');
+    const hasTuitionAccess = roleData.some(r => r.tuition_id === tuitionId);
+
+    if (!isSuperAdmin && !hasTuitionAccess) {
+      return new Response(
+        JSON.stringify({ error: 'Access denied for this tuition' }),
+        { status: 403, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid email format' }),
+        { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     if (password.length < 6) {
-      console.error('Password too short');
       return new Response(
         JSON.stringify({ error: 'Password must be at least 6 characters' }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
+
+    console.log(`Creating user account for student: ${studentName}`);
 
     // Check if user already exists
     const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
@@ -68,7 +130,7 @@ const handler = async (req: Request): Promise<Response> => {
       const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
         email: email,
         password: password,
-        email_confirm: true, // Auto-confirm email
+        email_confirm: true,
         user_metadata: {
           full_name: studentName,
           is_student: true
@@ -78,13 +140,12 @@ const handler = async (req: Request): Promise<Response> => {
       if (createError) {
         console.error('Error creating user:', createError);
         return new Response(
-          JSON.stringify({ error: createError.message }),
+          JSON.stringify({ error: 'Failed to create user account' }),
           { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
 
       if (!newUser?.user) {
-        console.error('User creation failed - no user returned');
         return new Response(
           JSON.stringify({ error: 'Failed to create user account' }),
           { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
@@ -115,7 +176,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Ensure student role is assigned
     console.log('Assigning student role...');
-    const { error: roleError } = await supabaseAdmin
+    const { error: roleInsertError } = await supabaseAdmin
       .from('user_roles')
       .upsert({
         user_id: userId,
@@ -125,9 +186,8 @@ const handler = async (req: Request): Promise<Response> => {
         onConflict: 'user_id,role'
       });
 
-    if (roleError) {
-      console.error('Error assigning role:', roleError);
-      // Don't fail the whole operation, just log it
+    if (roleInsertError) {
+      console.error('Error assigning role:', roleInsertError);
     }
 
     // Update profile with tuition_id
@@ -144,7 +204,6 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (profileError) {
       console.error('Error updating profile:', profileError);
-      // Don't fail, the profile might already exist
     }
 
     console.log('Student user account created and linked successfully');
@@ -164,7 +223,7 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error('Error in create-student-user function:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: 'An unexpected error occurred' }),
       { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
     );
   }

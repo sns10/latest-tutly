@@ -1,3 +1,4 @@
+import { lazy, Suspense } from "react";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -7,13 +8,26 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import Index from "./pages/Index";
-import SuperAdmin from "./pages/SuperAdmin";
-import Student from "./pages/Student";
 import { AuthPage } from "./components/AuthPage";
-import NotFound from "./pages/NotFound";
+import { Loader2 } from "lucide-react";
+
+// Lazy load heavy pages
+const Index = lazy(() => import("./pages/Index"));
+const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
+const Student = lazy(() => import("./pages/Student"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+
+// Loading fallback component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-background">
+    <div className="flex items-center gap-2">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      <span className="text-muted-foreground">Loading...</span>
+    </div>
+  </div>
+);
 
 function AppContent() {
   const location = useLocation();
@@ -37,33 +51,35 @@ function AppContent() {
             </div>
           )}
           <div className={`flex-1 ${showSidebars ? 'pb-20 md:pb-0' : ''} bg-[#f8f9fa] w-full overflow-x-hidden`}>
-            <Routes>
-              <Route path="/auth" element={<AuthPage />} />
-              <Route 
-                path="/super-admin" 
-                element={
-                  <ProtectedRoute allowedRoles={['super_admin']}>
-                    <SuperAdmin />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/student" 
-                element={
-                  <ProtectedRoute allowedRoles={['student', 'parent']} allowPortalUsers={true}>
-                    <Student />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/*" 
-                element={
-                  <ProtectedRoute allowedRoles={['tuition_admin']}>
-                    <Index />
-                  </ProtectedRoute>
-                } 
-              />
-            </Routes>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/auth" element={<AuthPage />} />
+                <Route 
+                  path="/super-admin" 
+                  element={
+                    <ProtectedRoute allowedRoles={['super_admin']}>
+                      <SuperAdmin />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/student" 
+                  element={
+                    <ProtectedRoute allowedRoles={['student', 'parent']} allowPortalUsers={true}>
+                      <Student />
+                    </ProtectedRoute>
+                  } 
+                />
+                <Route 
+                  path="/*" 
+                  element={
+                    <ProtectedRoute allowedRoles={['tuition_admin']}>
+                      <Index />
+                    </ProtectedRoute>
+                  } 
+                />
+              </Routes>
+            </Suspense>
           </div>
         </main>
         {showSidebars && <BottomNav />}

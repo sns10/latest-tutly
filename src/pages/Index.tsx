@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { useSupabaseData } from "@/hooks/useSupabaseData";
@@ -18,14 +19,26 @@ import { TuitionBranding } from "@/components/TuitionBranding";
 import { Loader2, LogOut, Share2, Check } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
-import LeaderboardPage from './Leaderboard';
-import MaterialsPage from './Materials';
-import FeesPage from './Fees';
-import AttendancePage from './Attendance';
-import TimetablePage from './Timetable';
-import ClassesPage from './Classes';
-import StudentsPage from './Students';
-import ReportsPage from './Reports';
+
+// Lazy load sub-pages for code splitting
+const LeaderboardPage = lazy(() => import('./Leaderboard'));
+const MaterialsPage = lazy(() => import('./Materials'));
+const FeesPage = lazy(() => import('./Fees'));
+const AttendancePage = lazy(() => import('./Attendance'));
+const TimetablePage = lazy(() => import('./Timetable'));
+const ClassesPage = lazy(() => import('./Classes'));
+const StudentsPage = lazy(() => import('./Students'));
+const ReportsPage = lazy(() => import('./Reports'));
+
+// Loading component for lazy routes
+const RouteLoader = () => (
+  <div className="min-h-[50vh] flex items-center justify-center">
+    <div className="flex items-center gap-2">
+      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+      <span className="text-sm text-muted-foreground">Loading...</span>
+    </div>
+  </div>
+);
 
 const Index = () => {
   const { user, signOut, loading: authLoading } = useAuth();
@@ -203,34 +216,54 @@ const Index = () => {
       } />
       <Route path="/leaderboard" element={
         <FeatureGate featureKey="leaderboard" featureName="Leaderboard">
-          <LeaderboardPage />
+          <Suspense fallback={<RouteLoader />}>
+            <LeaderboardPage />
+          </Suspense>
         </FeatureGate>
       } />
       <Route path="/materials" element={
         <FeatureGate featureKey="materials" featureName="Materials">
-          <MaterialsPage />
+          <Suspense fallback={<RouteLoader />}>
+            <MaterialsPage />
+          </Suspense>
         </FeatureGate>
       } />
       <Route path="/fees" element={
         <FeatureGate featureKey="fees" featureName="Fees">
-          <FeesPage />
+          <Suspense fallback={<RouteLoader />}>
+            <FeesPage />
+          </Suspense>
         </FeatureGate>
       } />
       <Route path="/attendance" element={
         <FeatureGate featureKey="attendance" featureName="Attendance">
-          <AttendancePage />
+          <Suspense fallback={<RouteLoader />}>
+            <AttendancePage />
+          </Suspense>
         </FeatureGate>
       } />
       <Route path="/timetable" element={
         <FeatureGate featureKey="timetable" featureName="Timetable">
-          <TimetablePage />
+          <Suspense fallback={<RouteLoader />}>
+            <TimetablePage />
+          </Suspense>
         </FeatureGate>
       } />
-      <Route path="/classes" element={<ClassesPage />} />
-      <Route path="/students" element={<StudentsPage />} />
+      <Route path="/classes" element={
+        <Suspense fallback={<RouteLoader />}>
+          <ClassesPage />
+        </Suspense>
+      } />
+      <Route path="/students" element={
+        <Suspense fallback={<RouteLoader />}>
+          <StudentsPage />
+        </Suspense>
+      } />
       <Route path="/reports" element={
         <FeatureGate featureKey="reports" featureName="Reports">
-          <ReportsPage />
+          <Suspense fallback={<RouteLoader />}>
+            <ReportsPage />
+          </Suspense>
         </FeatureGate>
       } />
     </Routes>
