@@ -9,6 +9,9 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { BottomNav } from "@/components/BottomNav";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { AuthPage } from "./components/AuthPage";
+import { PrivacyPolicy } from "@/components/legal/PrivacyPolicy";
+import { TermsOfService } from "@/components/legal/TermsOfService";
+import { Footer } from "@/components/Footer";
 import { Loader2 } from "lucide-react";
 
 // Lazy load heavy pages
@@ -33,10 +36,11 @@ function AppContent() {
   const location = useLocation();
   const isAuthPage = location.pathname === '/auth';
   const isSuperAdminPage = location.pathname === '/super-admin';
-  const isStudentPage = location.pathname === '/student';
+  const isStudentPage = location.pathname.startsWith('/student');
+  const isLegalPage = location.pathname === '/privacy' || location.pathname === '/terms';
 
-  // Don't show sidebars on auth, super-admin, or student pages
-  const showSidebars = !isAuthPage && !isSuperAdminPage && !isStudentPage;
+  // Don't show sidebars on auth, super-admin, student, or legal pages
+  const showSidebars = !isAuthPage && !isSuperAdminPage && !isStudentPage && !isLegalPage;
 
   return (
     <SidebarProvider>
@@ -50,36 +54,41 @@ function AppContent() {
               </div>
             </div>
           )}
-          <div className={`flex-1 ${showSidebars ? 'pb-20 md:pb-0' : ''} bg-[#f8f9fa] w-full overflow-x-hidden`}>
-            <Suspense fallback={<PageLoader />}>
-              <Routes>
-                <Route path="/auth" element={<AuthPage />} />
-                <Route 
-                  path="/super-admin" 
-                  element={
-                    <ProtectedRoute allowedRoles={['super_admin']}>
-                      <SuperAdmin />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/student" 
-                  element={
-                    <ProtectedRoute allowedRoles={['student', 'parent']} allowPortalUsers={true}>
-                      <Student />
-                    </ProtectedRoute>
-                  } 
-                />
-                <Route 
-                  path="/*" 
-                  element={
-                    <ProtectedRoute allowedRoles={['tuition_admin']}>
-                      <Index />
-                    </ProtectedRoute>
-                  } 
-                />
-              </Routes>
-            </Suspense>
+          <div className={`flex-1 ${showSidebars ? 'pb-20 md:pb-0' : ''} bg-[#f8f9fa] w-full overflow-x-hidden flex flex-col`}>
+            <div className="flex-1">
+              <Suspense fallback={<PageLoader />}>
+                <Routes>
+                  <Route path="/auth" element={<AuthPage />} />
+                  <Route path="/privacy" element={<PrivacyPolicy />} />
+                  <Route path="/terms" element={<TermsOfService />} />
+                  <Route 
+                    path="/super-admin" 
+                    element={
+                      <ProtectedRoute allowedRoles={['super_admin']}>
+                        <SuperAdmin />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/student" 
+                    element={
+                      <ProtectedRoute allowedRoles={['student', 'parent']} allowPortalUsers={true}>
+                        <Student />
+                      </ProtectedRoute>
+                    } 
+                  />
+                  <Route 
+                    path="/*" 
+                    element={
+                      <ProtectedRoute allowedRoles={['tuition_admin']}>
+                        <Index />
+                      </ProtectedRoute>
+                    } 
+                  />
+                </Routes>
+              </Suspense>
+            </div>
+            <Footer />
           </div>
         </main>
         {showSidebars && <BottomNav />}
