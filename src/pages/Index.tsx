@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
 import { useSupabaseData } from "@/hooks/useSupabaseData";
@@ -13,12 +13,20 @@ import { RecentTests } from "@/components/RecentTests";
 import { FeatureGate } from "@/components/FeatureGate";
 import { PortalEmailConfig } from "@/components/PortalEmailConfig";
 import { HomeworkManager } from "@/components/HomeworkManager";
+import { BackupDashboard } from "@/components/BackupDashboard";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TuitionBranding } from "@/components/TuitionBranding";
-import { Loader2, LogOut, Share2, Check } from "lucide-react";
-import { useState } from "react";
+import { Loader2, LogOut, Share2, Check, Settings } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
 // Lazy load sub-pages for code splitting
 const LeaderboardPage = lazy(() => import('./Leaderboard'));
@@ -138,6 +146,25 @@ const Index = () => {
                 {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
                 <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share Portal'}</span>
               </Button>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    <span className="hidden sm:inline">Settings</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>Settings</SheetTitle>
+                    <SheetDescription>
+                      Manage your tuition center settings and backups
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-6">
+                    <BackupDashboard />
+                  </div>
+                </SheetContent>
+              </Sheet>
               <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Logout</span>

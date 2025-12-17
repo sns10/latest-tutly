@@ -5,7 +5,8 @@ import {
   Building2, 
   Users, 
   Plus, 
-  LogOut
+  LogOut,
+  Database
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
@@ -13,11 +14,13 @@ import { CreateTuitionDialog } from '@/components/super-admin/CreateTuitionDialo
 import { TuitionsList } from '@/components/super-admin/TuitionsList';
 import { SuperAdminStats } from '@/components/super-admin/SuperAdminStats';
 import { TuitionAdminManager } from '@/components/super-admin/TuitionAdminManager';
+import { SuperAdminBackups } from '@/components/super-admin/SuperAdminBackups';
 
 export default function SuperAdmin() {
   const { signOut } = useAuth();
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showAdminManager, setShowAdminManager] = useState(false);
+  const [showBackups, setShowBackups] = useState(false);
   const [tuitions, setTuitions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -83,7 +86,11 @@ export default function SuperAdmin() {
               Manage all registered tuition centers and their subscriptions
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-wrap">
+            <Button variant="outline" onClick={() => setShowBackups(true)}>
+              <Database className="h-4 w-4 mr-2" />
+              Backups
+            </Button>
             <Button variant="outline" onClick={() => setShowAdminManager(true)}>
               <Users className="h-4 w-4 mr-2" />
               Manage Admins
@@ -114,6 +121,13 @@ export default function SuperAdmin() {
       <TuitionAdminManager
         open={showAdminManager}
         onOpenChange={setShowAdminManager}
+      />
+
+      {/* Super Admin Backups Dialog */}
+      <SuperAdminBackups
+        open={showBackups}
+        onOpenChange={setShowBackups}
+        tuitions={tuitions}
       />
     </div>
   );
