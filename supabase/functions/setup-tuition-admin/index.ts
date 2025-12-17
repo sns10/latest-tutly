@@ -26,23 +26,58 @@ Deno.serve(async (req) => {
       auth: { autoRefreshToken: false, persistSession: false }
     })
 
+    // Verify caller is super_admin
+    const authHeader = req.headers.get('Authorization')
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(token)
+
+    if (authError || !callerUser) {
+      console.error('Auth verification failed:', authError)
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Check for super_admin role
+    const { data: roleData, error: roleError } = await supabaseAdmin
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', callerUser.id)
+      .eq('role', 'super_admin')
+      .single()
+
+    if (roleError || !roleData) {
+      console.error('Super admin check failed:', roleError)
+      return new Response(
+        JSON.stringify({ error: 'Super admin access required' }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     const { adminEmail, adminPassword, adminName, tuitionId } = await req.json()
 
     console.log('Received request:', { adminEmail, adminName, tuitionId, hasPassword: !!adminPassword })
 
     if (!adminEmail || !tuitionId) {
       return new Response(
-        JSON.stringify({ error: 'Missing required fields: adminEmail and tuitionId are required' }),
+        JSON.stringify({ error: 'Missing required fields' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
 
-    // Check if user already exists by listing users and searching by email
+    // Check if user already exists
     let existingUser = null
     let page = 1
     const perPage = 1000
 
-    // Search through pages of users to find one with matching email
     while (true) {
       const { data: usersData, error: listError } = await supabaseAdmin.auth.admin.listUsers({
         page,
@@ -52,7 +87,7 @@ Deno.serve(async (req) => {
       if (listError) {
         console.error('Error listing users:', listError)
         return new Response(
-          JSON.stringify({ error: `Failed to search for users: ${listError.message}` }),
+          JSON.stringify({ error: 'Failed to search for users' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -63,7 +98,6 @@ Deno.serve(async (req) => {
         break
       }
 
-      // If we got fewer users than requested, we've reached the end
       if (!usersData?.users || usersData.users.length < perPage) {
         break
       }
@@ -75,11 +109,9 @@ Deno.serve(async (req) => {
     let isNewUser = false
 
     if (existingUser) {
-      // User exists - use their ID
       userId = existingUser.id
       console.log('Found existing user:', userId)
     } else {
-      // Create new user
       if (!adminPassword) {
         return new Response(
           JSON.stringify({ error: 'Password required for new user' }),
@@ -104,7 +136,7 @@ Deno.serve(async (req) => {
       if (createError) {
         console.error('Error creating user:', createError)
         return new Response(
-          JSON.stringify({ error: `Failed to create user: ${createError.message}` }),
+          JSON.stringify({ error: 'Failed to create user account' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -112,7 +144,7 @@ Deno.serve(async (req) => {
       if (!newUser?.user?.id) {
         console.error('User created but no ID returned')
         return new Response(
-          JSON.stringify({ error: 'User created but no ID returned' }),
+          JSON.stringify({ error: 'User creation failed' }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         )
       }
@@ -122,7 +154,7 @@ Deno.serve(async (req) => {
       console.log('Created new user:', userId)
     }
 
-    // Set up profile and role using the existing database function
+    // Set up profile and role
     const { error: setupError } = await supabaseAdmin.rpc('setup_tuition_admin', {
       _user_id: userId,
       _tuition_id: tuitionId,
@@ -132,7 +164,7 @@ Deno.serve(async (req) => {
     if (setupError) {
       console.error('Error setting up tuition admin:', setupError)
       return new Response(
-        JSON.stringify({ error: `Failed to assign admin role: ${setupError.message}` }),
+        JSON.stringify({ error: 'Failed to assign admin role' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
@@ -149,9 +181,9 @@ Deno.serve(async (req) => {
     )
 
   } catch (error: any) {
-    console.error('Unexpected error in setup-tuition-admin:', error)
+    console.error('Unexpected error:', error)
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: 'An unexpected error occurred' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

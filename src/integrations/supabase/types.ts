@@ -118,6 +118,50 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          entity_id: string | null
+          entity_type: string
+          id: string
+          ip_address: string | null
+          tuition_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type: string
+          id?: string
+          ip_address?: string | null
+          tuition_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          entity_id?: string | null
+          entity_type?: string
+          id?: string
+          ip_address?: string | null
+          tuition_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       challenges: {
         Row: {
           created_at: string
@@ -1046,6 +1090,44 @@ export type Database = {
           },
           {
             foreignKeyName: "timetable_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tuition_backups: {
+        Row: {
+          backup_data: Json
+          created_at: string
+          created_by: string | null
+          file_size: number | null
+          id: string
+          status: string
+          tuition_id: string
+        }
+        Insert: {
+          backup_data: Json
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          id?: string
+          status?: string
+          tuition_id: string
+        }
+        Update: {
+          backup_data?: Json
+          created_at?: string
+          created_by?: string | null
+          file_size?: number | null
+          id?: string
+          status?: string
+          tuition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tuition_backups_tuition_id_fkey"
             columns: ["tuition_id"]
             isOneToOne: false
             referencedRelation: "tuitions"
