@@ -14,11 +14,19 @@ import { TermsOfService } from "@/components/legal/TermsOfService";
 import { Footer } from "@/components/Footer";
 import { Loader2 } from "lucide-react";
 
-// Lazy load heavy pages
+// Lazy load heavy pages for faster initial load
 const Index = lazy(() => import("./pages/Index"));
 const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
 const Student = lazy(() => import("./pages/Student"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Attendance = lazy(() => import("./pages/Attendance"));
+const Students = lazy(() => import("./pages/Students"));
+const Fees = lazy(() => import("./pages/Fees"));
+const Reports = lazy(() => import("./pages/Reports"));
+const Timetable = lazy(() => import("./pages/Timetable"));
+const Materials = lazy(() => import("./pages/Materials"));
+const Classes = lazy(() => import("./pages/Classes"));
+const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 
 const queryClient = new QueryClient();
 
