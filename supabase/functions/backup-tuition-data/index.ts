@@ -8,9 +8,12 @@ const corsHeaders = {
 
 interface BackupRequest {
   tuitionId: string;
-  action: 'create' | 'list' | 'download';
+  action: 'export' | 'create' | 'list' | 'download';
   backupId?: string;
 }
+
+const MAX_BACKUPS_PER_TUITION = 2;
+const BACKUP_RETENTION_DAYS = 60;
 
 const handler = async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
@@ -29,7 +32,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify caller is authenticated
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
       return new Response(
@@ -42,7 +44,6 @@ const handler = async (req: Request): Promise<Response> => {
       auth: { autoRefreshToken: false, persistSession: false }
     });
 
-    // Verify the caller's JWT and role
     const token = authHeader.replace('Bearer ', '');
     const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
@@ -53,7 +54,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Check if caller has tuition_admin or super_admin role
     const { data: roleData, error: roleError } = await supabaseAdmin
       .from('user_roles')
       .select('role, tuition_id')
@@ -76,7 +76,6 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Verify caller has permission for this tuition
     const isSuperAdmin = roleData.some(r => r.role === 'super_admin');
     const hasTuitionAccess = roleData.some(r => r.tuition_id === tuitionId);
 
@@ -87,10 +86,8 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (action === 'create') {
-      console.log('Creating backup for tuition:', tuitionId);
-      
-      // Fetch all tuition data
+    // Helper function to fetch all tuition data
+    const fetchTuitionData = async () => {
       const [
         studentsRes,
         attendanceRes,
@@ -119,7 +116,7 @@ const handler = async (req: Request): Promise<Response> => {
         supabaseAdmin.from('rooms').select('*').eq('tuition_id', tuitionId),
       ]);
 
-      const backupData = {
+      return {
         metadata: {
           tuitionId,
           createdAt: new Date().toISOString(),
@@ -148,8 +145,57 @@ const handler = async (req: Request): Promise<Response> => {
           facultyCount: facultyRes.data?.length || 0,
         }
       };
+    };
 
-      // Store backup record in database
+    // EXPORT: Instant download, no storage
+    if (action === 'export') {
+      console.log('Exporting data for tuition:', tuitionId);
+      const backupData = await fetchTuitionData();
+      
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          backup: backupData,
+          message: 'Data exported successfully'
+        }),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // CREATE: Monthly snapshot with retention cleanup
+    if (action === 'create') {
+      console.log('Creating monthly snapshot for tuition:', tuitionId);
+      
+      // Clean up old backups (older than retention period)
+      const retentionDate = new Date();
+      retentionDate.setDate(retentionDate.getDate() - BACKUP_RETENTION_DAYS);
+      
+      await supabaseAdmin
+        .from('tuition_backups')
+        .delete()
+        .eq('tuition_id', tuitionId)
+        .lt('created_at', retentionDate.toISOString());
+
+      // Check existing backup count and delete oldest if exceeds limit
+      const { data: existingBackups } = await supabaseAdmin
+        .from('tuition_backups')
+        .select('id, created_at')
+        .eq('tuition_id', tuitionId)
+        .order('created_at', { ascending: false });
+
+      if (existingBackups && existingBackups.length >= MAX_BACKUPS_PER_TUITION) {
+        const backupsToDelete = existingBackups.slice(MAX_BACKUPS_PER_TUITION - 1);
+        for (const backup of backupsToDelete) {
+          await supabaseAdmin
+            .from('tuition_backups')
+            .delete()
+            .eq('id', backup.id);
+        }
+        console.log(`Deleted ${backupsToDelete.length} old backups to maintain limit`);
+      }
+
+      const backupData = await fetchTuitionData();
+
       const { data: backupRecord, error: insertError } = await supabaseAdmin
         .from('tuition_backups')
         .insert({
@@ -163,26 +209,21 @@ const handler = async (req: Request): Promise<Response> => {
         .single();
 
       if (insertError) {
-        // Table might not exist yet, return the data directly
-        console.log('Backup table not available, returning data directly');
+        console.error('Failed to store backup:', insertError);
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            backup: backupData,
-            message: 'Backup created successfully (in-memory)'
-          }),
-          { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          JSON.stringify({ error: 'Failed to create snapshot' }),
+          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
         );
       }
 
-      console.log('Backup created successfully:', backupRecord.id);
+      console.log('Monthly snapshot created:', backupRecord.id);
 
       return new Response(
         JSON.stringify({ 
           success: true, 
           backupId: backupRecord.id,
           stats: backupData.stats,
-          message: 'Backup created successfully'
+          message: 'Monthly snapshot created successfully'
         }),
         { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
@@ -194,10 +235,9 @@ const handler = async (req: Request): Promise<Response> => {
         .select('id, created_at, file_size, status, created_by')
         .eq('tuition_id', tuitionId)
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(MAX_BACKUPS_PER_TUITION);
 
       if (listError) {
-        // Table might not exist
         return new Response(
           JSON.stringify({ success: true, backups: [] }),
           { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
