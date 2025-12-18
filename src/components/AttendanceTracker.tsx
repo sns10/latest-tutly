@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
 import { Student, StudentAttendance, Timetable, Subject, Faculty, ClassName, Division } from '@/types';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -127,8 +127,8 @@ export function AttendanceTracker({
     return divisions.filter(d => d.class === selectedClass);
   }, [divisions, selectedClass]);
 
-  // Get attendance for selected date - must match exact subject/faculty context
-  const getAttendanceForStudent = (studentId: string) => {
+  // Memoize attendance lookup for performance - prevents stale closures
+  const getAttendanceForStudent = useCallback((studentId: string) => {
     return attendance.find(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
       
@@ -144,7 +144,7 @@ export function AttendanceTracker({
       
       return subjectMatches && facultyMatches;
     });
-  };
+  }, [attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Filter students by class, division and search query
   const filteredStudentsBase = useMemo(() => {
@@ -164,7 +164,7 @@ export function AttendanceTracker({
       if (statusFilter === 'unmarked') return !studentAttendance;
       return studentAttendance?.status === statusFilter;
     });
-  }, [filteredStudentsBase, statusFilter, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudentsBase, statusFilter, getAttendanceForStudent]);
 
   // Get today's scheduled classes from timetable
   const todaysClasses = useMemo(() => {
@@ -244,7 +244,7 @@ export function AttendanceTracker({
       const studentAttendance = getAttendanceForStudent(student.id);
       return studentAttendance?.status === 'absent';
     });
-  }, [filteredStudentsBase, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudentsBase, getAttendanceForStudent]);
 
   // Get late students for WhatsApp message
   const lateStudents = useMemo(() => {
@@ -252,9 +252,9 @@ export function AttendanceTracker({
       const studentAttendance = getAttendanceForStudent(student.id);
       return studentAttendance?.status === 'late';
     });
-  }, [filteredStudentsBase, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudentsBase, getAttendanceForStudent]);
 
-  const handleMarkAttendance = (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
+  const handleMarkAttendance = useCallback((studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
     onMarkAttendance(studentId, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
     
@@ -262,9 +262,9 @@ export function AttendanceTracker({
     const context = subjectName ? ` for ${subjectName}` : '';
     
     toast.success(`${studentName}${context} marked as ${status}`);
-  };
+  }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
 
-  const handleBulkAttendance = (status: 'present' | 'absent' | 'late' | 'excused') => {
+  const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
     let markedCount = 0;
     
     filteredStudentsBase.forEach(student => {
@@ -280,7 +280,7 @@ export function AttendanceTracker({
     } else {
       toast.info('All students already have attendance marked');
     }
-  };
+  }, [filteredStudentsBase, getAttendanceForStudent, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   const handleSwitchToManual = () => {
     setIsManualMode(true);
@@ -686,8 +686,8 @@ export function AttendanceTracker({
   );
 }
 
-// Inline compact student row component for better UX
-function StudentAttendanceRow({ 
+// Memoized student row component to prevent unnecessary re-renders
+const StudentAttendanceRow = memo(function StudentAttendanceRow({ 
   student, 
   studentAttendance, 
   onMarkAttendance 
@@ -699,7 +699,7 @@ function StudentAttendanceRow({
   const status = studentAttendance?.status;
   
   return (
-    <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-slate-50/50">
+    <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-slate-50/50 touch-manipulation">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium shrink-0">
           {student.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
@@ -715,7 +715,7 @@ function StudentAttendanceRow({
           size="sm" 
           variant={status === 'present' ? 'default' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'present')}
-          className={`h-8 px-3 text-xs font-medium ${
+          className={`h-8 px-3 text-xs font-medium active:scale-95 transition-transform ${
             status === 'present' 
               ? 'bg-green-600 hover:bg-green-700 text-white' 
               : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
@@ -727,7 +727,7 @@ function StudentAttendanceRow({
           size="sm" 
           variant={status === 'absent' ? 'destructive' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'absent')}
-          className={`h-8 px-3 text-xs font-medium ${
+          className={`h-8 px-3 text-xs font-medium active:scale-95 transition-transform ${
             status === 'absent' 
               ? '' 
               : 'hover:bg-red-50 hover:text-red-700 hover:border-red-300'
@@ -739,7 +739,7 @@ function StudentAttendanceRow({
           size="sm" 
           variant={status === 'late' ? 'secondary' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'late')}
-          className={`h-8 px-3 text-xs font-medium ${
+          className={`h-8 px-3 text-xs font-medium active:scale-95 transition-transform ${
             status === 'late' 
               ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
               : 'hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-300'
@@ -750,4 +750,4 @@ function StudentAttendanceRow({
       </div>
     </div>
   );
-}
+});

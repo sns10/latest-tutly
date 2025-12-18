@@ -78,6 +78,8 @@
     width: 100%;
     max-width: 100vw;
     position: relative;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
   }
   
   #root {
@@ -89,6 +91,16 @@
   /* Global overflow prevention */
   * {
     max-width: 100%;
+  }
+
+  /* Smooth scrolling for better mobile UX */
+  html {
+    scroll-behavior: smooth;
+  }
+  
+  /* Optimize rendering for mobile */
+  .will-change-transform {
+    will-change: transform;
   }
 
   /* Text size variants */
@@ -156,7 +168,7 @@
     }
   }
 
-  /* Touch feedback */
+  /* Touch feedback for mobile */
   .touch-feedback:active {
     transform: scale(0.98);
     transition: transform 0.1s ease-out;
@@ -166,5 +178,29 @@
   .click-target-large {
     min-height: 44px;
     min-width: 44px;
+  }
+  
+  /* Fast tap response */
+  button, a, [role="button"] {
+    touch-action: manipulation;
+  }
+  
+  /* Skeleton loading animation */
+  .skeleton-pulse {
+    animation: skeleton-pulse 1.5s ease-in-out infinite;
+  }
+  
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+  
+  /* Reduced motion support */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
