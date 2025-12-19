@@ -195,6 +195,39 @@
     50% { opacity: 0.5; }
   }
   
+  /* GPU acceleration for smooth scrolling */
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+  
+  /* Content containment for better paint performance */
+  .contain-layout {
+    contain: layout;
+  }
+  
+  .contain-paint {
+    contain: paint;
+  }
+  
+  .contain-strict {
+    contain: strict;
+  }
+  
+  /* Optimized scrolling containers */
+  .scroll-container {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+  
+  /* Virtual list optimization */
+  .virtual-list {
+    contain: strict;
+    will-change: transform;
+  }
+  
   /* Reduced motion support */
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
