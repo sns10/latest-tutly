@@ -192,9 +192,31 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
 
           {/* Feature Toggles */}
           <div className="space-y-3">
-            <div>
-              <Label>Feature Access</Label>
-              <p className="text-xs text-muted-foreground">Enable or disable features for this tuition center</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label>Feature Access</Label>
+                <p className="text-xs text-muted-foreground">
+                  {enabledFeatures.length}/{ALL_FEATURES.length} features enabled
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEnabledFeatures(ALL_FEATURES.map(f => f.key))}
+                >
+                  Enable All
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEnabledFeatures([])}
+                >
+                  Disable All
+                </Button>
+              </div>
             </div>
             <ScrollArea className="h-[280px] border rounded-md p-3">
               <div className="space-y-4">

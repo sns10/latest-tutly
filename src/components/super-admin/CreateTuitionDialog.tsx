@@ -14,6 +14,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { ALL_FEATURES } from '@/hooks/useTuitionFeatures';
 
 interface CreateTuitionDialogProps {
   open: boolean;
@@ -38,7 +39,7 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
     setLoading(true);
 
     try {
-      // 1. Create tuition center
+      // 1. Create tuition center with all features enabled by default
       const { data: tuitionData, error: tuitionError } = await supabase
         .from('tuitions')
         .insert({
@@ -49,6 +50,7 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
           is_active: true,
           subscription_status: 'active',
           subscription_start_date: new Date().toISOString(),
+          features: ALL_FEATURES.map(f => f.key), // Enable all features by default
         })
         .select()
         .single();
