@@ -698,15 +698,23 @@ const StudentAttendanceRow = memo(function StudentAttendanceRow({
 }) {
   const status = studentAttendance?.status;
   
+  // Memoize initials to avoid recalculating on every render
+  const initials = useMemo(() => 
+    student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+    [student.name]
+  );
+  
   return (
     <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-slate-50/50 touch-manipulation">
       <div className="flex items-center gap-2 min-w-0 flex-1">
         <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium shrink-0">
-          {student.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+          {initials}
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-medium text-sm truncate">{student.name}</div>
-          <div className="text-xs text-muted-foreground">{student.class}</div>
+          <div className="text-xs text-muted-foreground">
+            {student.rollNo ? `#${student.rollNo} • ` : ''}{student.class}
+          </div>
         </div>
       </div>
       
@@ -715,7 +723,7 @@ const StudentAttendanceRow = memo(function StudentAttendanceRow({
           size="sm" 
           variant={status === 'present' ? 'default' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'present')}
-          className={`h-8 px-3 text-xs font-medium active:scale-95 transition-transform ${
+          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
             status === 'present' 
               ? 'bg-green-600 hover:bg-green-700 text-white' 
               : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
@@ -727,7 +735,7 @@ const StudentAttendanceRow = memo(function StudentAttendanceRow({
           size="sm" 
           variant={status === 'absent' ? 'destructive' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'absent')}
-          className={`h-8 px-3 text-xs font-medium active:scale-95 transition-transform ${
+          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
             status === 'absent' 
               ? '' 
               : 'hover:bg-red-50 hover:text-red-700 hover:border-red-300'
@@ -739,13 +747,25 @@ const StudentAttendanceRow = memo(function StudentAttendanceRow({
           size="sm" 
           variant={status === 'late' ? 'secondary' : 'outline'}
           onClick={() => onMarkAttendance(student.id, 'late')}
-          className={`h-8 px-3 text-xs font-medium active:scale-95 transition-transform ${
+          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
             status === 'late' 
               ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
               : 'hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-300'
           }`}
         >
           L
+        </Button>
+        <Button 
+          size="sm" 
+          variant={status === 'excused' ? 'default' : 'outline'}
+          onClick={() => onMarkAttendance(student.id, 'excused')}
+          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
+            status === 'excused' 
+              ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+              : 'hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300'
+          }`}
+        >
+          E
         </Button>
       </div>
     </div>
