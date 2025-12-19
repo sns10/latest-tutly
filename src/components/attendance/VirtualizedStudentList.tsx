@@ -126,11 +126,20 @@ export const VirtualizedStudentList = memo(function VirtualizedStudentList({
     );
   }
 
+  // Calculate dynamic height - min 200px, max 50vh, or content height if smaller
+  const contentHeight = studentsWithStatus.length * 56;
+  const maxHeight = typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400;
+  const containerHeight = Math.min(Math.max(contentHeight, 200), maxHeight);
+
   return (
     <div
       ref={parentRef}
-      className="max-h-[50vh] overflow-y-auto will-change-transform"
-      style={{ contain: 'strict' }}
+      className="overflow-y-auto will-change-transform"
+      style={{ 
+        height: `${containerHeight}px`,
+        minHeight: '200px',
+        maxHeight: '50vh'
+      }}
     >
       <div
         style={{
