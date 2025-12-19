@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, memo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, memo, lazy, Suspense } from 'react';
 import { Student, StudentAttendance, Timetable, Subject, Faculty, ClassName, Division } from '@/types';
 import { toast } from 'sonner';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { AttendanceStats } from './attendance/AttendanceStats';
-import { StudentAttendanceList } from './attendance/StudentAttendanceList';
+import { VirtualizedStudentList } from './attendance/VirtualizedStudentList';
 import { ReportExporter } from './ReportExporter';
 import { WhatsAppMessageDialog } from './attendance/WhatsAppMessageDialog';
 import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
@@ -564,23 +564,11 @@ export function AttendanceTracker({
                   {selectedDate.toLocaleDateString()}
                 </span>
               </div>
-              <div className="space-y-2 max-h-[50vh] overflow-y-auto">
-                {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => {
-                    const studentAttendance = getAttendanceForStudent(student.id);
-                    return (
-                      <StudentAttendanceRow
-                        key={student.id}
-                        student={student}
-                        studentAttendance={studentAttendance}
-                        onMarkAttendance={handleMarkAttendance}
-                      />
-                    );
-                  })
-                ) : (
-                  <p className="text-muted-foreground text-center py-4 text-sm">No students found.</p>
-                )}
-              </div>
+              <VirtualizedStudentList
+                students={filteredStudents}
+                getAttendanceForStudent={getAttendanceForStudent}
+                onMarkAttendance={handleMarkAttendance}
+              />
             </CardContent>
           </Card>
         )}
@@ -685,89 +673,3 @@ export function AttendanceTracker({
     </div>
   );
 }
-
-// Memoized student row component to prevent unnecessary re-renders
-const StudentAttendanceRow = memo(function StudentAttendanceRow({ 
-  student, 
-  studentAttendance, 
-  onMarkAttendance 
-}: { 
-  student: Student; 
-  studentAttendance?: StudentAttendance; 
-  onMarkAttendance: (studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => void;
-}) {
-  const status = studentAttendance?.status;
-  
-  // Memoize initials to avoid recalculating on every render
-  const initials = useMemo(() => 
-    student.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
-    [student.name]
-  );
-  
-  return (
-    <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-slate-50/50 touch-manipulation">
-      <div className="flex items-center gap-2 min-w-0 flex-1">
-        <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium shrink-0">
-          {initials}
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-medium text-sm truncate">{student.name}</div>
-          <div className="text-xs text-muted-foreground">
-            {student.rollNo ? `#${student.rollNo} • ` : ''}{student.class}
-          </div>
-        </div>
-      </div>
-      
-      <div className="flex items-center gap-1">
-        <Button 
-          size="sm" 
-          variant={status === 'present' ? 'default' : 'outline'}
-          onClick={() => onMarkAttendance(student.id, 'present')}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
-            status === 'present' 
-              ? 'bg-green-600 hover:bg-green-700 text-white' 
-              : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
-          }`}
-        >
-          P
-        </Button>
-        <Button 
-          size="sm" 
-          variant={status === 'absent' ? 'destructive' : 'outline'}
-          onClick={() => onMarkAttendance(student.id, 'absent')}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
-            status === 'absent' 
-              ? '' 
-              : 'hover:bg-red-50 hover:text-red-700 hover:border-red-300'
-          }`}
-        >
-          A
-        </Button>
-        <Button 
-          size="sm" 
-          variant={status === 'late' ? 'secondary' : 'outline'}
-          onClick={() => onMarkAttendance(student.id, 'late')}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
-            status === 'late' 
-              ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
-              : 'hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-300'
-          }`}
-        >
-          L
-        </Button>
-        <Button 
-          size="sm" 
-          variant={status === 'excused' ? 'default' : 'outline'}
-          onClick={() => onMarkAttendance(student.id, 'excused')}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
-            status === 'excused' 
-              ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-              : 'hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300'
-          }`}
-        >
-          E
-        </Button>
-      </div>
-    </div>
-  );
-});
