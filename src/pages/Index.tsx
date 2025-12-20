@@ -37,6 +37,7 @@ const TimetablePage = lazy(() => import('./Timetable'));
 const ClassesPage = lazy(() => import('./Classes'));
 const StudentsPage = lazy(() => import('./Students'));
 const ReportsPage = lazy(() => import('./Reports'));
+const TestsPage = lazy(() => import('./Tests'));
 
 // Loading component for lazy routes
 const RouteLoader = () => (
@@ -240,6 +241,11 @@ const Index = () => {
             </CardContent>
           </Card>
         </div>
+      } />
+      <Route path="/tests" element={
+        <Suspense fallback={<RouteLoader />}>
+          <TestsPage />
+        </Suspense>
       } />
       <Route path="/leaderboard" element={
         <FeatureGate featureKey="leaderboard" featureName="Leaderboard">
