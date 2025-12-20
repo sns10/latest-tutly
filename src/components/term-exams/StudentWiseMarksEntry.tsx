@@ -167,11 +167,11 @@ export function StudentWiseMarksEntry({
         </Button>
       </DialogTrigger>
       <DialogContent 
-        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] p-0 gap-0 overflow-hidden"
+        className="w-[calc(100%-1rem)] sm:max-w-4xl h-[90vh] sm:h-[85vh] p-0 gap-0 flex flex-col"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader className="p-3 pb-2 border-b sticky top-0 bg-background z-10 shrink-0">
+        <DialogHeader className="p-3 pb-2 border-b shrink-0">
           <DialogTitle className="text-base">Student-wise Mark Entry - {exam.name}</DialogTitle>
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             <Badge variant="outline" className="text-xs">{exam.term}</Badge>
@@ -180,9 +180,14 @@ export function StudentWiseMarksEntry({
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
-          {/* Student List Panel */}
-          <div className="w-full md:w-64 border-b md:border-b-0 md:border-r flex flex-col shrink-0 max-h-[35vh] md:max-h-none">
+        {/* Mobile: Stacked layout, Desktop: Side by side */}
+        <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
+          
+          {/* Student List Panel - Collapsible on mobile when student selected */}
+          <div className={cn(
+            "w-full md:w-64 border-b md:border-b-0 md:border-r flex flex-col shrink-0",
+            selectedStudent ? "h-28 md:h-auto" : "flex-1 md:flex-initial"
+          )}>
             <div className="p-2 space-y-2 border-b shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -193,7 +198,7 @@ export function StudentWiseMarksEntry({
                   className="pl-9 h-8 text-sm"
                 />
               </div>
-              {availableDivisions.length > 0 && (
+              {availableDivisions.length > 0 && !selectedStudent && (
                 <Select value={divisionFilter || "all"} onValueChange={(v) => setDivisionFilter(v === "all" ? "" : v)}>
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="All divisions" />
@@ -209,7 +214,7 @@ export function StudentWiseMarksEntry({
                 </Select>
               )}
             </div>
-            <ScrollArea className="flex-1">
+            <div className="flex-1 overflow-y-auto">
               <div className="p-1">
                 {filteredStudents.map(student => {
                   const status = getStudentCompletionStatus(student.id);
@@ -253,28 +258,29 @@ export function StudentWiseMarksEntry({
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
           </div>
 
           {/* Marks Entry Panel */}
-          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden min-h-0">
             {selectedStudent ? (
               <>
                 <div className="p-2 border-b bg-muted/30 flex items-center justify-between shrink-0">
-                  <div>
-                    <div className="font-semibold text-sm">{selectedStudent.name}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-sm truncate">{selectedStudent.name}</div>
                     <div className="text-xs text-muted-foreground">
                       {selectedStudent.rollNo && `Roll No: ${selectedStudent.rollNo}`}
                       {selectedStudent.divisionId && ` • Division ${divisions.find(d => d.id === selectedStudent.divisionId)?.name}`}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={clearSelection} className="h-7 w-7 p-0">
+                  <Button variant="ghost" size="sm" onClick={clearSelection} className="h-7 w-7 p-0 shrink-0">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
                 
-                <ScrollArea className="flex-1 min-h-0">
-                  <div className="p-2 space-y-2 pb-4">
+                {/* Scrollable subjects list */}
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  <div className="p-2 space-y-2">
                     {examSubjects.map(es => {
                       const subject = subjects.find(s => s.id === es.subjectId);
                       const currentMark = marks[es.subjectId];
@@ -311,9 +317,10 @@ export function StudentWiseMarksEntry({
                       );
                     })}
                   </div>
-                </ScrollArea>
+                </div>
 
-                <div className="p-2 border-t bg-muted/30 shrink-0 sticky bottom-0">
+                {/* Fixed footer with save button */}
+                <div className="p-2 border-t bg-background shrink-0">
                   <div className="flex items-center justify-between">
                     <div className="text-sm">
                       <span className="text-muted-foreground">Total: </span>
