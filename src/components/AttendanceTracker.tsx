@@ -151,15 +151,15 @@ export function AttendanceTracker({
     return attendance.find(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
       
-      // Match subject: if selectedSubject is set, must match; if not set, attendance must have no subject
-      const subjectMatches = selectedSubject 
-        ? a.subjectId === selectedSubject 
-        : !a.subjectId;
+      // Match subject: if selectedSubject is set, must match; if not set, don't filter by subject
+      const subjectMatches = selectedSubject
+        ? a.subjectId === selectedSubject
+        : true;
       
-      // Match faculty: if selectedFaculty is set, must match; if not set, attendance must have no faculty
-      const facultyMatches = selectedFaculty 
-        ? a.facultyId === selectedFaculty 
-        : !a.facultyId;
+      // Match faculty: if selectedFaculty is set, must match; if not set, don't filter by faculty
+      const facultyMatches = selectedFaculty
+        ? a.facultyId === selectedFaculty
+        : true;
       
       return subjectMatches && facultyMatches;
     });
@@ -237,13 +237,13 @@ export function AttendanceTracker({
       if (a.date !== selectedDateStr) return false;
       if (!filteredStudentsBase.some(s => s.id === a.studentId)) return false;
       
-      // Match exact subject/faculty context
-      const subjectMatches = selectedSubject 
-        ? a.subjectId === selectedSubject 
-        : !a.subjectId;
-      const facultyMatches = selectedFaculty 
-        ? a.facultyId === selectedFaculty 
-        : !a.facultyId;
+      // Match exact subject/faculty context when selected; otherwise don't filter
+      const subjectMatches = selectedSubject
+        ? a.subjectId === selectedSubject
+        : true;
+      const facultyMatches = selectedFaculty
+        ? a.facultyId === selectedFaculty
+        : true;
       
       return subjectMatches && facultyMatches;
     });
