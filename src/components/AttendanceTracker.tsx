@@ -65,6 +65,18 @@ export function AttendanceTracker({
   const formatDate = (date: Date) => date.toISOString().split('T')[0];
   const selectedDateStr = formatDate(selectedDate);
 
+  // When navigating away from today, stop using the auto-detected subject/faculty context.
+  // This prevents past attendance (often saved without subject/faculty) from appearing "missing".
+  useEffect(() => {
+    const today = formatDate(new Date());
+    if (selectedDateStr !== today && !isManualMode) {
+      setIsManualMode(true);
+      setDetectedClass(null);
+      setSelectedSubject('');
+      setSelectedFaculty('');
+    }
+  }, [selectedDateStr, isManualMode]);
+
   // Smart Check: Detect ongoing class from timetable (regular + special)
   // Only run on initial mount, not when date changes
   useEffect(() => {
