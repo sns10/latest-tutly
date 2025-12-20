@@ -1,16 +1,22 @@
-import { lazy, Suspense, useState, memo } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
-import { useDashboardData } from "@/hooks/useDashboardData";
+import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useTuitionInfo } from "@/hooks/useTuitionInfo";
+import { useTermExamData } from "@/hooks/useTermExamData";
 import { useUserTuition } from "@/hooks/useUserTuition";
 import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
+import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
 import { QuickActions } from "@/components/QuickActions";
+import { RecentTests } from "@/components/RecentTests";
 import { FeatureGate } from "@/components/FeatureGate";
 import { PortalEmailConfig } from "@/components/PortalEmailConfig";
-import { TuitionBranding } from "@/components/TuitionBranding";
+import { HomeworkManager } from "@/components/HomeworkManager";
+import { BackupDashboard } from "@/components/BackupDashboard";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { TuitionBranding } from "@/components/TuitionBranding";
 import { Loader2, LogOut, Share2, Check, Settings } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -22,7 +28,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
-// Lazy load ALL sub-components for faster initial load
+// Lazy load sub-pages for code splitting
 const LeaderboardPage = lazy(() => import('./Leaderboard'));
 const MaterialsPage = lazy(() => import('./Materials'));
 const FeesPage = lazy(() => import('./Fees'));
@@ -32,39 +38,65 @@ const ClassesPage = lazy(() => import('./Classes'));
 const StudentsPage = lazy(() => import('./Students'));
 const ReportsPage = lazy(() => import('./Reports'));
 const TestsPage = lazy(() => import('./Tests'));
-const BackupDashboard = lazy(() => import('@/components/BackupDashboard').then(m => ({ default: m.BackupDashboard })));
-const HomeworkManager = lazy(() => import('@/components/HomeworkManager').then(m => ({ default: m.HomeworkManager })));
 
-// Minimal loading component
-const RouteLoader = memo(() => (
+// Loading component for lazy routes
+const RouteLoader = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
     <div className="flex items-center gap-2">
       <Loader2 className="h-5 w-5 animate-spin text-primary" />
       <span className="text-sm text-muted-foreground">Loading...</span>
     </div>
   </div>
-));
-RouteLoader.displayName = 'RouteLoader';
+);
 
-// Small inline loader
-const SmallLoader = memo(() => (
-  <div className="flex items-center justify-center py-8">
-    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-  </div>
-));
-SmallLoader.displayName = 'SmallLoader';
-
-// Dashboard component - memoized to prevent re-renders
-const Dashboard = memo(() => {
-  const { signOut } = useAuth();
+const Index = () => {
+  const { user, signOut, loading: authLoading } = useAuth();
   const { tuition, refetch: refetchTuition } = useTuitionInfo();
   const { tuitionId } = useUserTuition();
-  const { isFeatureEnabled } = useTuitionFeatures();
+  const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
   const [copied, setCopied] = useState(false);
-  
-  // Use lightweight hooks for counts
-  const { data: stats, isLoading: statsLoading } = useDashboardData();
-  
+  const {
+    termExams,
+    termExamSubjects,
+    termExamResults,
+    loading: termExamLoading,
+    addTermExam,
+    deleteTermExam,
+    addTermExamResult,
+    bulkAddTermExamResults,
+  } = useTermExamData();
+  const {
+    students,
+    weeklyTests,
+    testResults,
+    challenges,
+    studentChallenges,
+    announcements,
+    attendance,
+    fees,
+    classFees,
+    subjects,
+    faculty,
+    divisions,
+    loading,
+    addStudent,
+    addWeeklyTest,
+    deleteWeeklyTest,
+    addTestResult,
+    addXp,
+    awardXP,
+    removeStudent,
+    assignTeam,
+    buyReward,
+    useReward,
+    addChallenge,
+    completeChallenge,
+    addAnnouncement,
+    markAttendance,
+    addFee,
+    updateFeeStatus,
+    updateClassFee,
+  } = useSupabaseData();
 
   const handleSharePortalLink = () => {
     const portalUrl = `${window.location.origin}/student`;
@@ -74,96 +106,7 @@ const Dashboard = memo(() => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const attendancePercent = stats?.todayAttendance.total 
-    ? Math.round((stats.todayAttendance.present / stats.todayAttendance.total) * 100)
-    : 0;
-
-  return (
-    <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
-      <div className="flex items-center justify-between mb-4 gap-2">
-        <TuitionBranding 
-          name={tuition?.name || 'Dashboard'} 
-          logoUrl={tuition?.logo_url}
-        />
-        <div className="flex items-center gap-2">
-          {tuitionId && (
-            <PortalEmailConfig
-              tuitionId={tuitionId}
-              currentEmail={tuition?.portal_email}
-              onUpdate={refetchTuition}
-            />
-          )}
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleSharePortalLink}
-            className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
-          >
-            {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
-            <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share Portal'}</span>
-          </Button>
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Settings className="h-4 w-4" />
-                <span className="hidden sm:inline">Settings</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Settings</SheetTitle>
-                <SheetDescription>
-                  Manage your tuition center settings and backups
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-6">
-                <Suspense fallback={<SmallLoader />}>
-                  <BackupDashboard />
-                </Suspense>
-              </div>
-            </SheetContent>
-          </Sheet>
-          <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
-            <LogOut className="h-4 w-4" />
-            <span className="hidden sm:inline">Logout</span>
-          </Button>
-        </div>
-      </div>
-      
-      {statsLoading ? (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-20 bg-white rounded-lg animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <ManagementCards 
-          testsCount={stats?.testsCount || 0}
-          studentsCount={stats?.studentsCount || 0}
-          attendanceToday={attendancePercent}
-          pendingFees={stats?.pendingFeesCount || 0}
-          activeChallenges={stats?.activeChallengesCount || 0}
-        />
-      )}
-
-      <QuickActions />
-
-      {/* Homework Manager - Feature Gated - Lazy loaded */}
-      {isFeatureEnabled('homework') && (
-        <Suspense fallback={<SmallLoader />}>
-          <HomeworkManager />
-        </Suspense>
-      )}
-    </div>
-  );
-});
-Dashboard.displayName = 'Dashboard';
-
-const Index = () => {
-  const { user, loading: authLoading } = useAuth();
-  const { loading: featuresLoading } = useTuitionFeatures();
-
-  if (authLoading || featuresLoading) {
+  if (authLoading || loading || termExamLoading || featuresLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-2">
@@ -180,7 +123,125 @@ const Index = () => {
 
   return (
     <Routes>
-      <Route path="/" element={<Dashboard />} />
+      <Route path="/" element={
+        <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
+          <div className="flex items-center justify-between mb-4 gap-2">
+            <TuitionBranding 
+              name={tuition?.name || 'Dashboard'} 
+              logoUrl={tuition?.logo_url}
+            />
+            <div className="flex items-center gap-2">
+              {tuitionId && (
+                <PortalEmailConfig
+                  tuitionId={tuitionId}
+                  currentEmail={tuition?.portal_email}
+                  onUpdate={refetchTuition}
+                />
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSharePortalLink}
+                className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share Portal'}</span>
+              </Button>
+              <Sheet>
+                <SheetTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Settings className="h-4 w-4" />
+                    <span className="hidden sm:inline">Settings</span>
+                  </Button>
+                </SheetTrigger>
+                <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
+                  <SheetHeader>
+                    <SheetTitle>Settings</SheetTitle>
+                    <SheetDescription>
+                      Manage your tuition center settings and backups
+                    </SheetDescription>
+                  </SheetHeader>
+                  <div className="mt-6">
+                    <BackupDashboard />
+                  </div>
+                </SheetContent>
+              </Sheet>
+              <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline">Logout</span>
+              </Button>
+            </div>
+          </div>
+          
+          <ManagementCards 
+            testsCount={weeklyTests.length}
+            studentsCount={students.length}
+            attendanceToday={
+              attendance.length > 0 
+                ? Math.round((attendance.filter(a => a.status === 'present' && a.date === new Date().toISOString().split('T')[0]).length / 
+                    attendance.filter(a => a.date === new Date().toISOString().split('T')[0]).length) * 100) || 0
+                : 0
+            }
+            pendingFees={fees.filter(f => f.status === 'unpaid' || f.status === 'overdue').length}
+            activeChallenges={challenges.filter(c => c.isActive).length}
+          />
+
+          <QuickActions onAddTest={addWeeklyTest} subjects={subjects} />
+          
+          <RecentTests 
+            tests={weeklyTests}
+            testResults={testResults}
+            students={students}
+            divisions={divisions}
+            onAddTestResult={addTestResult}
+            onAwardXP={awardXP}
+          />
+
+          {/* Homework Manager - Feature Gated */}
+          {isFeatureEnabled('homework') && <HomeworkManager />}
+
+
+          <Card className="bg-white border border-gray-100 shadow-sm">
+            <CardHeader className="pb-2 sm:pb-3">
+              <CardTitle className="text-sm sm:text-base font-semibold text-gray-900">All Tests</CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-6">
+              <WeeklyTestManager
+                tests={weeklyTests}
+                testResults={testResults}
+                students={students}
+                challenges={challenges}
+                studentChallenges={studentChallenges}
+                announcements={announcements}
+                attendance={attendance}
+                fees={fees}
+                classFees={classFees}
+                subjects={subjects}
+                faculty={faculty}
+                divisions={divisions}
+                termExams={termExams}
+                termExamSubjects={termExamSubjects}
+                termExamResults={termExamResults}
+                onAddTest={addWeeklyTest}
+                onDeleteTest={deleteWeeklyTest}
+                onAddTestResult={addTestResult}
+                onAwardXP={awardXP}
+                onAddChallenge={addChallenge}
+                onCompleteChallenge={completeChallenge}
+                onAddAnnouncement={addAnnouncement}
+                onMarkAttendance={markAttendance}
+                onAddFee={addFee}
+                onUpdateFeeStatus={updateFeeStatus}
+                onUpdateClassFee={updateClassFee}
+                onCreateTermExam={addTermExam}
+                onDeleteTermExam={deleteTermExam}
+                onAddTermExamResult={addTermExamResult}
+                onBulkAddTermExamResults={bulkAddTermExamResults}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      } />
       <Route path="/tests" element={
         <Suspense fallback={<RouteLoader />}>
           <TestsPage />
