@@ -268,20 +268,33 @@ export function useSupabaseData() {
   };
 
   const fetchAttendance = async () => {
-    // Supabase has a default limit of 1000 rows - we need to fetch all attendance
-    // to show historical data. Using a generous limit for the past year of data.
-    const { data, error } = await supabase
-      .from('student_attendance')
-      .select('*')
-      .order('date', { ascending: false })
-      .limit(50000);
+    // Backend API caps responses at 1000 rows per request. Attendance can exceed this,
+    // so we must fetch in pages to ensure older months (e.g., October) are included.
+    const pageSize = 1000;
+    let from = 0;
 
-    if (error) {
-      console.error('Error fetching attendance:', error);
-      return;
+    const allRows: any[] = [];
+
+    while (true) {
+      const { data, error } = await supabase
+        .from('student_attendance')
+        .select('*')
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false })
+        .range(from, from + pageSize - 1);
+
+      if (error) {
+        console.error('Error fetching attendance:', error);
+        return;
+      }
+
+      allRows.push(...(data ?? []));
+
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
     }
 
-    const formattedAttendance: StudentAttendance[] = data.map(attendance => ({
+    const formattedAttendance: StudentAttendance[] = allRows.map((attendance) => ({
       id: attendance.id,
       studentId: attendance.student_id,
       date: attendance.date,
