@@ -28,7 +28,17 @@ const Materials = lazy(() => import("./pages/Materials"));
 const Classes = lazy(() => import("./pages/Classes"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes - prevents refetching
+      gcTime: 10 * 60 * 1000, // 10 minutes cache
+      refetchOnWindowFocus: false, // Don't refetch when window regains focus
+      refetchOnReconnect: false, // Don't refetch on reconnect
+      retry: 1, // Only retry once
+    },
+  },
+});
 
 // Loading fallback component
 const PageLoader = () => (
