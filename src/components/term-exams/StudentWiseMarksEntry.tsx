@@ -166,32 +166,36 @@ export function StudentWiseMarksEntry({
           Student-wise Entry
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[90vh] p-0 gap-0 overflow-hidden">
-        <DialogHeader className="p-4 pb-2 border-b sticky top-0 bg-background z-10">
-          <DialogTitle>Student-wise Mark Entry - {exam.name}</DialogTitle>
-          <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
-            <Badge variant="outline">{exam.term}</Badge>
-            <Badge variant="outline">{exam.class} Grade</Badge>
+      <DialogContent 
+        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] p-0 gap-0 overflow-hidden"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="p-3 pb-2 border-b sticky top-0 bg-background z-10 shrink-0">
+          <DialogTitle className="text-base">Student-wise Mark Entry - {exam.name}</DialogTitle>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <Badge variant="outline" className="text-xs">{exam.term}</Badge>
+            <Badge variant="outline" className="text-xs">{exam.class} Grade</Badge>
             <span>{examSubjects.length} subjects</span>
           </div>
         </DialogHeader>
 
-        <div className="flex flex-col md:flex-row h-[calc(90vh-120px)]">
+        <div className="flex flex-col md:flex-row flex-1 min-h-0 overflow-hidden">
           {/* Student List Panel */}
-          <div className="w-full md:w-72 border-b md:border-b-0 md:border-r flex flex-col shrink-0">
-            <div className="p-3 space-y-2 border-b">
+          <div className="w-full md:w-64 border-b md:border-b-0 md:border-r flex flex-col shrink-0 max-h-[35vh] md:max-h-none">
+            <div className="p-2 space-y-2 border-b shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search students..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9 h-9"
+                  className="pl-9 h-8 text-sm"
                 />
               </div>
               {availableDivisions.length > 0 && (
                 <Select value={divisionFilter || "all"} onValueChange={(v) => setDivisionFilter(v === "all" ? "" : v)}>
-                  <SelectTrigger className="h-9">
+                  <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="All divisions" />
                   </SelectTrigger>
                   <SelectContent>
@@ -205,8 +209,8 @@ export function StudentWiseMarksEntry({
                 </Select>
               )}
             </div>
-            <ScrollArea className="flex-1 max-h-40 md:max-h-none">
-              <div className="p-2">
+            <ScrollArea className="flex-1">
+              <div className="p-1">
                 {filteredStudents.map(student => {
                   const status = getStudentCompletionStatus(student.id);
                   const isSelected = student.id === selectedStudentId;
@@ -216,7 +220,7 @@ export function StudentWiseMarksEntry({
                       key={student.id}
                       onClick={() => loadStudentMarks(student.id)}
                       className={cn(
-                        "w-full flex items-center justify-between p-2 rounded-lg text-left transition-colors mb-1",
+                        "w-full flex items-center justify-between p-2 rounded-lg text-left transition-colors mb-0.5",
                         isSelected 
                           ? "bg-primary text-primary-foreground" 
                           : "hover:bg-muted"
@@ -253,24 +257,24 @@ export function StudentWiseMarksEntry({
           </div>
 
           {/* Marks Entry Panel */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
             {selectedStudent ? (
               <>
-                <div className="p-3 border-b bg-muted/30 flex items-center justify-between shrink-0">
+                <div className="p-2 border-b bg-muted/30 flex items-center justify-between shrink-0">
                   <div>
-                    <div className="font-semibold">{selectedStudent.name}</div>
-                    <div className="text-sm text-muted-foreground">
+                    <div className="font-semibold text-sm">{selectedStudent.name}</div>
+                    <div className="text-xs text-muted-foreground">
                       {selectedStudent.rollNo && `Roll No: ${selectedStudent.rollNo}`}
                       {selectedStudent.divisionId && ` • Division ${divisions.find(d => d.id === selectedStudent.divisionId)?.name}`}
                     </div>
                   </div>
-                  <Button variant="ghost" size="sm" onClick={clearSelection}>
+                  <Button variant="ghost" size="sm" onClick={clearSelection} className="h-7 w-7 p-0">
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
                 
-                <ScrollArea className="flex-1 p-3">
-                  <div className="space-y-3">
+                <ScrollArea className="flex-1 min-h-0">
+                  <div className="p-2 space-y-2 pb-4">
                     {examSubjects.map(es => {
                       const subject = subjects.find(s => s.id === es.subjectId);
                       const currentMark = marks[es.subjectId];
@@ -279,30 +283,29 @@ export function StudentWiseMarksEntry({
                       )?.marks;
 
                       return (
-                        <div key={es.id} className="flex items-center gap-3 p-3 rounded-lg border bg-card">
+                        <div key={es.id} className="flex items-center gap-2 p-2 rounded-lg border bg-card">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm">{subject?.name}</div>
+                            <div className="font-medium text-sm truncate">{subject?.name}</div>
                             <div className="text-xs text-muted-foreground">
                               Max: {es.maxMarks}
                               {existingMark !== undefined && (
-                                <span className="ml-2 text-green-600">
-                                  (Saved: {existingMark})
-                                </span>
+                                <span className="ml-1 text-green-600">(Saved: {existingMark})</span>
                               )}
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1 shrink-0">
                             <Input
                               type="number"
+                              inputMode="decimal"
                               min="0"
                               max={es.maxMarks}
                               step="0.5"
                               placeholder="0"
                               value={currentMark ?? ''}
                               onChange={(e) => handleMarkChange(es.subjectId, e.target.value)}
-                              className="w-20 text-center"
+                              className="w-16 h-9 text-center text-base"
                             />
-                            <span className="text-sm text-muted-foreground w-12">/{es.maxMarks}</span>
+                            <span className="text-xs text-muted-foreground w-8">/{es.maxMarks}</span>
                           </div>
                         </div>
                       );
@@ -310,13 +313,13 @@ export function StudentWiseMarksEntry({
                   </div>
                 </ScrollArea>
 
-                <div className="p-3 border-t bg-muted/30 shrink-0">
-                  <div className="flex items-center justify-between mb-3">
+                <div className="p-2 border-t bg-muted/30 shrink-0 sticky bottom-0">
+                  <div className="flex items-center justify-between">
                     <div className="text-sm">
                       <span className="text-muted-foreground">Total: </span>
-                      <span className="font-bold text-lg">{totalMarks}/{maxTotal}</span>
+                      <span className="font-bold">{totalMarks}/{maxTotal}</span>
                       <span className={cn(
-                        "ml-2 font-semibold",
+                        "ml-1 font-semibold text-xs",
                         percentage >= 80 ? "text-green-600" :
                         percentage >= 60 ? "text-yellow-600" :
                         percentage >= 40 ? "text-orange-600" : "text-red-600"
@@ -324,8 +327,8 @@ export function StudentWiseMarksEntry({
                         ({percentage}%)
                       </span>
                     </div>
-                    <Button onClick={handleSave} disabled={isSaving} className="gap-2">
-                      <Save className="h-4 w-4" />
+                    <Button onClick={handleSave} disabled={isSaving} size="sm" className="gap-1.5">
+                      <Save className="h-3.5 w-3.5" />
                       {isSaving ? "Saving..." : "Save & Next"}
                     </Button>
                   </div>
