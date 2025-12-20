@@ -61,6 +61,7 @@ export function AttendanceTracker({
   const [statsOpen, setStatsOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
+  const [bulkOverrideMode, setBulkOverrideMode] = useState(false);
 
   const formatDate = (date: Date) => date.toISOString().split('T')[0];
   const selectedDateStr = formatDate(selectedDate);
@@ -271,21 +272,22 @@ export function AttendanceTracker({
     toast.success(`${studentName}${context} marked as ${status}`);
   }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
 
-  const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
+  const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused', override: boolean = false) => {
     let markedCount = 0;
     
     filteredStudentsBase.forEach(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
-      if (!existingAttendance) {
+      // If override mode is on, mark all students; otherwise only mark those without attendance
+      if (override || !existingAttendance) {
         onMarkAttendance(student.id, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
         markedCount++;
       }
     });
     
     if (markedCount > 0) {
-      toast.success(`${markedCount} students marked as ${status}`);
+      toast.success(`${markedCount} students marked as ${status}${override ? ' (override)' : ''}`);
     } else {
-      toast.info('All students already have attendance marked');
+      toast.info('All students already have attendance marked. Enable "Override" to update.');
     }
   }, [filteredStudentsBase, getAttendanceForStudent, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
@@ -538,14 +540,66 @@ export function AttendanceTracker({
               />
             </div>
 
-            {/* Mark All Present Button */}
-            <Button 
-              onClick={() => handleBulkAttendance('present')} 
-              className="w-full bg-green-600 hover:bg-green-700 h-9 text-sm font-medium" 
-              disabled={!selectedClass || filteredStudentsBase.length === 0}
-            >
-              Mark All Present ({filteredStudentsBase.length})
-            </Button>
+            {/* Bulk Attendance Actions */}
+            <div className="space-y-2 pt-2 border-t">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-muted-foreground">Bulk Mark Attendance</span>
+                <div className="flex items-center gap-2">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={bulkOverrideMode}
+                      onChange={(e) => setBulkOverrideMode(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-primary focus:ring-primary"
+                    />
+                    <span className="text-xs text-muted-foreground">Override existing</span>
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    {selectedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              </div>
+              <div className="grid grid-cols-4 gap-2">
+                <Button 
+                  onClick={() => handleBulkAttendance('present', bulkOverrideMode)} 
+                  className="bg-green-600 hover:bg-green-700 h-10 text-sm font-medium flex flex-col items-center justify-center gap-0.5" 
+                  disabled={!selectedClass || filteredStudentsBase.length === 0}
+                >
+                  <span>Present</span>
+                  <span className="text-[10px] opacity-80">({filteredStudentsBase.length})</span>
+                </Button>
+                <Button 
+                  onClick={() => handleBulkAttendance('absent', bulkOverrideMode)} 
+                  variant="destructive"
+                  className="h-10 text-sm font-medium flex flex-col items-center justify-center gap-0.5" 
+                  disabled={!selectedClass || filteredStudentsBase.length === 0}
+                >
+                  <span>Absent</span>
+                  <span className="text-[10px] opacity-80">({filteredStudentsBase.length})</span>
+                </Button>
+                <Button 
+                  onClick={() => handleBulkAttendance('late', bulkOverrideMode)} 
+                  className="bg-yellow-500 hover:bg-yellow-600 h-10 text-sm font-medium flex flex-col items-center justify-center gap-0.5" 
+                  disabled={!selectedClass || filteredStudentsBase.length === 0}
+                >
+                  <span>Late</span>
+                  <span className="text-[10px] opacity-80">({filteredStudentsBase.length})</span>
+                </Button>
+                <Button 
+                  onClick={() => handleBulkAttendance('excused', bulkOverrideMode)} 
+                  className="bg-blue-500 hover:bg-blue-600 h-10 text-sm font-medium flex flex-col items-center justify-center gap-0.5" 
+                  disabled={!selectedClass || filteredStudentsBase.length === 0}
+                >
+                  <span>Excused</span>
+                  <span className="text-[10px] opacity-80">({filteredStudentsBase.length})</span>
+                </Button>
+              </div>
+              <p className="text-[10px] text-muted-foreground text-center">
+                {bulkOverrideMode 
+                  ? '⚠️ Will update ALL students including those already marked' 
+                  : 'Only marks students without existing attendance for this date'}
+              </p>
+            </div>
           </CardContent>
         </Card>
 
