@@ -126,8 +126,18 @@ export function CreateTermExamDialog({ subjects, onCreateExam }: CreateTermExamD
           Create Term Exam
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[calc(100%-1rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent 
+        className="w-[calc(100%-1rem)] sm:max-w-2xl max-h-[85vh] overflow-y-auto"
+        style={{ 
+          // iOS keyboard fix - ensure dialog stays visible when keyboard opens
+          paddingBottom: 'env(safe-area-inset-bottom, 20px)',
+        }}
+        onOpenAutoFocus={(e) => {
+          // Prevent auto focus to avoid keyboard triggering on dialog open
+          e.preventDefault();
+        }}
+      >
+        <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
           <DialogTitle>Create Term Exam</DialogTitle>
         </DialogHeader>
 

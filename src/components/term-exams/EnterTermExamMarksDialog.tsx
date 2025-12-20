@@ -248,8 +248,12 @@ export function EnterTermExamMarksDialog({
           </Badge>
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent 
+        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] overflow-y-auto"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 20px)' }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="sticky top-0 bg-background z-10 pb-2">
           <DialogTitle>Enter Marks - {exam.name}</DialogTitle>
           <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
             <Badge variant="outline">{exam.term}</Badge>

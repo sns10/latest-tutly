@@ -236,4 +236,39 @@
       transition-duration: 0.01ms !important;
     }
   }
+  
+  /* iOS keyboard visibility fix for dialogs */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS specific styles */
+    .dialog-ios-fix {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      max-height: calc(100vh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 40px);
+    }
+    
+    /* When keyboard is open, adjust dialog positioning */
+    input:focus ~ [role="dialog"],
+    textarea:focus ~ [role="dialog"] {
+      top: 25%;
+    }
+  }
+  
+  /* Ensure inputs scroll into view on iOS */
+  input, textarea, select {
+    scroll-margin: 100px;
+  }
+  
+  /* Dialog scroll fix for mobile keyboards */
+  [role="dialog"] {
+    overscroll-behavior: contain;
+  }
+  
+  /* Prevent body scroll when dialog is open on iOS */
+  body:has([role="dialog"][data-state="open"]) {
+    overflow: hidden;
+    position: fixed;
+    width: 100%;
+  }
 }

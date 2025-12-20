@@ -1,4 +1,4 @@
-import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText } from 'lucide-react';
+import { BookOpen, Trophy, FolderOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText, ClipboardList } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -22,6 +22,7 @@ interface MenuItem {
 
 const tuitionAdminItems: MenuItem[] = [
   { title: 'Management', url: '/', icon: BookOpen },
+  { title: 'Tests', url: '/tests', icon: ClipboardList },
   { title: 'Students', url: '/students', icon: GraduationCap },
   { title: 'Leaderboard', url: '/leaderboard', icon: Trophy, featureKey: 'leaderboard' },
   { title: 'Materials', url: '/materials', icon: FolderOpen, featureKey: 'materials' },

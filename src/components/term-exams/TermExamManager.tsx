@@ -7,6 +7,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { FileText, Trash2, Calendar, BookOpen } from "lucide-react";
 import { CreateTermExamDialog } from "./CreateTermExamDialog";
 import { EnterTermExamMarksDialog } from "./EnterTermExamMarksDialog";
+import { StudentWiseMarksEntry } from "./StudentWiseMarksEntry";
 import { TermExamReportGenerator } from "./TermExamReportGenerator";
 
 interface TermExamManagerProps {
@@ -175,6 +176,15 @@ export function TermExamManager({
                         divisions={divisions}
                         subjects={subjects}
                         onAddResult={onAddResult}
+                        onBulkAddResults={onBulkAddResults}
+                      />
+                      <StudentWiseMarksEntry
+                        exam={exam}
+                        examSubjects={examSubjs}
+                        existingResults={examResults}
+                        students={students}
+                        divisions={divisions}
+                        subjects={subjects}
                         onBulkAddResults={onBulkAddResults}
                       />
                       <TermExamReportGenerator
