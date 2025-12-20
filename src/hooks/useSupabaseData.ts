@@ -777,64 +777,103 @@ export function useSupabaseData() {
   };
 
   const markAttendance = async (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => {
-    // Build query to check if attendance already exists for this combination
-    let query = supabase
-      .from('student_attendance')
-      .select('id')
-      .eq('student_id', studentId)
-      .eq('date', date);
-    
-    // Handle null checks for subject_id and faculty_id
-    if (subjectId) {
-      query = query.eq('subject_id', subjectId);
-    } else {
-      query = query.is('subject_id', null);
-    }
-    
-    if (facultyId) {
-      query = query.eq('faculty_id', facultyId);
-    } else {
-      query = query.is('faculty_id', null);
-    }
-    
-    const { data: existingAttendance } = await query.maybeSingle();
+    try {
+      // Normalize the subject and faculty IDs (empty string should be treated as null)
+      const normalizedSubjectId = subjectId && subjectId.trim() !== '' ? subjectId : null;
+      const normalizedFacultyId = facultyId && facultyId.trim() !== '' ? facultyId : null;
 
-    if (existingAttendance) {
-      // Update existing record
-      const { error } = await supabase
+      // Build query to check if attendance already exists for this combination
+      let query = supabase
         .from('student_attendance')
-        .update({
-          status,
-          notes: notes || null,
-        })
-        .eq('id', existingAttendance.id);
+        .select('id')
+        .eq('student_id', studentId)
+        .eq('date', date);
+      
+      // Handle null checks for subject_id and faculty_id
+      if (normalizedSubjectId) {
+        query = query.eq('subject_id', normalizedSubjectId);
+      } else {
+        query = query.is('subject_id', null);
+      }
+      
+      if (normalizedFacultyId) {
+        query = query.eq('faculty_id', normalizedFacultyId);
+      } else {
+        query = query.is('faculty_id', null);
+      }
+      
+      const { data: existingAttendance, error: checkError } = await query.maybeSingle();
 
-      if (error) {
-        console.error('Error updating attendance:', error);
-        toast.error('Failed to mark attendance');
+      if (checkError) {
+        console.error('Error checking existing attendance:', checkError);
+        toast.error('Failed to mark attendance - please try again');
         return;
       }
-    } else {
-      // Insert new record
-      const { error } = await supabase
-        .from('student_attendance')
-        .insert({
-          student_id: studentId,
-          date,
-          status,
-          notes: notes || null,
-          subject_id: subjectId || null,
-          faculty_id: facultyId || null,
-        });
 
-      if (error) {
-        console.error('Error marking attendance:', error);
-        toast.error('Failed to mark attendance');
-        return;
+      if (existingAttendance) {
+        // Update existing record
+        const { error } = await supabase
+          .from('student_attendance')
+          .update({
+            status,
+            notes: notes || null,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', existingAttendance.id);
+
+        if (error) {
+          console.error('Error updating attendance:', error);
+          toast.error('Failed to update attendance');
+          return;
+        }
+      } else {
+        // Insert new record
+        const { error } = await supabase
+          .from('student_attendance')
+          .insert({
+            student_id: studentId,
+            date,
+            status,
+            notes: notes || null,
+            subject_id: normalizedSubjectId,
+            faculty_id: normalizedFacultyId,
+          });
+
+        if (error) {
+          console.error('Error marking attendance:', error);
+          toast.error('Failed to mark attendance');
+          return;
+        }
       }
-    }
 
-    await fetchAttendance();
+      // Optimistic update - add to local state immediately
+      const newRecord: StudentAttendance = {
+        id: existingAttendance?.id || crypto.randomUUID(),
+        studentId,
+        date,
+        status,
+        notes: notes || undefined,
+        subjectId: normalizedSubjectId || undefined,
+        facultyId: normalizedFacultyId || undefined,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      setAttendance(prev => {
+        // Remove existing record if updating
+        const filtered = prev.filter(a => !(
+          a.studentId === studentId && 
+          a.date === date && 
+          (normalizedSubjectId ? a.subjectId === normalizedSubjectId : !a.subjectId) &&
+          (normalizedFacultyId ? a.facultyId === normalizedFacultyId : !a.facultyId)
+        ));
+        return [newRecord, ...filtered];
+      });
+
+    } catch (error) {
+      console.error('Error marking attendance:', error);
+      toast.error('Network error - please check your connection and try again');
+    }
   };
 
   const addFee = async (newFee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => {

@@ -66,13 +66,20 @@ export function AttendanceTracker({
   const selectedDateStr = formatDate(selectedDate);
 
   // Smart Check: Detect ongoing class from timetable (regular + special)
+  // Only run on initial mount, not when date changes
   useEffect(() => {
     if (isManualMode) return;
+
+    // Only auto-detect for today's date
+    const today = new Date().toISOString().split('T')[0];
+    if (selectedDateStr !== today) {
+      // For previous dates, don't auto-detect - let user select manually
+      return;
+    }
 
     const now = new Date();
     const currentDay = now.getDay();
     const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-    const today = now.toISOString().split('T')[0];
 
     // First check for special classes on today's date
     const specialClassEntry = timetable.find(entry => {
@@ -119,7 +126,7 @@ export function AttendanceTracker({
     // No ongoing class detected
     setDetectedClass(null);
     setIsManualMode(true);
-  }, [timetable, subjects, faculty, isManualMode]);
+  }, [timetable, subjects, faculty, isManualMode, selectedDateStr]);
 
   // Get available divisions for selected class
   const availableDivisions = useMemo(() => {
