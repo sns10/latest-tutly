@@ -1,22 +1,42 @@
 import { useMemo, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getYear, getMonth, setMonth, setYear } from 'date-fns';
 
 interface AttendanceRecord {
   id: string;
   date: string;
   status: string;
-  student_id: string | null;
+  student_id?: string | null;
+  studentId?: string;
+  subject_id?: string | null;
+  subjectId?: string | null;
+}
+
+interface Subject {
+  id: string;
+  name: string;
 }
 
 interface AttendanceCalendarProps {
   attendance: AttendanceRecord[];
+  subjects?: Subject[];
+  showSubjectFilter?: boolean;
 }
 
-export function AttendanceCalendar({ attendance }: AttendanceCalendarProps) {
+export function AttendanceCalendar({ attendance, subjects = [], showSubjectFilter = false }: AttendanceCalendarProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedSubject, setSelectedSubject] = useState<string>('all');
+
+  // Generate year options (last 3 years to current year)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 4 }, (_, i) => currentYear - 3 + i);
+  const months = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   const days = useMemo(() => {
     const start = startOfMonth(currentMonth);
@@ -24,16 +44,25 @@ export function AttendanceCalendar({ attendance }: AttendanceCalendarProps) {
     return eachDayOfInterval({ start, end });
   }, [currentMonth]);
 
+  // Filter attendance by selected subject
+  const filteredAttendance = useMemo(() => {
+    if (selectedSubject === 'all') return attendance;
+    return attendance.filter(a => {
+      const subjectId = a.subject_id || a.subjectId;
+      return subjectId === selectedSubject;
+    });
+  }, [attendance, selectedSubject]);
+
   const attendanceByDate = useMemo(() => {
     const map: Record<string, string> = {};
-    attendance.forEach(a => {
+    filteredAttendance.forEach(a => {
       // Use most recent status if multiple entries for same day
       if (!map[a.date]) {
         map[a.date] = a.status;
       }
     });
     return map;
-  }, [attendance]);
+  }, [filteredAttendance]);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -45,18 +74,53 @@ export function AttendanceCalendar({ attendance }: AttendanceCalendarProps) {
     }
   };
 
+  const handleMonthChange = (monthIndex: string) => {
+    setCurrentMonth(setMonth(currentMonth, parseInt(monthIndex)));
+  };
+
+  const handleYearChange = (year: string) => {
+    setCurrentMonth(setYear(currentMonth, parseInt(year)));
+  };
+
   const weekDays = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
   const firstDayOfMonth = startOfMonth(currentMonth).getDay();
+
+  // Get unique subjects from attendance records
+  const attendanceSubjects = useMemo(() => {
+    const subjectIds = new Set<string>();
+    attendance.forEach(a => {
+      const subjectId = a.subject_id || a.subjectId;
+      if (subjectId) subjectIds.add(subjectId);
+    });
+    return subjects.filter(s => subjectIds.has(s.id));
+  }, [attendance, subjects]);
 
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-lg">Attendance Calendar</CardTitle>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <CardTitle className="text-lg">Attendance Calendar</CardTitle>
+          {showSubjectFilter && attendanceSubjects.length > 0 && (
+            <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+              <SelectTrigger className="w-[160px]">
+                <SelectValue placeholder="All Subjects" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Subjects</SelectItem>
+                {attendanceSubjects.map(subject => (
+                  <SelectItem key={subject.id} value={subject.id}>
+                    {subject.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex flex-col items-center">
-          {/* Month Navigation */}
-          <div className="flex items-center justify-between w-full max-w-[280px] mb-4">
+          {/* Month/Year Navigation */}
+          <div className="flex items-center justify-between w-full max-w-[320px] mb-4 gap-2">
             <Button
               variant="ghost"
               size="icon"
@@ -64,9 +128,35 @@ export function AttendanceCalendar({ attendance }: AttendanceCalendarProps) {
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <span className="font-semibold text-sm">
-              {format(currentMonth, 'MMMM yyyy')}
-            </span>
+            
+            <div className="flex items-center gap-2">
+              <Select value={getMonth(currentMonth).toString()} onValueChange={handleMonthChange}>
+                <SelectTrigger className="w-[110px] h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month, index) => (
+                    <SelectItem key={month} value={index.toString()}>
+                      {month}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              <Select value={getYear(currentMonth).toString()} onValueChange={handleYearChange}>
+                <SelectTrigger className="w-[80px] h-8 text-sm">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map(year => (
+                    <SelectItem key={year} value={year.toString()}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
             <Button
               variant="ghost"
               size="icon"
