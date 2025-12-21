@@ -14,6 +14,7 @@ import { StudentPortalAuth } from '@/components/StudentPortalAuth';
 import { StudentPortalSelector } from '@/components/StudentPortalSelector';
 import { AttendanceCalendar } from '@/components/student-portal/AttendanceCalendar';
 import { HomeworkSection } from '@/components/student-portal/HomeworkSection';
+import { StudentStats } from '@/components/student-portal/StudentStats';
 import { TuitionBranding } from '@/components/TuitionBranding';
 import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, LogOut, Trophy, ArrowLeft, Flame } from 'lucide-react';
 
@@ -279,8 +280,12 @@ export default function Student() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="tests" className="space-y-3 sm:space-y-4">
-        <TabsList className="grid w-full grid-cols-6 h-auto p-1">
+      <Tabs defaultValue="overview" className="space-y-3 sm:space-y-4">
+        <TabsList className="grid w-full grid-cols-7 h-auto p-1">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
+            <span className="hidden sm:inline">Overview</span>
+            <span className="sm:hidden">Stats</span>
+          </TabsTrigger>
           <TabsTrigger value="tests" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">Tests</TabsTrigger>
           <TabsTrigger value="attendance" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
             <span className="hidden sm:inline">Attendance</span>
@@ -294,6 +299,16 @@ export default function Student() {
           </TabsTrigger>
           <TabsTrigger value="announcements" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">News</TabsTrigger>
         </TabsList>
+
+        {/* Overview Tab - Stats */}
+        <TabsContent value="overview">
+          <StudentStats 
+            testResults={testResults}
+            tests={tests}
+            attendance={attendance}
+            subjects={subjects}
+          />
+        </TabsContent>
 
         {/* Tests Tab */}
         <TabsContent value="tests">
@@ -330,7 +345,7 @@ export default function Student() {
         <TabsContent value="attendance">
           <div className="space-y-6">
             {/* Attendance Calendar */}
-            <AttendanceCalendar attendance={attendance} />
+            <AttendanceCalendar attendance={attendance} subjects={subjects} showSubjectFilter />
             
             {/* Subject-wise Attendance */}
             <Card>
