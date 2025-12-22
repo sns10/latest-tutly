@@ -167,10 +167,21 @@ export default function Student() {
     ? studentResults.reduce((sum, r) => sum + r.percentage, 0) / studentResults.length 
     : 0;
 
+  function getGrade(percentage: number): string {
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C+';
+    if (percentage >= 40) return 'C';
+    if (percentage >= 35) return 'D';
+    return 'F';
+  }
+
   // Process term exam results
-  const termExamData = termExams.map(exam => {
-    const examSubjects = termExamSubjects.filter(s => s.term_exam_id === exam.id);
-    const results = termExamResults.filter(r => r.term_exam_id === exam.id);
+  const termExamData = (termExams || []).map(exam => {
+    const examSubjects = (termExamSubjects || []).filter(s => s.term_exam_id === exam.id);
+    const results = (termExamResults || []).filter(r => r.term_exam_id === exam.id);
     
     let totalMarks = 0;
     let totalMaxMarks = 0;
@@ -201,17 +212,6 @@ export default function Student() {
       grade: getGrade(percentage)
     };
   });
-
-  function getGrade(percentage: number): string {
-    if (percentage >= 90) return 'A+';
-    if (percentage >= 80) return 'A';
-    if (percentage >= 70) return 'B+';
-    if (percentage >= 60) return 'B';
-    if (percentage >= 50) return 'C+';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
-  }
 
   const totalAttendanceDays = attendance.length;
   const presentDays = attendance.filter(a => a.status === 'present').length;

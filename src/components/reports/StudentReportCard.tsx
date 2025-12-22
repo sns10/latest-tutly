@@ -113,6 +113,17 @@ export function StudentReportCard() {
     };
   }, [testPerformance]);
 
+  function getGrade(percentage: number): string {
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C+';
+    if (percentage >= 40) return 'C';
+    if (percentage >= 35) return 'D';
+    return 'F';
+  }
+
   // Process term exam data for the selected student
   const termExamPerformance = useMemo(() => {
     if (!student) return [];
@@ -154,17 +165,6 @@ export function StudentReportCard() {
       };
     });
   }, [student, termExams, termExamSubjects, termExamResults, subjects]);
-
-  function getGrade(percentage: number): string {
-    if (percentage >= 90) return 'A+';
-    if (percentage >= 80) return 'A';
-    if (percentage >= 70) return 'B+';
-    if (percentage >= 60) return 'B';
-    if (percentage >= 50) return 'C+';
-    if (percentage >= 40) return 'C';
-    if (percentage >= 35) return 'D';
-    return 'F';
-  }
 
   function getGradeBadge(grade: string) {
     const colors: Record<string, string> = {
