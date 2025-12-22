@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Student, StudentAttendance, StudentTestResult, WeeklyTest, StudentFee, Subject, Faculty, Division, ClassName } from '@/types';
+import { Student, StudentAttendance, StudentTestResult, WeeklyTest, StudentFee, Subject, Faculty, Division, ClassName, TermExam, TermExamSubject, TermExamResult } from '@/types';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +28,9 @@ interface StudentDetailsDialogProps {
   subjects: Subject[];
   faculty: Faculty[];
   divisions?: Division[];
+  termExams?: TermExam[];
+  termExamSubjects?: TermExamSubject[];
+  termExamResults?: TermExamResult[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRemoveStudent: (studentId: string) => void;
@@ -46,6 +49,9 @@ export function StudentDetailsDialog({
   subjects,
   faculty,
   divisions = [],
+  termExams = [],
+  termExamSubjects = [],
+  termExamResults = [],
   open,
   onOpenChange,
   onRemoveStudent,
@@ -204,6 +210,56 @@ export function StudentDetailsDialog({
   const avgScore = testsWithResults.length > 0
     ? Math.round(testsWithResults.reduce((sum, r) => sum + r.percentage, 0) / testsWithResults.length)
     : 0;
+
+  // Process term exam data
+  const termExamData = useMemo(() => {
+    const studentTermExams = termExams.filter(exam => exam.class === student.class);
+    
+    return studentTermExams.map(exam => {
+      const examSubjects = termExamSubjects.filter(s => s.termExamId === exam.id);
+      const results = termExamResults.filter(r => r.termExamId === exam.id);
+      
+      let totalMarks = 0;
+      let totalMaxMarks = 0;
+      
+      const subjectResults = examSubjects.map(es => {
+        const result = results.find(r => r.subjectId === es.subjectId);
+        if (result?.marks !== null && result?.marks !== undefined) {
+          totalMarks += result.marks;
+          totalMaxMarks += es.maxMarks;
+        }
+        return {
+          subjectId: es.subjectId,
+          subjectName: es.subject?.name || 'Unknown',
+          marks: result?.marks,
+          maxMarks: es.maxMarks,
+          grade: result?.grade
+        };
+      });
+      
+      const percentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
+      
+      const getGrade = (pct: number): string => {
+        if (pct >= 90) return 'A+';
+        if (pct >= 80) return 'A';
+        if (pct >= 70) return 'B+';
+        if (pct >= 60) return 'B';
+        if (pct >= 50) return 'C+';
+        if (pct >= 40) return 'C';
+        if (pct >= 35) return 'D';
+        return 'F';
+      };
+      
+      return {
+        ...exam,
+        subjectResults,
+        totalMarks,
+        totalMaxMarks,
+        percentage,
+        grade: getGrade(percentage)
+      };
+    });
+  }, [termExams, termExamSubjects, termExamResults, student.class]);
 
   const pendingFees = fees.filter(f => f.status === 'unpaid' || f.status === 'overdue');
   const totalPendingAmount = pendingFees.reduce((sum, f) => sum + f.amount, 0);
@@ -645,14 +701,15 @@ export function StudentDetailsDialog({
           </TabsContent>
 
           {/* Tests Tab */}
-          <TabsContent value="tests" className="mt-3">
+          <TabsContent value="tests" className="mt-3 space-y-4">
+            {/* Weekly Tests */}
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Recent Test Results</CardTitle>
+                <CardTitle className="text-sm">Weekly Test Results</CardTitle>
               </CardHeader>
               <CardContent>
                 {testsWithResults.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-4">No test results yet</p>
+                  <p className="text-center text-muted-foreground py-4">No weekly test results yet</p>
                 ) : (
                   <div className="space-y-3">
                     {testsWithResults.map((result, idx) => (
@@ -669,6 +726,56 @@ export function StudentDetailsDialog({
                           >
                             {result.percentage}%
                           </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Term Exams */}
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Term Exam Results</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {termExamData.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-4">No term exam results yet</p>
+                ) : (
+                  <div className="space-y-4">
+                    {termExamData.map((exam) => (
+                      <div key={exam.id} className="border rounded-lg p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <div className="font-semibold text-sm">{exam.name}</div>
+                            <div className="text-xs text-muted-foreground">{exam.term} • {exam.academicYear}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-sm">{exam.totalMarks}/{exam.totalMaxMarks}</div>
+                            <Badge 
+                              variant={exam.percentage >= 80 ? 'default' : exam.percentage >= 60 ? 'secondary' : 'destructive'}
+                              className="text-xs"
+                            >
+                              {exam.percentage.toFixed(1)}% • {exam.grade}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        {/* Subject-wise breakdown */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-2 pt-2 border-t">
+                          {exam.subjectResults.map((sr) => (
+                            <div key={sr.subjectId} className="bg-muted/50 rounded px-2 py-1">
+                              <div className="text-xs text-muted-foreground truncate">{sr.subjectName}</div>
+                              <div className="font-medium text-sm">
+                                {sr.marks !== null && sr.marks !== undefined ? (
+                                  <span>{sr.marks}/{sr.maxMarks}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     ))}

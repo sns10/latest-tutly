@@ -12,6 +12,10 @@ type Subject = Tables<'subjects'>;
 type Announcement = Tables<'announcements'>;
 type Tuition = Tables<'tuitions'>;
 type Homework = Tables<'homework'>;
+type TermExam = Tables<'term_exams'>;
+type TermExamSubject = Tables<'term_exam_subjects'>;
+type TermExamResult = Tables<'term_exam_results'>;
+
 interface Division {
   id: string;
   name: string;
@@ -34,6 +38,9 @@ export function useStudentData(selectedStudentId?: string | null) {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
+  const [termExams, setTermExams] = useState<TermExam[]>([]);
+  const [termExamSubjects, setTermExamSubjects] = useState<(TermExamSubject & { subject?: Subject })[]>([]);
+  const [termExamResults, setTermExamResults] = useState<TermExamResult[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -145,7 +152,10 @@ export function useStudentData(selectedStudentId?: string | null) {
         feesRes,
         subjectsRes,
         announcementsRes,
-        homeworkRes
+        homeworkRes,
+        termExamsRes,
+        termExamSubjectsRes,
+        termExamResultsRes
       ] = await Promise.all([
         supabase
           .from('student_attendance')
@@ -182,7 +192,21 @@ export function useStudentData(selectedStudentId?: string | null) {
           .select('*')
           .eq('tuition_id', studentData.tuition_id)
           .eq('class', studentData.class)
-          .order('due_date', { ascending: true })
+          .order('due_date', { ascending: true }),
+        supabase
+          .from('term_exams')
+          .select('*')
+          .eq('tuition_id', studentData.tuition_id)
+          .eq('class', studentData.class)
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('term_exam_subjects')
+          .select('*, subject:subjects(id, name, class)')
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('term_exam_results')
+          .select('*')
+          .eq('student_id', studentData.id)
       ]);
 
       if (attendanceRes.data) setAttendance(attendanceRes.data);
@@ -192,6 +216,9 @@ export function useStudentData(selectedStudentId?: string | null) {
       if (subjectsRes.data) setSubjects(subjectsRes.data);
       if (announcementsRes.data) setAnnouncements(announcementsRes.data);
       if (homeworkRes.data) setHomework(homeworkRes.data);
+      if (termExamsRes.data) setTermExams(termExamsRes.data);
+      if (termExamSubjectsRes.data) setTermExamSubjects(termExamSubjectsRes.data as any);
+      if (termExamResultsRes.data) setTermExamResults(termExamResultsRes.data);
     };
 
     fetchStudentData();
@@ -209,6 +236,9 @@ export function useStudentData(selectedStudentId?: string | null) {
     subjects,
     announcements,
     homework,
+    termExams,
+    termExamSubjects,
+    termExamResults,
     loading
   };
 }

@@ -34,6 +34,9 @@ export default function Student() {
     subjects, 
     announcements, 
     homework,
+    termExams,
+    termExamSubjects,
+    termExamResults,
     loading 
   } = useStudentData(selectedStudentId);
   
@@ -163,6 +166,52 @@ export default function Student() {
   const averageScore = studentResults.length > 0 
     ? studentResults.reduce((sum, r) => sum + r.percentage, 0) / studentResults.length 
     : 0;
+
+  // Process term exam results
+  const termExamData = termExams.map(exam => {
+    const examSubjects = termExamSubjects.filter(s => s.term_exam_id === exam.id);
+    const results = termExamResults.filter(r => r.term_exam_id === exam.id);
+    
+    let totalMarks = 0;
+    let totalMaxMarks = 0;
+    
+    const subjectResults = examSubjects.map(es => {
+      const result = results.find(r => r.subject_id === es.subject_id);
+      if (result?.marks !== null && result?.marks !== undefined) {
+        totalMarks += result.marks;
+        totalMaxMarks += es.max_marks;
+      }
+      return {
+        subjectId: es.subject_id,
+        subjectName: (es as any).subject?.name || 'Unknown',
+        marks: result?.marks,
+        maxMarks: es.max_marks,
+        grade: result?.grade
+      };
+    });
+    
+    const percentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
+    
+    return {
+      ...exam,
+      subjectResults,
+      totalMarks,
+      totalMaxMarks,
+      percentage,
+      grade: getGrade(percentage)
+    };
+  });
+
+  function getGrade(percentage: number): string {
+    if (percentage >= 90) return 'A+';
+    if (percentage >= 80) return 'A';
+    if (percentage >= 70) return 'B+';
+    if (percentage >= 60) return 'B';
+    if (percentage >= 50) return 'C+';
+    if (percentage >= 40) return 'C';
+    if (percentage >= 35) return 'D';
+    return 'F';
+  }
 
   const totalAttendanceDays = attendance.length;
   const presentDays = attendance.filter(a => a.status === 'present').length;
@@ -312,33 +361,86 @@ export default function Student() {
 
         {/* Tests Tab */}
         <TabsContent value="tests">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Test Results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {recentTests.length > 0 ? (
-                <div className="space-y-3">
-                  {recentTests.map((result) => (
-                    <div key={result.id} className="flex justify-between items-center p-3 border rounded">
-                      <div>
-                        <div className="font-medium">{result.test?.name}</div>
-                        <div className="text-sm text-muted-foreground">{result.test?.subject}</div>
+          <div className="space-y-6">
+            {/* Weekly Tests */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Weekly Test Results</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentTests.length > 0 ? (
+                  <div className="space-y-3">
+                    {recentTests.map((result) => (
+                      <div key={result.id} className="flex justify-between items-center p-3 border rounded">
+                        <div>
+                          <div className="font-medium">{result.test?.name}</div>
+                          <div className="text-sm text-muted-foreground">{result.test?.subject}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold">{result.marks}/{result.test?.max_marks}</div>
+                          <Badge variant={result.percentage >= 80 ? 'default' : result.percentage >= 60 ? 'secondary' : 'destructive'}>
+                            {result.percentage.toFixed(1)}%
+                          </Badge>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <div className="font-bold">{result.marks}/{result.test?.max_marks}</div>
-                        <Badge variant={result.percentage >= 80 ? 'default' : result.percentage >= 60 ? 'secondary' : 'destructive'}>
-                          {result.percentage.toFixed(1)}%
-                        </Badge>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No weekly test results yet</p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Term Exams */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Term Exam Results</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {termExamData.length > 0 ? (
+                  <div className="space-y-4">
+                    {termExamData.map((exam) => (
+                      <div key={exam.id} className="border rounded-lg p-4">
+                        <div className="flex justify-between items-start mb-3">
+                          <div>
+                            <div className="font-semibold text-lg">{exam.name}</div>
+                            <div className="text-sm text-muted-foreground">{exam.term} • {exam.academic_year}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-bold text-lg">{exam.totalMarks}/{exam.totalMaxMarks}</div>
+                            <Badge 
+                              variant={exam.percentage >= 80 ? 'default' : exam.percentage >= 60 ? 'secondary' : 'destructive'}
+                              className="text-sm"
+                            >
+                              {exam.percentage.toFixed(1)}% • {exam.grade}
+                            </Badge>
+                          </div>
+                        </div>
+                        
+                        {/* Subject-wise breakdown */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t">
+                          {exam.subjectResults.map((sr) => (
+                            <div key={sr.subjectId} className="bg-muted/50 rounded p-2">
+                              <div className="text-xs text-muted-foreground">{sr.subjectName}</div>
+                              <div className="font-medium">
+                                {sr.marks !== null && sr.marks !== undefined ? (
+                                  <span>{sr.marks}/{sr.maxMarks}</span>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No test results yet</p>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No term exam results yet</p>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         {/* Attendance Tab */}
