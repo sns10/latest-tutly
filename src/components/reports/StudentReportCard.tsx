@@ -8,12 +8,14 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Download, Printer, User, CalendarDays, BookOpen, TrendingUp } from 'lucide-react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useTermExamData } from '@/hooks/useTermExamData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
 export function StudentReportCard() {
-  const { students, weeklyTests, testResults, attendance, divisions } = useSupabaseData();
+  const { students, weeklyTests, testResults, attendance, divisions, subjects } = useSupabaseData();
+  const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
@@ -110,6 +112,48 @@ export function StudentReportCard() {
       grade: getGrade(percentage)
     };
   }, [testPerformance]);
+
+  // Process term exam data for the selected student
+  const termExamPerformance = useMemo(() => {
+    if (!student) return [];
+
+    const studentTermExams = termExams.filter(exam => exam.class === student.class);
+    
+    return studentTermExams.map(exam => {
+      const examSubjects = termExamSubjects.filter(s => s.termExamId === exam.id);
+      const results = termExamResults.filter(r => r.termExamId === exam.id && r.studentId === student.id);
+      
+      let totalMarks = 0;
+      let totalMaxMarks = 0;
+      
+      const subjectResults = examSubjects.map(es => {
+        const result = results.find(r => r.subjectId === es.subjectId);
+        const subj = subjects.find(s => s.id === es.subjectId);
+        if (result?.marks !== null && result?.marks !== undefined) {
+          totalMarks += result.marks;
+          totalMaxMarks += es.maxMarks;
+        }
+        return {
+          subjectId: es.subjectId,
+          subjectName: es.subject?.name || subj?.name || 'Unknown',
+          marks: result?.marks,
+          maxMarks: es.maxMarks,
+          grade: result?.grade
+        };
+      });
+      
+      const percentage = totalMaxMarks > 0 ? Math.round((totalMarks / totalMaxMarks) * 100) : 0;
+      
+      return {
+        ...exam,
+        subjectResults,
+        totalMarks,
+        totalMaxMarks,
+        percentage,
+        grade: getGrade(percentage)
+      };
+    });
+  }, [student, termExams, termExamSubjects, termExamResults, subjects]);
 
   function getGrade(percentage: number): string {
     if (percentage >= 90) return 'A+';
@@ -239,6 +283,38 @@ export function StudentReportCard() {
               </table>
             ` : ''}
           </div>
+
+          ${termExamPerformance.length > 0 ? `
+            <div class="section">
+              <h3>📚 Term Examination Results</h3>
+              ${termExamPerformance.map(exam => `
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px;">
+                  <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                    <div>
+                      <strong>${exam.name}</strong>
+                      <div style="font-size: 12px; color: #666;">${exam.term} • ${exam.academicYear}</div>
+                    </div>
+                    <div style="text-align: right;">
+                      <strong>${exam.totalMarks}/${exam.totalMaxMarks}</strong>
+                      <div><span class="grade grade-${exam.grade[0]}">${exam.percentage}% • ${exam.grade}</span></div>
+                    </div>
+                  </div>
+                  <table style="font-size: 12px;">
+                    <thead><tr><th>Subject</th><th>Marks</th><th>Max</th></tr></thead>
+                    <tbody>
+                      ${exam.subjectResults.map(sr => `
+                        <tr>
+                          <td>${sr.subjectName}</td>
+                          <td>${sr.marks !== null && sr.marks !== undefined ? sr.marks : '-'}</td>
+                          <td>${sr.maxMarks}</td>
+                        </tr>
+                      `).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
 
           <div class="footer">
             <div class="signature-line">Class Teacher</div>
@@ -464,6 +540,46 @@ export function StudentReportCard() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Term Exam Results */}
+          {termExamPerformance.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <BookOpen className="h-4 w-4" />
+                  Term Exam Results ({termExamPerformance.length} exams)
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {termExamPerformance.map((exam) => (
+                    <div key={exam.id} className="border rounded-lg p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <div className="font-semibold">{exam.name}</div>
+                          <div className="text-xs text-muted-foreground">{exam.term} • {exam.academicYear}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-bold">{exam.totalMarks}/{exam.totalMaxMarks}</div>
+                          {getGradeBadge(exam.grade)}
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2 pt-2 border-t">
+                        {exam.subjectResults.map((sr) => (
+                          <div key={sr.subjectId} className="bg-muted/50 rounded px-2 py-1 text-sm">
+                            <div className="text-xs text-muted-foreground">{sr.subjectName}</div>
+                            <div className="font-medium">
+                              {sr.marks !== null && sr.marks !== undefined ? `${sr.marks}/${sr.maxMarks}` : '-'}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Export Actions */}
           <div className="flex flex-wrap gap-2">
