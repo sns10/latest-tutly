@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
+import { useTermExamData } from '@/hooks/useTermExamData';
 import { Student, Division } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -36,6 +37,7 @@ export default function StudentsPage() {
   } = useSupabaseData();
   
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
+  const { termExams, termExamSubjects, termExamResults, loading: termExamLoading } = useTermExamData();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('All');
@@ -77,7 +79,7 @@ export default function StudentsPage() {
     }
   };
 
-  if (loading || featuresLoading) {
+  if (loading || featuresLoading || termExamLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin" />
@@ -246,6 +248,9 @@ export default function StudentsPage() {
           subjects={subjects}
           faculty={faculty}
           divisions={divisions}
+          termExams={termExams.filter(te => te.class === selectedStudent.class)}
+          termExamSubjects={termExamSubjects}
+          termExamResults={termExamResults.filter(r => r.studentId === selectedStudent.id)}
           open={!!selectedStudent}
           onOpenChange={(open) => !open && setSelectedStudent(null)}
           onRemoveStudent={removeStudent}
