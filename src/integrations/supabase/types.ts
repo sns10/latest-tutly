@@ -217,21 +217,30 @@ export type Database = {
           amount: number
           class: string
           created_at: string
+          due_day: number | null
           id: string
+          late_fee_amount: number | null
+          late_fee_percentage: number | null
           tuition_id: string
         }
         Insert: {
           amount: number
           class: string
           created_at?: string
+          due_day?: number | null
           id?: string
+          late_fee_amount?: number | null
+          late_fee_percentage?: number | null
           tuition_id: string
         }
         Update: {
           amount?: number
           class?: string
           created_at?: string
+          due_day?: number | null
           id?: string
+          late_fee_amount?: number | null
+          late_fee_percentage?: number | null
           tuition_id?: string
         }
         Relationships: [
@@ -346,6 +355,50 @@ export type Database = {
             columns: ["subject_id"]
             isOneToOne: false
             referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fee_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          fee_id: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+          payment_reference: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          fee_id: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          fee_id?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fee_payments_fee_id_fkey"
+            columns: ["fee_id"]
+            isOneToOne: false
+            referencedRelation: "student_fees"
             referencedColumns: ["id"]
           },
         ]
@@ -610,11 +663,16 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          discount_amount: number | null
+          discount_reason: string | null
           due_date: string
           fee_type: string | null
           id: string
           notes: string | null
           paid_date: string | null
+          partial_amount_paid: number | null
+          payment_method: string | null
+          payment_reference: string | null
           status: string
           student_id: string | null
           updated_at: string
@@ -622,11 +680,16 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
+          discount_amount?: number | null
+          discount_reason?: string | null
           due_date: string
           fee_type?: string | null
           id?: string
           notes?: string | null
           paid_date?: string | null
+          partial_amount_paid?: number | null
+          payment_method?: string | null
+          payment_reference?: string | null
           status: string
           student_id?: string | null
           updated_at?: string
@@ -634,11 +697,16 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
+          discount_amount?: number | null
+          discount_reason?: string | null
           due_date?: string
           fee_type?: string | null
           id?: string
           notes?: string | null
           paid_date?: string | null
+          partial_amount_paid?: number | null
+          payment_method?: string | null
+          payment_reference?: string | null
           status?: string
           student_id?: string | null
           updated_at?: string
