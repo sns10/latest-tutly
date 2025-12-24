@@ -5,3 +5,5 @@ export { FeeReports } from './FeeReports';
 export { RecordPaymentDialog } from './RecordPaymentDialog';
 export { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
 export { AddCustomFeeDialog } from './AddCustomFeeDialog';
+export { PaymentHistoryDialog } from './PaymentHistoryDialog';
+export { CustomFeesManager } from './CustomFeesManager';

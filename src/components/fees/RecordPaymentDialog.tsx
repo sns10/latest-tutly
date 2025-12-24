@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { StudentFee } from '@/types';
 import {
   Dialog,
@@ -16,11 +16,23 @@ import { Textarea } from '@/components/ui/textarea';
 import { CreditCard, Banknote, Smartphone, Building } from 'lucide-react';
 import { toast } from 'sonner';
 
+interface FeePayment {
+  id: string;
+  feeId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  paymentReference?: string;
+  notes?: string;
+  createdAt: string;
+}
+
 interface RecordPaymentDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   fee: StudentFee;
   studentName: string;
+  existingPayments?: FeePayment[];
   onRecordPayment: (amount: number, paymentMethod: string, reference?: string, notes?: string) => void;
 }
 
@@ -37,13 +49,27 @@ export function RecordPaymentDialog({
   onOpenChange,
   fee,
   studentName,
+  existingPayments = [],
   onRecordPayment
 }: RecordPaymentDialogProps) {
-  const [amount, setAmount] = useState(fee.amount.toString());
+  const alreadyPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
+  const remainingDue = fee.amount - alreadyPaid;
+  
+  const [amount, setAmount] = useState(remainingDue.toString());
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
-  const [isPartial, setIsPartial] = useState(false);
+
+  // Reset amount when dialog opens or fee changes
+  useEffect(() => {
+    if (open) {
+      const remaining = fee.amount - existingPayments.reduce((sum, p) => sum + p.amount, 0);
+      setAmount(remaining > 0 ? remaining.toString() : '0');
+      setPaymentMethod('cash');
+      setReference('');
+      setNotes('');
+    }
+  }, [open, fee, existingPayments]);
 
   const handleSubmit = () => {
     const paymentAmount = parseFloat(amount);
@@ -53,23 +79,17 @@ export function RecordPaymentDialog({
       return;
     }
 
-    if (paymentAmount > fee.amount) {
-      toast.error('Payment amount cannot exceed fee amount');
+    if (paymentAmount > remainingDue) {
+      toast.error(`Payment amount cannot exceed remaining due amount (₹${remainingDue.toLocaleString('en-IN')})`);
       return;
     }
 
     onRecordPayment(paymentAmount, paymentMethod, reference || undefined, notes || undefined);
-    toast.success(`Payment of ₹${paymentAmount.toLocaleString('en-IN')} recorded`);
-    
-    // Reset form
-    setAmount(fee.amount.toString());
-    setPaymentMethod('cash');
-    setReference('');
-    setNotes('');
-    setIsPartial(false);
+    onOpenChange(false);
   };
 
-  const remainingAmount = fee.amount - parseFloat(amount || '0');
+  const isPartial = parseFloat(amount || '0') > 0 && parseFloat(amount || '0') < remainingDue;
+  const newRemaining = remainingDue - parseFloat(amount || '0');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -95,6 +115,16 @@ export function RecordPaymentDialog({
               <span className="text-muted-foreground">Total Amount</span>
               <span className="font-bold">₹{fee.amount.toLocaleString('en-IN')}</span>
             </div>
+            {alreadyPaid > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Already Paid</span>
+                <span className="font-medium text-green-600">₹{alreadyPaid.toLocaleString('en-IN')}</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Remaining Due</span>
+              <span className="font-bold text-yellow-600">₹{remainingDue.toLocaleString('en-IN')}</span>
+            </div>
             <div className="flex justify-between text-sm">
               <span className="text-muted-foreground">Due Date</span>
               <span>{new Date(fee.dueDate).toLocaleDateString()}</span>
@@ -110,17 +140,34 @@ export function RecordPaymentDialog({
                 id="amount"
                 type="number"
                 value={amount}
-                onChange={(e) => {
-                  setAmount(e.target.value);
-                  setIsPartial(parseFloat(e.target.value) < fee.amount);
-                }}
+                onChange={(e) => setAmount(e.target.value)}
                 className="pl-7"
-                max={fee.amount}
+                max={remainingDue}
               />
             </div>
-            {isPartial && parseFloat(amount) > 0 && (
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => setAmount(remainingDue.toString())}
+              >
+                Full Amount
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs"
+                onClick={() => setAmount((remainingDue / 2).toString())}
+              >
+                Half
+              </Button>
+            </div>
+            {isPartial && (
               <p className="text-xs text-yellow-600">
-                Partial payment. Remaining: ₹{remainingAmount.toLocaleString('en-IN')}
+                Partial payment. After this: ₹{newRemaining.toLocaleString('en-IN')} remaining
               </p>
             )}
           </div>
@@ -191,7 +238,7 @@ export function RecordPaymentDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
+          <Button onClick={handleSubmit} disabled={remainingDue <= 0}>
             Record Payment
           </Button>
         </DialogFooter>
