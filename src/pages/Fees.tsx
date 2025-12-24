@@ -1,15 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, LayoutDashboard, List, Settings, FileText, PlusCircle } from 'lucide-react';
+import { Loader2, LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt } from 'lucide-react';
 import { 
   FeeDashboard, 
   FeesList, 
   FeeStructureManager, 
   FeeReports,
-  AddCustomFeeDialog 
+  AddCustomFeeDialog,
+  CustomFeesManager
 } from '@/components/fees';
+import { toast } from 'sonner';
+
+interface FeePayment {
+  id: string;
+  feeId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  paymentReference?: string;
+  notes?: string;
+  createdAt: string;
+}
 
 export default function FeesPage() {
   const { 
@@ -19,10 +33,81 @@ export default function FeesPage() {
     loading,
     addFee,
     updateFeeStatus,
-    updateClassFee
+    updateClassFee,
+    deleteFee,
+    fetchFees
   } = useSupabaseData();
 
   const [addFeeDialogOpen, setAddFeeDialogOpen] = useState(false);
+  const [payments, setPayments] = useState<FeePayment[]>([]);
+
+  // Fetch payments
+  useEffect(() => {
+    fetchPayments();
+  }, [fees]);
+
+  const fetchPayments = async () => {
+    const { data, error } = await supabase
+      .from('fee_payments')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching payments:', error);
+      return;
+    }
+
+    setPayments(data.map(p => ({
+      id: p.id,
+      feeId: p.fee_id,
+      amount: Number(p.amount),
+      paymentDate: p.payment_date,
+      paymentMethod: p.payment_method || 'cash',
+      paymentReference: p.payment_reference || undefined,
+      notes: p.notes || undefined,
+      createdAt: p.created_at,
+    })));
+  };
+
+  const handleRecordPayment = async (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => {
+    const { error } = await supabase
+      .from('fee_payments')
+      .insert({
+        fee_id: feeId,
+        amount,
+        payment_method: paymentMethod,
+        payment_reference: reference || null,
+        notes: notes || null,
+      });
+
+    if (error) {
+      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment');
+      return;
+    }
+
+    // Calculate total paid for this fee
+    const fee = fees.find(f => f.id === feeId);
+    if (fee) {
+      const existingPayments = payments.filter(p => p.feeId === feeId);
+      const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0) + amount;
+      
+      if (totalPaid >= fee.amount) {
+        await updateFeeStatus(feeId, 'paid', new Date().toISOString().split('T')[0]);
+      } else {
+        await updateFeeStatus(feeId, 'partial');
+      }
+    }
+
+    await fetchPayments();
+    toast.success(`Payment of ₹${amount.toLocaleString('en-IN')} recorded`);
+  };
+
+  const handleDeleteFee = async (feeId: string) => {
+    if (deleteFee) {
+      await deleteFee(feeId);
+    }
+  };
 
   if (loading) {
     return (
@@ -48,7 +133,7 @@ export default function FeesPage() {
 
       {/* Tabbed Interface */}
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 h-auto">
+        <TabsList className="grid w-full grid-cols-5 h-auto">
           <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
             <LayoutDashboard className="h-4 w-4 hidden sm:block" />
             Dashboard
@@ -56,6 +141,10 @@ export default function FeesPage() {
           <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
             <List className="h-4 w-4 hidden sm:block" />
             Fees
+          </TabsTrigger>
+          <TabsTrigger value="custom" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
+            <Receipt className="h-4 w-4 hidden sm:block" />
+            Custom
           </TabsTrigger>
           <TabsTrigger value="structure" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
             <Settings className="h-4 w-4 hidden sm:block" />
@@ -80,8 +169,21 @@ export default function FeesPage() {
             students={students}
             fees={fees}
             classFees={classFees}
+            payments={payments}
             onAddFee={addFee}
             onUpdateFeeStatus={updateFeeStatus}
+            onRecordPayment={handleRecordPayment}
+          />
+        </TabsContent>
+
+        <TabsContent value="custom" className="mt-4">
+          <CustomFeesManager
+            students={students}
+            fees={fees}
+            payments={payments}
+            onUpdateFeeStatus={updateFeeStatus}
+            onDeleteFee={handleDeleteFee}
+            onAddCustomFee={() => setAddFeeDialogOpen(true)}
           />
         </TabsContent>
 

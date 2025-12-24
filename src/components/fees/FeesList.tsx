@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Student, StudentFee, ClassFee } from '@/types';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
@@ -23,31 +23,47 @@ import {
   Calendar,
   CreditCard,
   MessageSquare,
-  MoreHorizontal
+  MoreHorizontal,
+  History
 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from 'sonner';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
+import { PaymentHistoryDialog } from './PaymentHistoryDialog';
+
+interface FeePayment {
+  id: string;
+  feeId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  paymentReference?: string;
+  notes?: string;
+  createdAt: string;
+}
 
 interface FeesListProps {
   students: Student[];
   fees: StudentFee[];
   classFees: ClassFee[];
+  payments: FeePayment[];
   onAddFee: (fee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
-  onRecordPayment?: (feeId: string, amount: number, paymentMethod: string, reference?: string) => void;
+  onRecordPayment: (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => void;
 }
 
 export function FeesList({
   students,
   fees,
   classFees,
+  payments,
   onAddFee,
   onUpdateFeeStatus,
   onRecordPayment
@@ -62,6 +78,8 @@ export function FeesList({
   const [selectedFeeForPayment, setSelectedFeeForPayment] = useState<StudentFee | null>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
   const [selectedStudentForReminder, setSelectedStudentForReminder] = useState<Student | null>(null);
+  const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
+  const [selectedFeeForHistory, setSelectedFeeForHistory] = useState<StudentFee | null>(null);
 
   function getCurrentMonth() {
     const now = new Date();
@@ -147,6 +165,16 @@ export function FeesList({
     return students.find(s => s.id === studentId);
   };
 
+  const getFeePayments = (feeId: string) => {
+    return payments.filter(p => p.feeId === feeId).sort((a, b) => 
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+  };
+
+  const getTotalPaid = (feeId: string) => {
+    return payments.filter(p => p.feeId === feeId).reduce((sum, p) => sum + p.amount, 0);
+  };
+
   const handleMarkAsPaid = (feeId: string) => {
     onUpdateFeeStatus(feeId, 'paid', new Date().toISOString().split('T')[0]);
     toast.success('Fee marked as paid');
@@ -188,6 +216,11 @@ export function FeesList({
     setPaymentDialogOpen(true);
   };
 
+  const handleViewHistory = (fee: StudentFee) => {
+    setSelectedFeeForHistory(fee);
+    setHistoryDialogOpen(true);
+  };
+
   const handleSendReminder = (studentId: string) => {
     const student = getStudent(studentId);
     if (student) {
@@ -210,15 +243,20 @@ export function FeesList({
   };
 
   const exportToCSV = () => {
-    const headers = ['Student', 'Class', 'Amount', 'Due Date', 'Status', 'Paid Date'];
-    const rows = filteredFees.map(fee => [
-      getStudentName(fee.studentId),
-      getStudentClass(fee.studentId),
-      fee.amount,
-      fee.dueDate,
-      fee.status,
-      fee.paidDate || '-'
-    ]);
+    const headers = ['Student', 'Class', 'Amount', 'Paid', 'Remaining', 'Due Date', 'Status', 'Paid Date'];
+    const rows = filteredFees.map(fee => {
+      const totalPaid = getTotalPaid(fee.id);
+      return [
+        getStudentName(fee.studentId),
+        getStudentClass(fee.studentId),
+        fee.amount,
+        totalPaid,
+        fee.amount - totalPaid,
+        fee.dueDate,
+        fee.status,
+        fee.paidDate || '-'
+      ];
+    });
     
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -232,7 +270,7 @@ export function FeesList({
   };
 
   const totalAmount = filteredFees.reduce((sum, f) => sum + f.amount, 0);
-  const paidAmount = filteredFees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
+  const paidAmount = filteredFees.reduce((sum, f) => sum + getTotalPaid(f.id), 0);
 
   return (
     <div className="space-y-4">
@@ -336,9 +374,9 @@ export function FeesList({
                   <TableHead>Student</TableHead>
                   <TableHead>Class</TableHead>
                   <TableHead>Amount</TableHead>
+                  <TableHead>Paid</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Paid Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -350,58 +388,75 @@ export function FeesList({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredFees.map(fee => (
-                    <TableRow key={fee.id}>
-                      <TableCell>
-                        {fee.status !== 'paid' && (
-                          <Checkbox 
-                            checked={selectedFees.has(fee.id)}
-                            onCheckedChange={(checked) => handleSelectFee(fee.id, checked as boolean)}
-                          />
-                        )}
-                      </TableCell>
-                      <TableCell className="font-medium">{getStudentName(fee.studentId)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{getStudentClass(fee.studentId)}</Badge>
-                      </TableCell>
-                      <TableCell className="font-semibold">₹{fee.amount.toLocaleString('en-IN')}</TableCell>
-                      <TableCell>{new Date(fee.dueDate).toLocaleDateString()}</TableCell>
-                      <TableCell>{getStatusBadge(fee.status)}</TableCell>
-                      <TableCell>{fee.paidDate ? new Date(fee.paidDate).toLocaleDateString() : '-'}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {fee.status !== 'paid' && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleMarkAsPaid(fee.id)}>
-                                  <CheckCircle className="h-4 w-4 mr-2" />
-                                  Mark as Paid
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleRecordPayment(fee)}>
-                                  <CreditCard className="h-4 w-4 mr-2" />
-                                  Record Payment
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleSendReminder(fee.studentId)}>
-                                  <MessageSquare className="h-4 w-4 mr-2" />
-                                  Send Reminder
-                                </DropdownMenuItem>
-                              </>
+                  filteredFees.map(fee => {
+                    const totalPaid = getTotalPaid(fee.id);
+                    const remaining = fee.amount - totalPaid;
+                    const paymentCount = getFeePayments(fee.id).length;
+                    
+                    return (
+                      <TableRow key={fee.id}>
+                        <TableCell>
+                          {fee.status !== 'paid' && (
+                            <Checkbox 
+                              checked={selectedFees.has(fee.id)}
+                              onCheckedChange={(checked) => handleSelectFee(fee.id, checked as boolean)}
+                            />
+                          )}
+                        </TableCell>
+                        <TableCell className="font-medium">{getStudentName(fee.studentId)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{getStudentClass(fee.studentId)}</Badge>
+                        </TableCell>
+                        <TableCell className="font-semibold">₹{fee.amount.toLocaleString('en-IN')}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-col">
+                            <span className={totalPaid > 0 ? 'text-green-600 font-medium' : 'text-muted-foreground'}>
+                              ₹{totalPaid.toLocaleString('en-IN')}
+                            </span>
+                            {remaining > 0 && totalPaid > 0 && (
+                              <span className="text-xs text-yellow-600">
+                                ₹{remaining.toLocaleString('en-IN')} due
+                              </span>
                             )}
-                            {fee.status === 'paid' && (
-                              <DropdownMenuItem disabled className="text-muted-foreground">
-                                No actions available
+                          </div>
+                        </TableCell>
+                        <TableCell>{new Date(fee.dueDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{getStatusBadge(fee.status)}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {fee.status !== 'paid' && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleMarkAsPaid(fee.id)}>
+                                    <CheckCircle className="h-4 w-4 mr-2" />
+                                    Mark as Paid
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleRecordPayment(fee)}>
+                                    <CreditCard className="h-4 w-4 mr-2" />
+                                    Record Payment
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleSendReminder(fee.studentId)}>
+                                    <MessageSquare className="h-4 w-4 mr-2" />
+                                    Send Reminder
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+                              <DropdownMenuItem onClick={() => handleViewHistory(fee)}>
+                                <History className="h-4 w-4 mr-2" />
+                                Payment History {paymentCount > 0 && `(${paymentCount})`}
                               </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -416,15 +471,23 @@ export function FeesList({
           onOpenChange={setPaymentDialogOpen}
           fee={selectedFeeForPayment}
           studentName={getStudentName(selectedFeeForPayment.studentId)}
-          onRecordPayment={(amount, method, reference) => {
-            if (onRecordPayment) {
-              onRecordPayment(selectedFeeForPayment.id, amount, method, reference);
-            } else {
-              onUpdateFeeStatus(selectedFeeForPayment.id, 'paid', new Date().toISOString().split('T')[0]);
-            }
+          existingPayments={getFeePayments(selectedFeeForPayment.id)}
+          onRecordPayment={(amount, method, reference, notes) => {
+            onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes);
             setPaymentDialogOpen(false);
             setSelectedFeeForPayment(null);
           }}
+        />
+      )}
+
+      {/* Payment History Dialog */}
+      {selectedFeeForHistory && (
+        <PaymentHistoryDialog
+          open={historyDialogOpen}
+          onOpenChange={setHistoryDialogOpen}
+          fee={selectedFeeForHistory}
+          studentName={getStudentName(selectedFeeForHistory.studentId)}
+          payments={getFeePayments(selectedFeeForHistory.id)}
         />
       )}
 
