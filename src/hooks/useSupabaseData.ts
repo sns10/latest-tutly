@@ -1527,6 +1527,36 @@ export function useSupabaseData() {
     return true;
   };
 
+  // Delete a fee (and its associated payments)
+  const deleteFee = async (feeId: string) => {
+    // First delete any associated payments
+    const { error: paymentsError } = await supabase
+      .from('fee_payments')
+      .delete()
+      .eq('fee_id', feeId);
+
+    if (paymentsError) {
+      console.error('Error deleting fee payments:', paymentsError);
+      toast.error('Failed to delete fee payments');
+      return;
+    }
+
+    // Then delete the fee
+    const { error } = await supabase
+      .from('student_fees')
+      .delete()
+      .eq('id', feeId);
+
+    if (error) {
+      console.error('Error deleting fee:', error);
+      toast.error('Failed to delete fee');
+      return;
+    }
+
+    await fetchFees();
+    toast.success('Fee deleted successfully');
+  };
+
   return {
     students,
     weeklyTests,
@@ -1579,5 +1609,7 @@ export function useSupabaseData() {
     deleteRoom,
     updateStudent,
     assignStudentEmail,
+    deleteFee,
+    fetchFees,
   };
 }
