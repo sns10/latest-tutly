@@ -3,14 +3,15 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt } from 'lucide-react';
+import { Loader2, LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt, Activity } from 'lucide-react';
 import { 
   FeeDashboard, 
   FeesList, 
   FeeStructureManager, 
   FeeReports,
   AddCustomFeeDialog,
-  CustomFeesManager
+  CustomFeesManager,
+  PaymentActivityFeed
 } from '@/components/fees';
 import { toast } from 'sonner';
 
@@ -133,10 +134,14 @@ export default function FeesPage() {
 
       {/* Tabbed Interface */}
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 h-auto">
+        <TabsList className="grid w-full grid-cols-6 h-auto">
           <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
             <LayoutDashboard className="h-4 w-4 hidden sm:block" />
             Dashboard
+          </TabsTrigger>
+          <TabsTrigger value="activity" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
+            <Activity className="h-4 w-4 hidden sm:block" />
+            Activity
           </TabsTrigger>
           <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
             <List className="h-4 w-4 hidden sm:block" />
@@ -161,6 +166,23 @@ export default function FeesPage() {
             students={students}
             fees={fees}
             classFees={classFees}
+          />
+        </TabsContent>
+
+        <TabsContent value="activity" className="mt-4">
+          <PaymentActivityFeed
+            feePayments={payments.map(p => ({
+              id: p.id,
+              fee_id: p.feeId,
+              amount: p.amount,
+              payment_date: p.paymentDate,
+              payment_method: p.paymentMethod,
+              payment_reference: p.paymentReference || null,
+              notes: p.notes || null,
+              created_at: p.createdAt,
+            }))}
+            fees={fees}
+            students={students}
           />
         </TabsContent>
 
