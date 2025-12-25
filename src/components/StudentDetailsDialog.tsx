@@ -15,9 +15,21 @@ import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check, Mail, UserCheck, Flame, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check, Mail, UserCheck, Flame, TrendingUp, ChevronLeft, ChevronRight, History, Banknote, Smartphone, Building, ChevronDown, ChevronUp } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getYear, getMonth, setMonth, setYear } from 'date-fns';
 import { AssignStudentEmailDialog } from './AssignStudentEmailDialog';
+
+interface FeePayment {
+  id: string;
+  fee_id: string;
+  amount: number;
+  payment_date: string;
+  payment_method: string | null;
+  payment_reference: string | null;
+  notes: string | null;
+  created_at: string;
+}
 
 interface StudentDetailsDialogProps {
   student: Student;
@@ -25,6 +37,7 @@ interface StudentDetailsDialogProps {
   testResults: StudentTestResult[];
   tests: WeeklyTest[];
   fees: StudentFee[];
+  feePayments?: FeePayment[];
   subjects: Subject[];
   faculty: Faculty[];
   divisions?: Division[];
@@ -46,6 +59,7 @@ export function StudentDetailsDialog({
   testResults,
   tests,
   fees,
+  feePayments = [],
   subjects,
   faculty,
   divisions = [],
@@ -65,6 +79,46 @@ export function StudentDetailsDialog({
   const [editDivisionId, setEditDivisionId] = useState(student.divisionId || '');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
+  const [expandedFeeId, setExpandedFeeId] = useState<string | null>(null);
+
+  // Get payment method display info
+  const getPaymentMethodIcon = (method: string | null) => {
+    switch (method) {
+      case 'cash':
+        return <Banknote className="h-3 w-3" />;
+      case 'upi':
+        return <Smartphone className="h-3 w-3" />;
+      case 'bank_transfer':
+        return <Building className="h-3 w-3" />;
+      default:
+        return <CreditCard className="h-3 w-3" />;
+    }
+  };
+
+  const formatPaymentMethod = (method: string | null) => {
+    const methods: Record<string, string> = {
+      cash: 'Cash',
+      upi: 'UPI',
+      bank_transfer: 'Bank Transfer',
+      cheque: 'Cheque',
+      card: 'Card',
+    };
+    return method ? methods[method] || method : 'Unknown';
+  };
+
+  // Get payments for a specific fee
+  const getPaymentsForFee = (feeId: string) => {
+    return feePayments.filter(p => p.fee_id === feeId).sort((a, b) => 
+      new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+    );
+  };
+
+  // Calculate total paid for a fee
+  const getTotalPaidForFee = (feeId: string) => {
+    return feePayments
+      .filter(p => p.fee_id === feeId)
+      .reduce((sum, p) => sum + p.amount, 0);
+  };
 
   // Calculate statistics
   const presentCount = attendance.filter(a => a.status === 'present').length;
@@ -855,36 +909,116 @@ export function StudentDetailsDialog({
           </TabsContent>
 
           {/* Fees Tab */}
-          <TabsContent value="fees" className="mt-3">
+          <TabsContent value="fees" className="mt-3 space-y-4">
+            {/* Fee Summary */}
+            <div className="grid grid-cols-3 gap-2">
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-lg font-bold text-primary">₹{fees.reduce((sum, f) => sum + f.amount, 0).toLocaleString('en-IN')}</p>
+                  <p className="text-xs text-muted-foreground">Total Fees</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-lg font-bold text-green-600">₹{feePayments.reduce((sum, p) => sum + p.amount, 0).toLocaleString('en-IN')}</p>
+                  <p className="text-xs text-muted-foreground">Total Paid</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-3 text-center">
+                  <p className="text-lg font-bold text-yellow-600">
+                    ₹{(fees.reduce((sum, f) => sum + f.amount, 0) - feePayments.reduce((sum, p) => sum + p.amount, 0)).toLocaleString('en-IN')}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Pending</p>
+                </CardContent>
+              </Card>
+            </div>
+
             <Card>
               <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Fee Status</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Fee Records
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {fees.length === 0 ? (
                   <p className="text-center text-muted-foreground py-4">No fee records</p>
                 ) : (
-                  <div className="space-y-2">
-                    {fees.map((fee, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2 bg-secondary/30 rounded-lg">
-                        <div>
-                          <p className="font-medium text-sm">{fee.feeType || 'Tuition Fee'}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Due: {format(new Date(fee.dueDate), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-bold text-sm">₹{fee.amount}</p>
-                          <Badge 
-                            variant={fee.status === 'paid' ? 'default' : fee.status === 'overdue' ? 'destructive' : 'secondary'}
-                            className="text-xs capitalize"
-                          >
-                            {fee.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <ScrollArea className="max-h-[300px]">
+                    <div className="space-y-2">
+                      {fees.map((fee) => {
+                        const payments = getPaymentsForFee(fee.id);
+                        const totalPaid = getTotalPaidForFee(fee.id);
+                        const remaining = fee.amount - totalPaid;
+                        const isExpanded = expandedFeeId === fee.id;
+
+                        return (
+                          <div key={fee.id} className="border rounded-lg overflow-hidden">
+                            <div 
+                              className="flex items-center justify-between p-3 bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
+                              onClick={() => setExpandedFeeId(isExpanded ? null : fee.id)}
+                            >
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-medium text-sm">{fee.feeType || 'Tuition Fee'}</p>
+                                  {payments.length > 0 && (
+                                    <Badge variant="outline" className="text-xs gap-1">
+                                      <History className="h-3 w-3" />
+                                      {payments.length} payment{payments.length > 1 ? 's' : ''}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  Due: {format(new Date(fee.dueDate), 'MMM d, yyyy')}
+                                </p>
+                              </div>
+                              <div className="text-right flex items-center gap-2">
+                                <div>
+                                  <p className="font-bold text-sm">₹{fee.amount.toLocaleString('en-IN')}</p>
+                                  {totalPaid > 0 && totalPaid < fee.amount && (
+                                    <p className="text-xs text-green-600">Paid: ₹{totalPaid.toLocaleString('en-IN')}</p>
+                                  )}
+                                  <Badge 
+                                    variant={fee.status === 'paid' ? 'default' : fee.status === 'overdue' ? 'destructive' : 'secondary'}
+                                    className="text-xs capitalize"
+                                  >
+                                    {fee.status === 'partial' ? `Partial (₹${remaining.toLocaleString('en-IN')} left)` : fee.status}
+                                  </Badge>
+                                </div>
+                                {payments.length > 0 && (
+                                  isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Payment History */}
+                            {isExpanded && payments.length > 0 && (
+                              <div className="border-t bg-muted/30 p-2">
+                                <p className="text-xs font-medium text-muted-foreground mb-2 px-1">Payment History</p>
+                                <div className="space-y-1.5">
+                                  {payments.map((payment, idx) => (
+                                    <div key={payment.id} className="flex items-center justify-between p-2 bg-background rounded text-sm">
+                                      <div className="flex items-center gap-2">
+                                        {getPaymentMethodIcon(payment.payment_method)}
+                                        <div>
+                                          <p className="font-medium text-green-600">+₹{payment.amount.toLocaleString('en-IN')}</p>
+                                          <p className="text-xs text-muted-foreground">
+                                            {format(new Date(payment.payment_date), 'MMM d, yyyy')} • {formatPaymentMethod(payment.payment_method)}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <Badge variant="outline" className="text-xs">#{payments.length - idx}</Badge>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </ScrollArea>
                 )}
               </CardContent>
             </Card>
