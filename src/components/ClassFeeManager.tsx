@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { ClassName, ClassFee, Student } from '@/types';
 
-const ALL_CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
+const ALL_CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
 interface ClassFeeManagerProps {
   classFees: ClassFee[];

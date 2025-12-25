@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
+import { CreatableSelect } from '@/components/ui/creatable-select';
 import { Badge } from '@/components/ui/badge';
 import { Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,18 +35,15 @@ interface ScheduleClassDialogProps {
   trigger?: React.ReactNode;
 }
 
-const EVENT_TYPES = [
-  { value: 'class', label: 'Regular Class' },
-  { value: 'exam_revision', label: 'Exam Revision' },
-  { value: 'night_class', label: 'Night Class' },
-  { value: 'special_class', label: 'Special Class' },
-  { value: 'replacement', label: 'Holiday Replacement' },
-  { value: 'extra_class', label: 'Extra Class' },
-  { value: 'ptm', label: 'Parent-Teacher Meeting' },
-  { value: 'custom', label: 'Custom Event' },
+const CLASS_TYPES = [
+  { value: 'Regular', label: 'Regular' },
+  { value: 'Night Class', label: 'Night Class' },
+  { value: 'Revision', label: 'Revision' },
+  { value: 'Exam', label: 'Exam' },
+  { value: 'Extra Class', label: 'Extra Class' },
 ];
 
-const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
+const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
 export function ScheduleClassDialog({
   timetable,
@@ -66,7 +64,7 @@ export function ScheduleClassDialog({
     startTime: '09:00',
     endTime: '10:00',
     roomId: '',
-    eventType: 'class',
+    eventType: 'Regular',
     notes: '',
   });
 
@@ -80,7 +78,7 @@ export function ScheduleClassDialog({
       startTime: '09:00',
       endTime: '10:00',
       roomId: '',
-      eventType: 'class',
+      eventType: 'Regular',
       notes: '',
     });
   };
@@ -199,30 +197,20 @@ export function ScheduleClassDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-lg bg-white max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-lg bg-white max-h-[85vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
           <DialogTitle>Schedule a Class</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Event Type */}
-          <div>
-            <Label>Event Type *</Label>
-            <Select
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0">
+          <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
+            {/* Class Type */}
+            <CreatableSelect
+              label="Class Type *"
               value={formData.eventType}
               onValueChange={(value) => setFormData({ ...formData, eventType: value })}
-            >
-              <SelectTrigger className="bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {EVENT_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+              options={CLASS_TYPES}
+              placeholder="Select or type class type..."
+            />
 
           {/* Date */}
           <div>
@@ -384,22 +372,19 @@ export function ScheduleClassDialog({
             </Select>
           </div>
 
-          {/* Notes */}
-          <div>
-            <Label>Notes (optional)</Label>
-            <Textarea
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Any additional notes..."
-              className="bg-white"
-              rows={2}
-            />
+            {/* Notes */}
+            <div>
+              <Label>Notes (optional)</Label>
+              <Textarea
+                value={formData.notes}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                placeholder="Any additional notes..."
+                className="bg-white"
+                rows={2}
+              />
+            </div>
           </div>
-
-          <div className="flex gap-2 pt-2">
-            <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700">
-              Schedule Class
-            </Button>
+          <DialogFooter className="px-6 py-4 border-t flex-shrink-0 gap-2">
             <Button
               type="button"
               variant="outline"
@@ -410,7 +395,10 @@ export function ScheduleClassDialog({
             >
               Cancel
             </Button>
-          </div>
+            <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              Schedule Class
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

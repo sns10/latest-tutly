@@ -128,45 +128,9 @@
   .touch-manipulation {
     touch-action: manipulation;
   }
-
-  /* Presentation mode utilities */
-  .presentation-mode {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-  }
-
-  /* High contrast mode improvements */
-  .high-contrast .bg-gradient-to-br {
-    background: var(--background) !important;
-  }
-
-  .high-contrast .bg-gradient-to-r {
-    background: var(--primary) !important;
-    -webkit-background-clip: initial !important;
-    background-clip: initial !important;
-    color: var(--primary-foreground) !important;
-  }
 }
 
 @layer components {
-  /* Smartboard-specific animations */
-  .animate-pop {
-    animation: pop 0.3s ease-out;
-  }
-
-  @keyframes pop {
-    0% {
-      transform: scale(1);
-    }
-    50% {
-      transform: scale(1.05);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
 
   /* Touch feedback for mobile */
   .touch-feedback:active {
@@ -270,5 +234,15 @@
     overflow: hidden;
     position: fixed;
     width: 100%;
+  }
+
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

@@ -14,6 +14,8 @@ import { FeatureGate } from "@/components/FeatureGate";
 import { PortalEmailConfig } from "@/components/PortalEmailConfig";
 import { HomeworkManager } from "@/components/HomeworkManager";
 import { BackupDashboard } from "@/components/BackupDashboard";
+import { AttendanceNotificationAlert } from "@/components/AttendanceNotificationAlert";
+import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TuitionBranding } from "@/components/TuitionBranding";
@@ -78,6 +80,7 @@ const Index = () => {
     subjects,
     faculty,
     divisions,
+    timetable,
     loading,
     addStudent,
     addWeeklyTest,
@@ -97,6 +100,14 @@ const Index = () => {
     updateFeeStatus,
     updateClassFee,
   } = useSupabaseData();
+
+  // Attendance notification system
+  const { pendingClass, dismissNotification } = useAttendanceNotification(
+    timetable || [],
+    attendance,
+    subjects,
+    faculty
+  );
 
   const handleSharePortalLink = () => {
     const portalUrl = `${window.location.origin}/student`;
@@ -122,9 +133,14 @@ const Index = () => {
   }
 
   return (
-    <Routes>
-      <Route path="/" element={
-        <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
+    <>
+      <AttendanceNotificationAlert
+        pendingClass={pendingClass}
+        onDismiss={dismissNotification}
+      />
+      <Routes>
+        <Route path="/" element={
+          <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
           <div className="flex items-center justify-between mb-4 gap-2">
             <TuitionBranding 
               name={tuition?.name || 'Dashboard'} 
@@ -176,13 +192,6 @@ const Index = () => {
           <ManagementCards 
             testsCount={weeklyTests.length}
             studentsCount={students.length}
-            attendanceToday={
-              attendance.length > 0 
-                ? Math.round((attendance.filter(a => a.status === 'present' && a.date === new Date().toISOString().split('T')[0]).length / 
-                    attendance.filter(a => a.date === new Date().toISOString().split('T')[0]).length) * 100) || 0
-                : 0
-            }
-            pendingFees={fees.filter(f => f.status === 'unpaid' || f.status === 'overdue').length}
             activeChallenges={challenges.filter(c => c.isActive).length}
           />
 
@@ -213,9 +222,6 @@ const Index = () => {
                 challenges={challenges}
                 studentChallenges={studentChallenges}
                 announcements={announcements}
-                attendance={attendance}
-                fees={fees}
-                classFees={classFees}
                 subjects={subjects}
                 faculty={faculty}
                 divisions={divisions}
@@ -229,14 +235,12 @@ const Index = () => {
                 onAddChallenge={addChallenge}
                 onCompleteChallenge={completeChallenge}
                 onAddAnnouncement={addAnnouncement}
-                onMarkAttendance={markAttendance}
-                onAddFee={addFee}
-                onUpdateFeeStatus={updateFeeStatus}
-                onUpdateClassFee={updateClassFee}
                 onCreateTermExam={addTermExam}
                 onDeleteTermExam={deleteTermExam}
                 onAddTermExamResult={addTermExamResult}
                 onBulkAddTermExamResults={bulkAddTermExamResults}
+                showAttendanceTab={false}
+                showFeesTab={false}
               />
             </CardContent>
           </Card>
@@ -299,7 +303,8 @@ const Index = () => {
           </Suspense>
         </FeatureGate>
       } />
-    </Routes>
+      </Routes>
+    </>
   );
 };
 

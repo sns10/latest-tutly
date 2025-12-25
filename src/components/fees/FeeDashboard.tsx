@@ -171,58 +171,58 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Total Expected</p>
-                <p className="text-lg sm:text-2xl font-bold">{formatCurrency(stats.totalAmount)}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Total Expected</p>
+                <p className="text-base sm:text-lg md:text-2xl font-bold truncate">{formatCurrency(stats.totalAmount)}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-primary" />
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0 ml-2">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Collected</p>
-                <p className="text-lg sm:text-2xl font-bold text-green-600">{formatCurrency(stats.paidAmount)}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Collected</p>
+                <p className="text-base sm:text-lg md:text-2xl font-bold text-green-600 truncate">{formatCurrency(stats.paidAmount)}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-green-100 flex items-center justify-center shrink-0 ml-2">
+                <CheckCircle className="h-4 w-4 sm:h-5 sm:w-5 text-green-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Pending</p>
-                <p className="text-lg sm:text-2xl font-bold text-yellow-600">{formatCurrency(stats.unpaidAmount)}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Pending</p>
+                <p className="text-base sm:text-lg md:text-2xl font-bold text-yellow-600 truncate">{formatCurrency(stats.unpaidAmount)}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-yellow-100 flex items-center justify-center">
-                <Clock className="h-5 w-5 text-yellow-600" />
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-yellow-100 flex items-center justify-center shrink-0 ml-2">
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600" />
               </div>
             </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Overdue</p>
-                <p className="text-lg sm:text-2xl font-bold text-red-600">{formatCurrency(stats.overdueAmount)}</p>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs sm:text-sm text-muted-foreground truncate">Overdue</p>
+                <p className="text-base sm:text-lg md:text-2xl font-bold text-red-600 truncate">{formatCurrency(stats.overdueAmount)}</p>
               </div>
-              <div className="h-10 w-10 rounded-full bg-red-100 flex items-center justify-center">
-                <AlertTriangle className="h-5 w-5 text-red-600" />
+              <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full bg-red-100 flex items-center justify-center shrink-0 ml-2">
+                <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-red-600" />
               </div>
             </div>
           </CardContent>
@@ -230,7 +230,7 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
       </div>
 
       {/* Collection Rate & Target */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base sm:text-lg flex items-center gap-2">
@@ -238,10 +238,10 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
               Collection Rate
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-2xl sm:text-3xl font-bold">{stats.collectionRate.toFixed(1)}%</span>
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-xl sm:text-2xl md:text-3xl font-bold">{stats.collectionRate.toFixed(1)}%</span>
                 <Badge variant={stats.rateChange >= 0 ? "default" : "destructive"} className="flex items-center gap-1">
                   {stats.rateChange >= 0 ? (
                     <ArrowUpRight className="h-3 w-3" />
@@ -268,21 +268,21 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
               Student Summary
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-sm sm:text-base">
                 <span className="text-muted-foreground">Total Students</span>
                 <span className="font-semibold">{stats.totalStudents}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-sm sm:text-base">
                 <span className="text-muted-foreground">Fees Generated</span>
                 <span className="font-semibold">{stats.paidCount + stats.unpaidCount + stats.overdueCount}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-sm sm:text-base">
                 <span className="text-muted-foreground">Fully Paid</span>
                 <span className="font-semibold text-green-600">{stats.paidCount}</span>
               </div>
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between text-sm sm:text-base">
                 <span className="text-muted-foreground">Defaulters</span>
                 <span className="font-semibold text-red-600">{stats.overdueCount}</span>
               </div>
@@ -327,8 +327,8 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
             <CardTitle className="text-base sm:text-lg">Status Distribution</CardTitle>
             <CardDescription>Current month breakdown</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="h-[250px]">
+          <CardContent className="p-4 sm:p-6">
+            <div className="h-[200px] sm:h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -366,14 +366,14 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
           <CardHeader>
             <CardTitle className="text-base sm:text-lg">Class-wise Collection</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <div className="space-y-3">
               {classWiseData.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No fee data available</p>
+                <p className="text-xs sm:text-sm text-muted-foreground text-center py-4">No fee data available</p>
               ) : (
                 classWiseData.map((item) => (
                   <div key={item.class} className="space-y-1">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-xs sm:text-sm flex-wrap gap-1">
                       <span className="font-medium">{item.class}</span>
                       <span className="text-muted-foreground">
                         ₹{item.collected.toFixed(1)}K / ₹{item.total.toFixed(1)}K ({item.rate}%)
@@ -395,21 +395,21 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
               Top Defaulters
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-4 sm:p-6">
             <div className="space-y-3">
               {topDefaulters.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-4">No defaulters 🎉</p>
+                <p className="text-xs sm:text-sm text-muted-foreground text-center py-4">No defaulters 🎉</p>
               ) : (
                 topDefaulters.map((item, index) => (
-                  <div key={item.student.id} className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-bold text-muted-foreground w-5">{index + 1}</span>
-                      <div>
-                        <p className="font-medium text-sm">{item.student.name}</p>
-                        <p className="text-xs text-muted-foreground">{item.student.class} • {item.unpaidCount} unpaid</p>
+                  <div key={item.student.id} className="flex items-center justify-between p-2 sm:p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                      <span className="text-xs font-bold text-muted-foreground w-5 shrink-0">{index + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs sm:text-sm truncate">{item.student.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">{item.student.class} • {item.unpaidCount} unpaid</p>
                       </div>
                     </div>
-                    <span className="font-bold text-red-600">{formatCurrency(item.unpaidAmount)}</span>
+                    <span className="font-bold text-red-600 text-xs sm:text-sm shrink-0 ml-2">{formatCurrency(item.unpaidAmount)}</span>
                   </div>
                 ))
               )}

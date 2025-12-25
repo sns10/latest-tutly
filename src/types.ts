@@ -1,4 +1,4 @@
-export type ClassName = "8th" | "9th" | "10th" | "11th" | "12th" | "All";
+export type ClassName = "4th" | "5th" | "6th" | "7th" | "8th" | "9th" | "10th" | "11th" | "12th" | "All";
 
 export interface Division {
   id: string;

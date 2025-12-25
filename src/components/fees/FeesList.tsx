@@ -6,25 +6,35 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '@/components/ui/table';
-import { 
-  CheckCircle, 
-  Clock, 
-  AlertTriangle, 
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import {
+  CheckCircle,
+  Clock,
+  AlertTriangle,
   Search,
   Download,
   Calendar,
   CreditCard,
   MessageSquare,
   MoreHorizontal,
-  History
+  History,
+  Filter,
+  X
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -37,6 +47,9 @@ import { toast } from 'sonner';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
+import { FloatingActionButton } from './FloatingActionButton';
+import { FeeCard } from './FeeCard';
+import { getStatusBadge } from './feeHelpers';
 
 interface FeePayment {
   id: string;
@@ -80,6 +93,7 @@ export function FeesList({
   const [selectedStudentForReminder, setSelectedStudentForReminder] = useState<Student | null>(null);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedFeeForHistory, setSelectedFeeForHistory] = useState<StudentFee | null>(null);
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   function getCurrentMonth() {
     const now = new Date();
@@ -91,11 +105,11 @@ export function FeesList({
       toast.error('Please set class fees first');
       return;
     }
-    
+
     const currentMonth = getCurrentMonth();
     const currentYear = new Date().getFullYear();
     let feesGenerated = 0;
-    
+
     students.forEach(student => {
       const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${currentMonth}`);
       if (!existingFee) {
@@ -114,7 +128,7 @@ export function FeesList({
         }
       }
     });
-    
+
     if (feesGenerated > 0) {
       toast.success(`Generated fees for ${feesGenerated} students`);
     } else {
@@ -142,8 +156,8 @@ export function FeesList({
     return fees.filter(fee => {
       const student = students.find(s => s.id === fee.studentId);
       const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
-      const monthMatch = fee.feeType?.includes(selectedMonth) || 
-                         (fee.feeType === 'monthly' && fee.dueDate?.startsWith(selectedMonth));
+      const monthMatch = fee.feeType?.includes(selectedMonth) ||
+        (fee.feeType === 'monthly' && fee.dueDate?.startsWith(selectedMonth));
       const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
       const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
       const searchMatch = searchQuery === '' || (student && student.name.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -166,7 +180,7 @@ export function FeesList({
   };
 
   const getFeePayments = (feeId: string) => {
-    return payments.filter(p => p.feeId === feeId).sort((a, b) => 
+    return payments.filter(p => p.feeId === feeId).sort((a, b) =>
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     );
   };
@@ -229,18 +243,7 @@ export function FeesList({
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100"><CheckCircle className="h-3 w-3 mr-1" />Paid</Badge>;
-      case 'partial':
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100"><Clock className="h-3 w-3 mr-1" />Partial</Badge>;
-      case 'overdue':
-        return <Badge className="bg-red-100 text-red-700 hover:bg-red-100"><AlertTriangle className="h-3 w-3 mr-1" />Overdue</Badge>;
-      default:
-        return <Badge className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100"><Clock className="h-3 w-3 mr-1" />Unpaid</Badge>;
-    }
-  };
+
 
   const exportToCSV = () => {
     const headers = ['Student', 'Class', 'Amount', 'Paid', 'Remaining', 'Due Date', 'Status', 'Paid Date'];
@@ -257,7 +260,7 @@ export function FeesList({
         fee.paidDate || '-'
       ];
     });
-    
+
     const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
@@ -272,32 +275,177 @@ export function FeesList({
   const totalAmount = filteredFees.reduce((sum, f) => sum + f.amount, 0);
   const paidAmount = filteredFees.reduce((sum, f) => sum + getTotalPaid(f.id), 0);
 
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedMonth !== getCurrentMonth()) count++;
+    if (selectedClass !== 'All') count++;
+    if (statusFilter !== 'All') count++;
+    if (selectedStudent !== 'All') count++;
+    if (searchQuery !== '') count++;
+    return count;
+  }, [selectedMonth, selectedClass, statusFilter, selectedStudent, searchQuery]);
+
+  const clearFilters = () => {
+    setSelectedMonth(getCurrentMonth());
+    setSelectedClass('All');
+    setStatusFilter('All');
+    setSelectedStudent('All');
+    setSearchQuery('');
+  };
+
+  // Filter component (reusable)
+  const FilterContent = () => (
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Month</label>
+          <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+            <SelectTrigger>
+              <SelectValue placeholder="Month" />
+            </SelectTrigger>
+            <SelectContent>
+              {getAvailableMonths().map(month => (
+                <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Class</label>
+          <Select value={selectedClass} onValueChange={setSelectedClass}>
+            <SelectTrigger>
+              <SelectValue placeholder="Class" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Classes</SelectItem>
+              {uniqueClasses.map(className => (
+                <SelectItem key={className} value={className}>{className}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Status</label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger>
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Status</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="unpaid">Unpaid</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Student</label>
+          <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+            <SelectTrigger>
+              <SelectValue placeholder="Student" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Students</SelectItem>
+              {students
+                .filter(s => selectedClass === 'All' || s.class === selectedClass)
+                .map(student => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student.name} - {student.class}
+                  </SelectItem>
+                ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Search</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by student name..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+        </div>
+      </div>
+
+      {activeFilterCount > 0 && (
+        <Button
+          variant="outline"
+          onClick={clearFilters}
+          className="w-full"
+          size="sm"
+        >
+          <X className="h-4 w-4 mr-2" />
+          Clear All Filters
+        </Button>
+      )}
+    </div>
+  );
+
   return (
     <div className="space-y-4">
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={generateMonthlyFees} size="sm">
-            <Calendar className="h-4 w-4 mr-2" />
-            Generate Fees
+          <Button onClick={generateMonthlyFees} size="sm" className="text-xs sm:text-sm">
+            <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Generate Fees</span>
+            <span className="sm:hidden">Generate</span>
           </Button>
           {selectedFees.size > 0 && (
-            <Button onClick={handleBulkMarkPaid} size="sm" variant="outline">
-              <CheckCircle className="h-4 w-4 mr-2" />
-              Mark {selectedFees.size} as Paid
+            <Button onClick={handleBulkMarkPaid} size="sm" variant="outline" className="text-xs sm:text-sm">
+              <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              <span className="hidden sm:inline">Mark {selectedFees.size} as Paid</span>
+              <span className="sm:hidden">Mark {selectedFees.size} Paid</span>
             </Button>
           )}
         </div>
-        <Button onClick={exportToCSV} size="sm" variant="outline">
-          <Download className="h-4 w-4 mr-2" />
-          Export CSV
-        </Button>
+        <div className="flex gap-2">
+          {/* Mobile Filter Button */}
+          <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+            <SheetTrigger asChild>
+              <Button size="sm" variant="outline" className="md:hidden">
+                <Filter className="h-4 w-4 mr-2" />
+                Filters
+                {activeFilterCount > 0 && (
+                  <Badge variant="secondary" className="ml-2 h-5 w-5 p-0 flex items-center justify-center">
+                    {activeFilterCount}
+                  </Badge>
+                )}
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] sm:w-[400px]">
+              <SheetHeader>
+                <SheetTitle>Filters</SheetTitle>
+                <SheetDescription>
+                  Filter fees by month, class, status, and student
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-6">
+                <FilterContent />
+              </div>
+            </SheetContent>
+          </Sheet>
+          <Button onClick={exportToCSV} size="sm" variant="outline" className="text-xs sm:text-sm">
+            <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Export CSV</span>
+            <span className="sm:hidden">Export</span>
+          </Button>
+        </div>
       </div>
 
-      {/* Filters */}
-      <Card>
+      {/* Filters - Desktop */}
+      <Card className="hidden md:block">
         <CardContent className="p-4">
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             <Select value={selectedMonth} onValueChange={setSelectedMonth}>
               <SelectTrigger>
                 <SelectValue placeholder="Month" />
@@ -334,7 +482,7 @@ export function FeesList({
               </SelectContent>
             </Select>
 
-            <div className="col-span-2 md:col-span-2 relative">
+            <div className="col-span-2 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Search student..."
@@ -347,26 +495,64 @@ export function FeesList({
         </CardContent>
       </Card>
 
+      {/* Active Filter Chips - Mobile */}
+      {activeFilterCount > 0 && (
+        <div className="md:hidden flex flex-wrap gap-2">
+          {selectedMonth !== getCurrentMonth() && (
+            <Badge variant="secondary" className="gap-1">
+              Month: {getAvailableMonths().find(m => m.value === selectedMonth)?.label.split(' ')[0]}
+              <button onClick={() => setSelectedMonth(getCurrentMonth())} className="ml-1">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {selectedClass !== 'All' && (
+            <Badge variant="secondary" className="gap-1">
+              Class: {selectedClass}
+              <button onClick={() => setSelectedClass('All')} className="ml-1">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {statusFilter !== 'All' && (
+            <Badge variant="secondary" className="gap-1">
+              Status: {statusFilter}
+              <button onClick={() => setStatusFilter('All')} className="ml-1">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {searchQuery !== '' && (
+            <Badge variant="secondary" className="gap-1">
+              Search: {searchQuery}
+              <button onClick={() => setSearchQuery('')} className="ml-1">
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
+      )}
+
       {/* Summary */}
-      <div className="flex flex-wrap gap-4 text-sm">
+      <div className="flex flex-wrap gap-2 sm:gap-4 text-xs sm:text-sm">
         <span className="text-muted-foreground">
           Showing <strong>{filteredFees.length}</strong> records
         </span>
-        <span className="text-muted-foreground">•</span>
+        <span className="text-muted-foreground hidden sm:inline">•</span>
         <span>Total: <strong>₹{totalAmount.toLocaleString('en-IN')}</strong></span>
-        <span className="text-muted-foreground">•</span>
+        <span className="text-muted-foreground hidden sm:inline">•</span>
         <span className="text-green-600">Collected: <strong>₹{paidAmount.toLocaleString('en-IN')}</strong></span>
       </div>
 
-      {/* Table */}
-      <Card>
+      {/* Desktop Table View */}
+      <Card className="hidden md:block">
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10">
-                    <Checkbox 
+                    <Checkbox
                       checked={selectedFees.size > 0 && selectedFees.size === filteredFees.filter(f => f.status !== 'paid').length}
                       onCheckedChange={handleSelectAll}
                     />
@@ -392,12 +578,12 @@ export function FeesList({
                     const totalPaid = getTotalPaid(fee.id);
                     const remaining = fee.amount - totalPaid;
                     const paymentCount = getFeePayments(fee.id).length;
-                    
+
                     return (
                       <TableRow key={fee.id}>
                         <TableCell>
                           {fee.status !== 'paid' && (
-                            <Checkbox 
+                            <Checkbox
                               checked={selectedFees.has(fee.id)}
                               onCheckedChange={(checked) => handleSelectFee(fee.id, checked as boolean)}
                             />
@@ -464,6 +650,41 @@ export function FeesList({
         </CardContent>
       </Card>
 
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {filteredFees.length === 0 ? (
+          <Card>
+            <CardContent className="py-8 text-center text-muted-foreground text-sm">
+              No fees found. {classFees.length === 0 ? 'Set class fees first.' : 'Click "Generate Fees" to create fee records.'}
+            </CardContent>
+          </Card>
+        ) : (
+          filteredFees.map(fee => {
+            const totalPaid = getTotalPaid(fee.id);
+            const remaining = fee.amount - totalPaid;
+            const paymentCount = getFeePayments(fee.id).length;
+
+            return (
+              <FeeCard
+                key={fee.id}
+                fee={fee}
+                studentName={getStudentName(fee.studentId)}
+                studentClass={getStudentClass(fee.studentId)}
+                totalPaid={totalPaid}
+                remaining={remaining}
+                paymentCount={paymentCount}
+                isSelected={selectedFees.has(fee.id)}
+                onSelect={(checked) => handleSelectFee(fee.id, checked)}
+                onMarkAsPaid={() => handleMarkAsPaid(fee.id)}
+                onRecordPayment={() => handleRecordPayment(fee)}
+                onSendReminder={() => handleSendReminder(fee.studentId)}
+                onViewHistory={() => handleViewHistory(fee)}
+              />
+            );
+          })
+        )}
+      </div>
+
       {/* Payment Dialog */}
       {selectedFeeForPayment && (
         <RecordPaymentDialog
@@ -500,6 +721,21 @@ export function FeesList({
           unpaidFees={fees.filter(f => f.studentId === selectedStudentForReminder.id && f.status !== 'paid')}
         />
       )}
+
+      {/* Floating Action Button - Mobile Only */}
+      <FloatingActionButton
+        onRecordPayment={() => {
+          // Open payment dialog for first unpaid fee if available (search unfiltered fees)
+          const unpaidFee = fees.find(f => f.status !== 'paid');
+          if (unpaidFee) {
+            handleRecordPayment(unpaidFee);
+          } else {
+            toast.info('No unpaid fees to record payment for');
+          }
+        }}
+        onGenerateFees={generateMonthlyFees}
+        showGenerateFees={true}
+      />
     </div>
   );
 }

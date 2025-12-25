@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { CreateTestDialog } from "./CreateTestDialog";
 import { EnterMarksDialog } from "./EnterMarksDialog";
 import { TestResultsView } from "./TestResultsView";
-import { SmartboardView } from "./SmartboardView";
 import { ChallengesManager } from "./ChallengesManager";
 import { AnnouncementsManager } from "./AnnouncementsManager";
 import { AttendanceTracker } from "./AttendanceTracker";
@@ -28,9 +27,9 @@ interface WeeklyTestManagerProps {
   challenges: Challenge[];
   studentChallenges: StudentChallenge[];
   announcements: Announcement[];
-  attendance: any[];
-  fees: any[];
-  classFees: ClassFee[];
+  attendance?: any[];
+  fees?: any[];
+  classFees?: ClassFee[];
   subjects: Subject[];
   faculty: Faculty[];
   divisions?: Division[];
@@ -44,14 +43,16 @@ interface WeeklyTestManagerProps {
   onAddChallenge: (challenge: Omit<Challenge, 'id' | 'createdAt'>) => void;
   onCompleteChallenge: (studentId: string, challengeId: string) => void;
   onAddAnnouncement: (announcement: Omit<Announcement, 'id' | 'publishedAt'>) => void;
-  onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => void;
-  onAddFee: (fee: any) => void;
-  onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
-  onUpdateClassFee: (className: string, amount: number) => void;
+  onMarkAttendance?: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string) => void;
+  onAddFee?: (fee: any) => void;
+  onUpdateFeeStatus?: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
+  onUpdateClassFee?: (className: string, amount: number) => void;
   onCreateTermExam?: (exam: any) => Promise<string | null>;
   onDeleteTermExam?: (examId: string) => void;
   onAddTermExamResult?: (result: any) => void;
   onBulkAddTermExamResults?: (results: any[]) => Promise<boolean>;
+  showAttendanceTab?: boolean;
+  showFeesTab?: boolean;
 }
 
 export function WeeklyTestManager({ 
@@ -61,9 +62,9 @@ export function WeeklyTestManager({
   challenges,
   studentChallenges,
   announcements,
-  attendance,
-  fees,
-  classFees,
+  attendance = [],
+  fees = [],
+  classFees = [],
   subjects,
   faculty,
   divisions = [],
@@ -85,6 +86,8 @@ export function WeeklyTestManager({
   onDeleteTermExam,
   onAddTermExamResult,
   onBulkAddTermExamResults,
+  showAttendanceTab = false,
+  showFeesTab = false,
 }: WeeklyTestManagerProps) {
   const { isFeatureEnabled } = useTuitionFeatures();
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
@@ -190,14 +193,18 @@ export function WeeklyTestManager({
               <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Students</span>
             </TabsTrigger>
-            <TabsTrigger value="attendance" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
-              <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Attend</span>
-            </TabsTrigger>
-            <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
-              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span>Fees</span>
-            </TabsTrigger>
+            {showAttendanceTab && (
+              <TabsTrigger value="attendance" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+                <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Attend</span>
+              </TabsTrigger>
+            )}
+            {showFeesTab && (
+              <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+                <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Fees</span>
+              </TabsTrigger>
+            )}
             {isFeatureEnabled('term_exams') && (
               <TabsTrigger value="term-exams" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
                 <BookOpen className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -367,6 +374,10 @@ export function WeeklyTestManager({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Classes</SelectItem>
+                    <SelectItem value="4th">4th</SelectItem>
+                    <SelectItem value="5th">5th</SelectItem>
+                    <SelectItem value="6th">6th</SelectItem>
+                    <SelectItem value="7th">7th</SelectItem>
                     <SelectItem value="8th">8th</SelectItem>
                     <SelectItem value="9th">9th</SelectItem>
                     <SelectItem value="10th">10th</SelectItem>
@@ -402,27 +413,31 @@ export function WeeklyTestManager({
           </Card>
         </TabsContent>
 
-        <TabsContent value="attendance">
-          <AttendanceTracker 
-            students={students}
-            attendance={attendance}
-            onMarkAttendance={onMarkAttendance}
-          />
-        </TabsContent>
+        {showAttendanceTab && onMarkAttendance && (
+          <TabsContent value="attendance">
+            <AttendanceTracker 
+              students={students}
+              attendance={attendance}
+              onMarkAttendance={onMarkAttendance}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="fees" className="space-y-6">
-          <ClassFeeManager 
-            classFees={classFees}
-            onUpdateClassFee={onUpdateClassFee}
-          />
-          <FeeManagement 
-            students={students}
-            fees={fees}
-            classFees={classFees}
-            onAddFee={onAddFee}
-            onUpdateFeeStatus={onUpdateFeeStatus}
-          />
-        </TabsContent>
+        {showFeesTab && onAddFee && onUpdateFeeStatus && onUpdateClassFee && (
+          <TabsContent value="fees" className="space-y-6">
+            <ClassFeeManager 
+              classFees={classFees}
+              onUpdateClassFee={onUpdateClassFee}
+            />
+            <FeeManagement 
+              students={students}
+              fees={fees}
+              classFees={classFees}
+              onAddFee={onAddFee}
+              onUpdateFeeStatus={onUpdateFeeStatus}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="challenges">
           <ChallengesManager 

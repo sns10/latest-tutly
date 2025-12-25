@@ -44,7 +44,7 @@ interface TimetableManagerProps {
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
+const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
 export function TimetableManager({
   timetable,

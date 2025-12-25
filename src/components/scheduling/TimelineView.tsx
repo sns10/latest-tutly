@@ -17,7 +17,7 @@ interface TimelineViewProps {
   onDeleteEntry?: (id: string) => void;
 }
 
-const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th', 'All'];
+const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th', 'All'];
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function TimelineView({
@@ -94,20 +94,29 @@ export function TimelineView({
   };
 
   const getEventTypeBadge = (entry: Timetable) => {
-    if (entry.type === 'regular') return null;
-
-    const eventType = entry.eventType || 'special';
+    const eventType = entry.eventType || 'Regular';
+    
+    // Map of known event types to colors (supports both old and new values)
     const labels: Record<string, { label: string; color: string }> = {
-      exam_revision: { label: 'Exam Revision', color: 'bg-purple-100 text-purple-700' },
-      night_class: { label: 'Night Class', color: 'bg-indigo-100 text-indigo-700' },
-      special_class: { label: 'Special', color: 'bg-blue-100 text-blue-700' },
-      replacement: { label: 'Replacement', color: 'bg-orange-100 text-orange-700' },
-      extra_class: { label: 'Extra', color: 'bg-green-100 text-green-700' },
-      ptm: { label: 'PTM', color: 'bg-pink-100 text-pink-700' },
-      custom: { label: 'Custom', color: 'bg-gray-100 text-gray-700' },
+      // New class type values
+      'Regular': { label: 'Regular', color: 'bg-slate-100 text-slate-700' },
+      'Night Class': { label: 'Night Class', color: 'bg-indigo-100 text-indigo-700' },
+      'Revision': { label: 'Revision', color: 'bg-purple-100 text-purple-700' },
+      'Exam': { label: 'Exam', color: 'bg-red-100 text-red-700' },
+      'Extra Class': { label: 'Extra Class', color: 'bg-green-100 text-green-700' },
+      // Old event type values (for backward compatibility)
+      'class': { label: 'Regular', color: 'bg-slate-100 text-slate-700' },
+      'exam_revision': { label: 'Exam Revision', color: 'bg-purple-100 text-purple-700' },
+      'night_class': { label: 'Night Class', color: 'bg-indigo-100 text-indigo-700' },
+      'special_class': { label: 'Special', color: 'bg-blue-100 text-blue-700' },
+      'replacement': { label: 'Replacement', color: 'bg-orange-100 text-orange-700' },
+      'extra_class': { label: 'Extra', color: 'bg-green-100 text-green-700' },
+      'ptm': { label: 'PTM', color: 'bg-pink-100 text-pink-700' },
+      'custom': { label: 'Custom', color: 'bg-gray-100 text-gray-700' },
     };
 
-    const badge = labels[eventType] || labels.custom;
+    // Use the eventType as-is if it exists in labels, otherwise treat it as a custom value
+    const badge = labels[eventType] || { label: eventType, color: 'bg-gray-100 text-gray-700' };
     return <Badge className={`${badge.color} text-xs`}>{badge.label}</Badge>;
   };
 

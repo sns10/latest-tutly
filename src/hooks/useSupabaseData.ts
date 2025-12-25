@@ -111,8 +111,8 @@ export function useSupabaseData() {
       } : undefined,
       tuitionId: student.tuition_id,
       avatar: student.avatar || '',
-      email: (student as any).email || undefined,
-      rollNo: (student as any).roll_no || undefined,
+      email: student.email || undefined,
+      rollNo: student.roll_no || undefined,
       team: student.team as TeamName | null,
       totalXp: student.total_xp,
       xp: {
@@ -268,17 +268,21 @@ export function useSupabaseData() {
   };
 
   const fetchAttendance = async () => {
-    // Backend API caps responses at 1000 rows per request. Attendance can exceed this,
-    // so we must fetch in pages to ensure older months (e.g., October) are included.
+    // Backend API caps responses at 1000 rows per request.
+    // To prevent browser crashes from loading millions of rows, we limit to the last 6 months.
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+
     const pageSize = 1000;
     let from = 0;
-
     const allRows: any[] = [];
+    const maxDateStr = sixMonthsAgo.toISOString().split('T')[0];
 
     while (true) {
       const { data, error } = await supabase
         .from('student_attendance')
         .select('*')
+        .gte('date', maxDateStr) // Only fetch recent data
         .order('date', { ascending: false })
         .order('created_at', { ascending: false })
         .range(from, from + pageSize - 1);
@@ -290,7 +294,9 @@ export function useSupabaseData() {
 
       allRows.push(...(data ?? []));
 
-      if (!data || data.length < pageSize) break;
+      // Stop if we got fewer rows than page size (end of data)
+      // OR if we've fetched a safe limit (e.g., 50k rows)
+      if (!data || data.length < pageSize || allRows.length > 50000) break;
       from += pageSize;
     }
 
@@ -338,7 +344,7 @@ export function useSupabaseData() {
 
   const fetchClassFees = async () => {
     if (!tuitionId) return;
-    
+
     const { data, error } = await supabase
       .from('class_fees')
       .select('*')
@@ -521,7 +527,7 @@ export function useSupabaseData() {
           student_id: studentId,
           category,
           amount: newAmount,
-        }, 
+        },
         { onConflict: 'student_id,category' }
       );
 
@@ -804,20 +810,20 @@ export function useSupabaseData() {
         .select('id')
         .eq('student_id', studentId)
         .eq('date', date);
-      
+
       // Handle null checks for subject_id and faculty_id
       if (normalizedSubjectId) {
         query = query.eq('subject_id', normalizedSubjectId);
       } else {
         query = query.is('subject_id', null);
       }
-      
+
       if (normalizedFacultyId) {
         query = query.eq('faculty_id', normalizedFacultyId);
       } else {
         query = query.is('faculty_id', null);
       }
-      
+
       const { data: existingAttendance, error: checkError } = await query.maybeSingle();
 
       if (checkError) {
@@ -878,8 +884,8 @@ export function useSupabaseData() {
       setAttendance(prev => {
         // Remove existing record if updating
         const filtered = prev.filter(a => !(
-          a.studentId === studentId && 
-          a.date === date && 
+          a.studentId === studentId &&
+          a.date === date &&
           (normalizedSubjectId ? a.subjectId === normalizedSubjectId : !a.subjectId) &&
           (normalizedFacultyId ? a.facultyId === normalizedFacultyId : !a.facultyId)
         ));
@@ -938,7 +944,7 @@ export function useSupabaseData() {
       toast.error('Unable to save class fee - no tuition context');
       return;
     }
-    
+
     // First check if the record exists
     const { data: existing } = await supabase
       .from('class_fees')
@@ -946,7 +952,7 @@ export function useSupabaseData() {
       .eq('class', className)
       .eq('tuition_id', tuitionId)
       .maybeSingle();
-    
+
     let error;
     if (existing) {
       // Update existing record
@@ -1013,7 +1019,8 @@ export function useSupabaseData() {
     const { data, error } = await supabase
       .from('subjects')
       .select('*')
-      .order('class, name');
+      .order('class', { ascending: true })
+      .order('name', { ascending: true });
 
     if (error) {
       console.error('Error fetching subjects:', error);
@@ -1030,7 +1037,6 @@ export function useSupabaseData() {
     setSubjects(formattedSubjects);
   };
 
-  // Fetch Timetable
   const fetchTimetable = async () => {
     const { data, error } = await supabase
       .from('timetable')
@@ -1040,7 +1046,8 @@ export function useSupabaseData() {
         faculty (*),
         divisions (*)
       `)
-      .order('day_of_week, start_time');
+      .order('day_of_week', { ascending: true })
+      .order('start_time', { ascending: true });
 
     if (error) {
       console.error('Error fetching timetable:', error);
@@ -1213,7 +1220,7 @@ export function useSupabaseData() {
 
     // Remove old subject mappings and add new ones
     await supabase.from('faculty_subjects').delete().eq('faculty_id', id);
-    
+
     if (subjectIds.length > 0) {
       await supabase
         .from('faculty_subjects')

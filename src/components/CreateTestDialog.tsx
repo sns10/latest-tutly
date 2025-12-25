@@ -41,7 +41,7 @@ const formSchema = z.object({
   subject: z.string().min(1, "Please select a subject."),
   maxMarks: z.coerce.number().int().positive("Max marks must be a positive number."),
   date: z.date(),
-  class: z.enum(["8th", "9th", "10th", "11th", "12th", "All"]),
+  class: z.enum(["4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "All"]),
 });
 
 interface CreateTestDialogProps {
@@ -134,6 +134,10 @@ export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps)
                     </FormControl>
                     <SelectContent>
                       <SelectItem value="All">All Classes</SelectItem>
+                      <SelectItem value="4th">4th Grade</SelectItem>
+                      <SelectItem value="5th">5th Grade</SelectItem>
+                      <SelectItem value="6th">6th Grade</SelectItem>
+                      <SelectItem value="7th">7th Grade</SelectItem>
                       <SelectItem value="8th">8th Grade</SelectItem>
                       <SelectItem value="9th">9th Grade</SelectItem>
                       <SelectItem value="10th">10th Grade</SelectItem>

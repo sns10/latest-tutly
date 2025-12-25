@@ -113,8 +113,8 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {tuitions.map((tuition) => (
-          <Card 
-            key={tuition.id} 
+          <Card
+            key={tuition.id}
             className="border-slate-200 shadow-sm hover:shadow-md transition-all hover:border-slate-300"
           >
             <CardHeader>
@@ -133,7 +133,7 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
               </div>
               <div className="flex items-center justify-between mt-3">
                 <div className="flex gap-2">
-                  <Badge 
+                  <Badge
                     variant={tuition.is_active ? 'default' : 'secondary'}
                     className={tuition.is_active ? 'bg-green-500' : 'bg-slate-400'}
                   >
@@ -179,17 +179,17 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
                 <span>Created {format(new Date(tuition.created_at), 'MMM d, yyyy')}</span>
               </div>
               <div className="flex gap-2 pt-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
+                <Button
+                  variant="outline"
+                  size="sm"
                   className="flex-1"
                   onClick={() => setViewTuition(tuition)}
                 >
                   <Eye className="h-4 w-4 mr-1" />
                   View
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => setEditTuition(tuition)}
                 >
@@ -197,8 +197,8 @@ export function TuitionsList({ tuitions, loading, onRefresh }: TuitionsListProps
                 </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="outline" 
+                    <Button
+                      variant="outline"
                       size="sm"
                       className="text-destructive hover:text-destructive"
                     >

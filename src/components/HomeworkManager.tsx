@@ -32,7 +32,7 @@ interface Homework {
   subjects?: { name: string } | null;
 }
 
-const CLASSES = ['8th', '9th', '10th', '11th', '12th'];
+const CLASSES = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
 export function HomeworkManager() {
   const { tuitionId } = useUserTuition();

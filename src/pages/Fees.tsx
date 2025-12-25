@@ -134,30 +134,35 @@ export default function FeesPage() {
 
       {/* Tabbed Interface */}
       <Tabs defaultValue="dashboard" className="w-full">
-        <TabsList className="grid w-full grid-cols-6 h-auto">
-          <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
-            <LayoutDashboard className="h-4 w-4 hidden sm:block" />
-            Dashboard
+        <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto p-1 bg-white border border-slate-200 touch-pan-x">
+          <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Dashboard</span>
+            <span className="xs:hidden">Dash</span>
           </TabsTrigger>
-          <TabsTrigger value="activity" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
-            <Activity className="h-4 w-4 hidden sm:block" />
-            Activity
+          <TabsTrigger value="activity" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Activity</span>
+            <span className="xs:hidden">Act</span>
           </TabsTrigger>
-          <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
-            <List className="h-4 w-4 hidden sm:block" />
+          <TabsTrigger value="fees" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Fees
           </TabsTrigger>
-          <TabsTrigger value="custom" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
-            <Receipt className="h-4 w-4 hidden sm:block" />
-            Custom
+          <TabsTrigger value="custom" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <Receipt className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Custom</span>
+            <span className="xs:hidden">Cust</span>
           </TabsTrigger>
-          <TabsTrigger value="structure" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
-            <Settings className="h-4 w-4 hidden sm:block" />
-            Structure
+          <TabsTrigger value="structure" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <Settings className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Structure</span>
+            <span className="xs:hidden">Struct</span>
           </TabsTrigger>
-          <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm py-2">
-            <FileText className="h-4 w-4 hidden sm:block" />
-            Reports
+          <TabsTrigger value="reports" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden xs:inline">Reports</span>
+            <span className="xs:hidden">Rpt</span>
           </TabsTrigger>
         </TabsList>
 

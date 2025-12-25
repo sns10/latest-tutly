@@ -93,39 +93,39 @@ export function RecordPaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
+      <DialogContent className="w-[calc(100%-2rem)] max-w-md max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-4 sm:px-6 pt-4 sm:pt-6 pb-3 sm:pb-4 border-b flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <CreditCard className="h-4 w-4 sm:h-5 sm:w-5" />
             Record Payment
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-xs sm:text-sm">
             Recording payment for {studentName}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="px-4 sm:px-6 py-4 overflow-y-auto flex-1 space-y-4">
           {/* Fee Summary */}
-          <div className="p-3 bg-muted rounded-lg space-y-2">
-            <div className="flex justify-between text-sm">
+          <div className="p-3 sm:p-4 bg-muted rounded-lg space-y-2">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground">Fee Type</span>
-              <span className="font-medium">{fee.feeType}</span>
+              <span className="font-medium truncate ml-2">{fee.feeType}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground">Total Amount</span>
               <span className="font-bold">₹{fee.amount.toLocaleString('en-IN')}</span>
             </div>
             {alreadyPaid > 0 && (
-              <div className="flex justify-between text-sm">
+              <div className="flex justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Already Paid</span>
                 <span className="font-medium text-green-600">₹{alreadyPaid.toLocaleString('en-IN')}</span>
               </div>
             )}
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground">Remaining Due</span>
               <span className="font-bold text-yellow-600">₹{remainingDue.toLocaleString('en-IN')}</span>
             </div>
-            <div className="flex justify-between text-sm">
+            <div className="flex justify-between text-xs sm:text-sm">
               <span className="text-muted-foreground">Due Date</span>
               <span>{new Date(fee.dueDate).toLocaleDateString()}</span>
             </div>
@@ -174,8 +174,8 @@ export function RecordPaymentDialog({
 
           {/* Payment Method */}
           <div className="space-y-2">
-            <Label>Payment Method</Label>
-            <div className="grid grid-cols-3 gap-2">
+            <Label className="text-sm">Payment Method</Label>
+            <div className="grid grid-cols-3 gap-2 sm:hidden">
               {PAYMENT_METHODS.slice(0, 3).map((method) => {
                 const Icon = method.icon;
                 return (
@@ -183,20 +183,20 @@ export function RecordPaymentDialog({
                     key={method.value}
                     type="button"
                     variant={paymentMethod === method.value ? 'default' : 'outline'}
-                    className="flex flex-col h-auto py-3"
+                    className="flex flex-col h-auto py-2.5"
                     onClick={() => setPaymentMethod(method.value)}
                   >
-                    <Icon className="h-4 w-4 mb-1" />
+                    <Icon className="h-3.5 w-3.5 mb-1" />
                     <span className="text-xs">{method.label}</span>
                   </Button>
                 );
               })}
             </div>
             <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-white">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white">
                 {PAYMENT_METHODS.map((method) => (
                   <SelectItem key={method.value} value={method.value}>
                     {method.label}
@@ -234,11 +234,11 @@ export function RecordPaymentDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+        <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs sm:text-sm">
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={remainingDue <= 0}>
+          <Button onClick={handleSubmit} disabled={remainingDue <= 0} className="text-xs sm:text-sm">
             Record Payment
           </Button>
         </DialogFooter>

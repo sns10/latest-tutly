@@ -224,44 +224,53 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
                 variant={selectedReport === 'monthly' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedReport('monthly')}
+                className="text-xs sm:text-sm"
               >
-                <Calendar className="h-4 w-4 mr-2" />
-                Monthly
+                <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                <span className="hidden sm:inline">Monthly</span>
+                <span className="sm:hidden">Month</span>
               </Button>
               <Button
                 variant={selectedReport === 'classwise' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedReport('classwise')}
+                className="text-xs sm:text-sm"
               >
-                <Users className="h-4 w-4 mr-2" />
-                Class-wise
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                <span className="hidden sm:inline">Class-wise</span>
+                <span className="sm:hidden">Class</span>
               </Button>
               <Button
                 variant={selectedReport === 'defaulters' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedReport('defaulters')}
+                className="text-xs sm:text-sm"
               >
-                <AlertTriangle className="h-4 w-4 mr-2" />
-                Defaulters
+                <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                <span className="hidden sm:inline">Defaulters</span>
+                <span className="sm:hidden">Def</span>
               </Button>
               <Button
                 variant={selectedReport === 'collection' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedReport('collection')}
+                className="text-xs sm:text-sm"
               >
-                <TrendingUp className="h-4 w-4 mr-2" />
+                <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
                 Trend
               </Button>
             </div>
 
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={exportToExcel}>
-                <FileSpreadsheet className="h-4 w-4 mr-2" />
-                Export
+              <Button variant="outline" size="sm" onClick={exportToExcel} className="text-xs sm:text-sm">
+                <FileSpreadsheet className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
+                <span className="sm:hidden">Exp</span>
               </Button>
-              <Button variant="outline" size="sm" onClick={handlePrint}>
-                <Printer className="h-4 w-4 mr-2" />
-                Print
+              <Button variant="outline" size="sm" onClick={handlePrint} className="text-xs sm:text-sm">
+                <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                <span className="hidden sm:inline">Print</span>
+                <span className="sm:hidden">Print</span>
               </Button>
             </div>
           </div>
@@ -278,7 +287,7 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
                 <CardDescription>Detailed fee collection for selected month</CardDescription>
               </div>
               <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                <SelectTrigger className="w-48">
+                <SelectTrigger className="w-full sm:w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -291,62 +300,107 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
           </CardHeader>
           <CardContent>
             {/* Summary */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 mb-6">
               <div className="p-3 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Total</p>
-                <p className="text-xl font-bold">₹{monthlyReport.total.toLocaleString('en-IN')}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Total</p>
+                <p className="text-lg sm:text-xl font-bold">₹{monthlyReport.total.toLocaleString('en-IN')}</p>
               </div>
               <div className="p-3 bg-green-50 rounded-lg">
-                <p className="text-sm text-green-600">Collected</p>
-                <p className="text-xl font-bold text-green-700">₹{monthlyReport.paid.toLocaleString('en-IN')}</p>
+                <p className="text-xs sm:text-sm text-green-600">Collected</p>
+                <p className="text-lg sm:text-xl font-bold text-green-700">₹{monthlyReport.paid.toLocaleString('en-IN')}</p>
               </div>
               <div className="p-3 bg-yellow-50 rounded-lg">
-                <p className="text-sm text-yellow-600">Pending</p>
-                <p className="text-xl font-bold text-yellow-700">₹{monthlyReport.unpaid.toLocaleString('en-IN')}</p>
+                <p className="text-xs sm:text-sm text-yellow-600">Pending</p>
+                <p className="text-lg sm:text-xl font-bold text-yellow-700">₹{monthlyReport.unpaid.toLocaleString('en-IN')}</p>
               </div>
               <div className="p-3 bg-blue-50 rounded-lg">
-                <p className="text-sm text-blue-600">Collection Rate</p>
-                <p className="text-xl font-bold text-blue-700">{monthlyReport.collectionRate}%</p>
+                <p className="text-xs sm:text-sm text-blue-600">Collection Rate</p>
+                <p className="text-lg sm:text-xl font-bold text-blue-700">{monthlyReport.collectionRate}%</p>
               </div>
             </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Student</TableHead>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Due Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {monthlyReport.fees.length === 0 ? (
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                      No fee records for this month
-                    </TableCell>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due Date</TableHead>
                   </TableRow>
-                ) : (
-                  monthlyReport.fees.map(fee => {
-                    const student = students.find(s => s.id === fee.studentId);
-                    return (
-                      <TableRow key={fee.id}>
-                        <TableCell className="font-medium">{student?.name || 'Unknown'}</TableCell>
-                        <TableCell><Badge variant="outline">{student?.class}</Badge></TableCell>
-                        <TableCell>₹{fee.amount.toLocaleString('en-IN')}</TableCell>
-                        <TableCell>
-                          <Badge variant={fee.status === 'paid' ? 'default' : fee.status === 'overdue' ? 'destructive' : 'secondary'}>
-                            {fee.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{new Date(fee.dueDate).toLocaleDateString()}</TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {monthlyReport.fees.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                        No fee records for this month
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    monthlyReport.fees.map(fee => {
+                      const student = students.find(s => s.id === fee.studentId);
+                      return (
+                        <TableRow key={fee.id}>
+                          <TableCell className="font-medium">{student?.name || 'Unknown'}</TableCell>
+                          <TableCell><Badge variant="outline">{student?.class}</Badge></TableCell>
+                          <TableCell>₹{fee.amount.toLocaleString('en-IN')}</TableCell>
+                          <TableCell>
+                            <Badge variant={fee.status === 'paid' ? 'default' : fee.status === 'overdue' ? 'destructive' : 'secondary'}>
+                              {fee.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{new Date(fee.dueDate).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {monthlyReport.fees.length === 0 ? (
+                <Card>
+                  <CardContent className="py-8 text-center text-muted-foreground text-sm">
+                    No fee records for this month
+                  </CardContent>
+                </Card>
+              ) : (
+                monthlyReport.fees.map(fee => {
+                  const student = students.find(s => s.id === fee.studentId);
+                  return (
+                    <Card key={fee.id}>
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base truncate">{student?.name || 'Unknown'}</h3>
+                              <Badge variant="outline" className="mt-1 text-xs">{student?.class}</Badge>
+                            </div>
+                            <Badge variant={fee.status === 'paid' ? 'default' : fee.status === 'overdue' ? 'destructive' : 'secondary'}>
+                              {fee.status}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Amount</p>
+                              <p className="text-lg font-bold">₹{fee.amount.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Due Date</p>
+                              <p className="text-sm font-medium">{new Date(fee.dueDate).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -359,34 +413,73 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
             <CardDescription>Fee collection summary by class</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Class</TableHead>
-                  <TableHead>Students</TableHead>
-                  <TableHead>Total Fees</TableHead>
-                  <TableHead>Collected</TableHead>
-                  <TableHead>Pending</TableHead>
-                  <TableHead>Rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Object.entries(classWiseReport).map(([className, data]) => (
-                  <TableRow key={className}>
-                    <TableCell><Badge variant="outline">{className}</Badge></TableCell>
-                    <TableCell>{data.students}</TableCell>
-                    <TableCell>₹{data.totalFees.toLocaleString('en-IN')}</TableCell>
-                    <TableCell className="text-green-600">₹{data.collected.toLocaleString('en-IN')}</TableCell>
-                    <TableCell className="text-red-600">₹{data.pending.toLocaleString('en-IN')}</TableCell>
-                    <TableCell>
-                      <Badge variant={parseFloat(data.collectionRate) >= 80 ? 'default' : 'secondary'}>
-                        {data.collectionRate}%
-                      </Badge>
-                    </TableCell>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Students</TableHead>
+                    <TableHead>Total Fees</TableHead>
+                    <TableHead>Collected</TableHead>
+                    <TableHead>Pending</TableHead>
+                    <TableHead>Rate</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {Object.entries(classWiseReport).map(([className, data]) => (
+                    <TableRow key={className}>
+                      <TableCell><Badge variant="outline">{className}</Badge></TableCell>
+                      <TableCell>{data.students}</TableCell>
+                      <TableCell>₹{data.totalFees.toLocaleString('en-IN')}</TableCell>
+                      <TableCell className="text-green-600">₹{data.collected.toLocaleString('en-IN')}</TableCell>
+                      <TableCell className="text-red-600">₹{data.pending.toLocaleString('en-IN')}</TableCell>
+                      <TableCell>
+                        <Badge variant={parseFloat(data.collectionRate) >= 80 ? 'default' : 'secondary'}>
+                          {data.collectionRate}%
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {Object.entries(classWiseReport).map(([className, data]) => (
+                <Card key={className}>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Badge variant="outline" className="text-sm font-medium">{className}</Badge>
+                        <Badge variant={parseFloat(data.collectionRate) >= 80 ? 'default' : 'secondary'}>
+                          {data.collectionRate}%
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Students</p>
+                          <p className="text-sm font-semibold">{data.students}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Fees</p>
+                          <p className="text-sm font-semibold">₹{data.totalFees.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-green-600">Collected</p>
+                          <p className="text-sm font-semibold text-green-700">₹{data.collected.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-red-600">Pending</p>
+                          <p className="text-sm font-semibold text-red-700">₹{data.pending.toLocaleString('en-IN')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}
@@ -403,34 +496,70 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
           </CardHeader>
           <CardContent>
             {defaultersReport.length === 0 ? (
-              <div className="text-center py-8 text-muted-foreground">
+              <div className="text-center py-8 text-muted-foreground text-sm">
                 No defaulters found 🎉
               </div>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Student</TableHead>
-                    <TableHead>Class</TableHead>
-                    <TableHead>Unpaid Fees</TableHead>
-                    <TableHead>Total Outstanding</TableHead>
-                    <TableHead>Oldest Due</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+              <>
+                {/* Desktop Table View */}
+                <div className="hidden md:block overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Student</TableHead>
+                        <TableHead>Class</TableHead>
+                        <TableHead>Unpaid Fees</TableHead>
+                        <TableHead>Total Outstanding</TableHead>
+                        <TableHead>Oldest Due</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {defaultersReport.map(d => (
+                        <TableRow key={d.student.id}>
+                          <TableCell className="font-medium">{d.student.name}</TableCell>
+                          <TableCell><Badge variant="outline">{d.student.class}</Badge></TableCell>
+                          <TableCell>{d.unpaidCount}</TableCell>
+                          <TableCell className="font-bold text-red-600">
+                            ₹{d.totalUnpaid.toLocaleString('en-IN')}
+                          </TableCell>
+                          <TableCell>{new Date(d.oldestDue).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                {/* Mobile Card View */}
+                <div className="md:hidden space-y-3">
                   {defaultersReport.map(d => (
-                    <TableRow key={d.student.id}>
-                      <TableCell className="font-medium">{d.student.name}</TableCell>
-                      <TableCell><Badge variant="outline">{d.student.class}</Badge></TableCell>
-                      <TableCell>{d.unpaidCount}</TableCell>
-                      <TableCell className="font-bold text-red-600">
-                        ₹{d.totalUnpaid.toLocaleString('en-IN')}
-                      </TableCell>
-                      <TableCell>{new Date(d.oldestDue).toLocaleDateString()}</TableCell>
-                    </TableRow>
+                    <Card key={d.student.id} className="border-red-200">
+                      <CardContent className="p-4">
+                        <div className="space-y-2">
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <h3 className="font-semibold text-base truncate">{d.student.name}</h3>
+                              <Badge variant="outline" className="mt-1 text-xs">{d.student.class}</Badge>
+                            </div>
+                            <div className="text-right shrink-0 ml-2">
+                              <p className="text-lg font-bold text-red-600">₹{d.totalUnpaid.toLocaleString('en-IN')}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t">
+                            <div>
+                              <p className="text-xs text-muted-foreground">Unpaid Fees</p>
+                              <p className="text-sm font-semibold">{d.unpaidCount}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-muted-foreground">Oldest Due</p>
+                              <p className="text-sm font-medium">{new Date(d.oldestDue).toLocaleDateString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
                   ))}
-                </TableBody>
-              </Table>
+                </div>
+              </>
             )}
           </CardContent>
         </Card>
@@ -444,30 +573,61 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
             <CardDescription>Monthly collection performance</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Month</TableHead>
-                  <TableHead>Total Fees</TableHead>
-                  <TableHead>Collected</TableHead>
-                  <TableHead>Collection Rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {collectionTrend.map(t => (
-                  <TableRow key={t.month}>
-                    <TableCell className="font-medium">{t.month}</TableCell>
-                    <TableCell>₹{t.total.toLocaleString('en-IN')}</TableCell>
-                    <TableCell className="text-green-600">₹{t.collected.toLocaleString('en-IN')}</TableCell>
-                    <TableCell>
-                      <Badge variant={parseFloat(t.rate) >= 80 ? 'default' : parseFloat(t.rate) >= 50 ? 'secondary' : 'destructive'}>
-                        {t.rate}%
-                      </Badge>
-                    </TableCell>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Month</TableHead>
+                    <TableHead>Total Fees</TableHead>
+                    <TableHead>Collected</TableHead>
+                    <TableHead>Collection Rate</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {collectionTrend.map(t => (
+                    <TableRow key={t.month}>
+                      <TableCell className="font-medium">{t.month}</TableCell>
+                      <TableCell>₹{t.total.toLocaleString('en-IN')}</TableCell>
+                      <TableCell className="text-green-600">₹{t.collected.toLocaleString('en-IN')}</TableCell>
+                      <TableCell>
+                        <Badge variant={parseFloat(t.rate) >= 80 ? 'default' : parseFloat(t.rate) >= 50 ? 'secondary' : 'destructive'}>
+                          {t.rate}%
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-3">
+              {collectionTrend.map(t => (
+                <Card key={t.month}>
+                  <CardContent className="p-4">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-semibold text-base">{t.month}</h3>
+                        <Badge variant={parseFloat(t.rate) >= 80 ? 'default' : parseFloat(t.rate) >= 50 ? 'secondary' : 'destructive'}>
+                          {t.rate}%
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3 pt-2 border-t">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total Fees</p>
+                          <p className="text-sm font-semibold">₹{t.total.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-green-600">Collected</p>
+                          <p className="text-sm font-semibold text-green-700">₹{t.collected.toLocaleString('en-IN')}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </CardContent>
         </Card>
       )}

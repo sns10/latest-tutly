@@ -21,25 +21,25 @@ import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, LogOut, Tro
 export default function Student() {
   const { user, loading: authLoading, signOut } = useAuth();
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
-  
-  const { 
-    student, 
-    allStudents, 
+
+  const {
+    student,
+    allStudents,
     tuition: sharedTuition,
     isSharedAccess,
-    attendance, 
-    testResults, 
-    tests, 
-    fees, 
-    subjects, 
-    announcements, 
+    attendance,
+    testResults,
+    tests,
+    fees,
+    subjects,
+    announcements,
     homework,
     termExams,
     termExamSubjects,
     termExamResults,
-    loading 
+    loading
   } = useStudentData(selectedStudentId);
-  
+
   const { tuition } = useTuitionInfo();
   const { leaderboardStudents, loading: leaderboardLoading } = useStudentLeaderboard(
     student?.tuition_id || sharedTuition?.id || null
@@ -48,7 +48,7 @@ export default function Student() {
   // Calculate attendance streak - must be before any returns
   const attendanceStreak = useMemo(() => {
     if (!attendance || attendance.length === 0) return 0;
-    
+
     const presentDates = new Set<string>();
     attendance.forEach(r => {
       if (r.status === 'present') {
@@ -56,7 +56,7 @@ export default function Student() {
       }
     });
 
-    const dates = Array.from(presentDates).sort((a, b) => 
+    const dates = Array.from(presentDates).sort((a, b) =>
       new Date(b).getTime() - new Date(a).getTime()
     );
 
@@ -64,10 +64,10 @@ export default function Student() {
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     const mostRecent = new Date(dates[0]);
     mostRecent.setHours(0, 0, 0, 0);
-    
+
     const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
     if (daysDiff > 1) return 0;
 
@@ -75,12 +75,12 @@ export default function Student() {
     for (let i = 1; i < dates.length; i++) {
       const date = new Date(dates[i]);
       date.setHours(0, 0, 0, 0);
-      
+
       const prevDate = new Date(dates[i - 1]);
       prevDate.setHours(0, 0, 0, 0);
-      
+
       const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (diff === 1) {
         streak++;
       } else {
@@ -152,7 +152,7 @@ export default function Student() {
     );
   }
 
-  // Calculate statistics
+  // Calculate statistics - combine weekly tests and term exams
   const studentResults = testResults.map(result => {
     const test = tests.find(t => t.id === result.test_id);
     return {
@@ -162,9 +162,42 @@ export default function Student() {
     };
   }).filter(r => r.test);
 
+  // Add term exam results to the mix
+  const termExamScores = (termExamResults || []).map(result => {
+    // Find the exam subject configuration
+    const examSubject = (termExamSubjects || []).find(s =>
+      s.term_exam_id === result.term_exam_id &&
+      s.subject_id === result.subject_id
+    );
+
+    // Only process if we have valid marks and exam subject
+    if (!examSubject || result.marks === null || result.marks === undefined) {
+      return null;
+    }
+
+    const exam = (termExams || []).find(e => e.id === result.term_exam_id);
+
+    return {
+      id: result.id,
+      marks: result.marks,
+      test_id: result.term_exam_id,
+      test: {
+        id: result.term_exam_id,
+        name: exam?.name || 'Term Exam',
+        subject: examSubject.subject?.name || '',
+        max_marks: examSubject.max_marks,
+        test_date: exam?.created_at || ''
+      },
+      percentage: (result.marks / examSubject.max_marks) * 100
+    };
+  }).filter((r): r is NonNullable<typeof r> => r !== null);
+
+  // Combine both for overall average
+  const allStudentResults = [...studentResults, ...termExamScores];
   const recentTests = studentResults.slice(0, 5);
-  const averageScore = studentResults.length > 0 
-    ? studentResults.reduce((sum, r) => sum + r.percentage, 0) / studentResults.length 
+
+  const averageScore = allStudentResults.length > 0
+    ? allStudentResults.reduce((sum, r) => sum + r.percentage, 0) / allStudentResults.length
     : 0;
 
   function getGrade(percentage: number): string {
@@ -182,10 +215,10 @@ export default function Student() {
   const termExamData = (termExams || []).map(exam => {
     const examSubjects = (termExamSubjects || []).filter(s => s.term_exam_id === exam.id);
     const results = (termExamResults || []).filter(r => r.term_exam_id === exam.id);
-    
+
     let totalMarks = 0;
     let totalMaxMarks = 0;
-    
+
     const subjectResults = examSubjects.map(es => {
       const result = results.find(r => r.subject_id === es.subject_id);
       if (result?.marks !== null && result?.marks !== undefined) {
@@ -200,9 +233,9 @@ export default function Student() {
         grade: result?.grade
       };
     });
-    
+
     const percentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
-    
+
     return {
       ...exam,
       subjectResults,
@@ -249,8 +282,8 @@ export default function Student() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
           )}
-          <TuitionBranding 
-            name={displayTuition?.name || 'Student Portal'} 
+          <TuitionBranding
+            name={displayTuition?.name || 'Student Portal'}
             logoUrl={displayTuition?.logo_url}
             size="sm"
           />
@@ -351,11 +384,14 @@ export default function Student() {
 
         {/* Overview Tab - Stats */}
         <TabsContent value="overview">
-          <StudentStats 
+          <StudentStats
             testResults={testResults}
             tests={tests}
             attendance={attendance}
             subjects={subjects}
+            termExamResults={termExamResults}
+            termExamSubjects={termExamSubjects}
+            termExams={termExams}
           />
         </TabsContent>
 
@@ -408,7 +444,7 @@ export default function Student() {
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-lg">{exam.totalMarks}/{exam.totalMaxMarks}</div>
-                            <Badge 
+                            <Badge
                               variant={exam.percentage >= 80 ? 'default' : exam.percentage >= 60 ? 'secondary' : 'destructive'}
                               className="text-sm"
                             >
@@ -416,7 +452,7 @@ export default function Student() {
                             </Badge>
                           </div>
                         </div>
-                        
+
                         {/* Subject-wise breakdown */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-3 pt-3 border-t">
                           {exam.subjectResults.map((sr) => (
@@ -448,7 +484,7 @@ export default function Student() {
           <div className="space-y-6">
             {/* Attendance Calendar */}
             <AttendanceCalendar attendance={attendance} subjects={subjects} showSubjectFilter />
-            
+
             {/* Subject-wise Attendance */}
             <Card>
               <CardHeader>
@@ -511,7 +547,7 @@ export default function Student() {
                         <div className="font-bold">₹{fee.amount.toFixed(2)}</div>
                         <Badge variant={
                           fee.status === 'paid' ? 'default' :
-                          fee.status === 'overdue' ? 'destructive' : 'secondary'
+                            fee.status === 'overdue' ? 'destructive' : 'secondary'
                         }>
                           {fee.status}
                         </Badge>

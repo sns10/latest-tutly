@@ -27,7 +27,7 @@ interface AddStudentDialogProps {
   onAddStudent: (student: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => void;
 }
 
-const classNames: ClassName[] = ["8th", "9th", "10th", "11th", "12th"];
+const classNames: ClassName[] = ["4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
 const avatars = [
   'photo-1582562124811-c09040d0a901',
   'photo-1535268647677-300dbf3d78d1',

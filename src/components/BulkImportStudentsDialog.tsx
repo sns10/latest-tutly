@@ -24,7 +24,7 @@ interface BulkImportStudentsDialogProps {
 }
 
 // Valid class names for import validation
-const classNames: ClassName[] = ["8th", "9th", "10th", "11th", "12th"];
+const classNames: ClassName[] = ["4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
 const avatars = [
   'photo-1582562124811-c09040d0a901',
   'photo-1535268647677-300dbf3d78d1',
@@ -41,8 +41,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
 
   const downloadTemplate = () => {
     const templateData = [
-      { "Roll No": 1, Name: "John Doe", Class: "8th", Division: "A" },
-      { "Roll No": 2, Name: "Jane Smith", Class: "9th", Division: "B" },
+      { "Roll No": 1, Name: "John Doe", Class: "4th", Division: "A" },
+      { "Roll No": 2, Name: "Jane Smith", Class: "8th", Division: "B" },
       { "Roll No": "", Name: "Bob Johnson", Class: "12th", Division: "A" },
     ];
 

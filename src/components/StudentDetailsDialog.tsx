@@ -51,7 +51,7 @@ interface StudentDetailsDialogProps {
   onStudentDataUpdated?: () => void;
 }
 
-const CLASSES: ClassName[] = ['8th', '9th', '10th', '11th', '12th'];
+const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
 export function StudentDetailsDialog({
   student,
@@ -108,7 +108,7 @@ export function StudentDetailsDialog({
 
   // Get payments for a specific fee
   const getPaymentsForFee = (feeId: string) => {
-    return feePayments.filter(p => p.fee_id === feeId).sort((a, b) => 
+    return feePayments.filter(p => p.fee_id === feeId).sort((a, b) =>
       new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
     );
   };
@@ -136,7 +136,7 @@ export function StudentDetailsDialog({
       }
     });
 
-    const dates = Array.from(presentDates).sort((a, b) => 
+    const dates = Array.from(presentDates).sort((a, b) =>
       new Date(a).getTime() - new Date(b).getTime()
     );
 
@@ -149,7 +149,7 @@ export function StudentDetailsDialog({
       const date = new Date(dates[i]);
       const prevDate = new Date(dates[i - 1]);
       const diff = Math.floor((date.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (diff === 1) {
         currentRunningStreak++;
         longestStreak = Math.max(longestStreak, currentRunningStreak);
@@ -161,8 +161,8 @@ export function StudentDetailsDialog({
     // Calculate current streak
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const sortedDesc = Array.from(presentDates).sort((a, b) => 
+
+    const sortedDesc = Array.from(presentDates).sort((a, b) =>
       new Date(b).getTime() - new Date(a).getTime()
     );
 
@@ -170,19 +170,19 @@ export function StudentDetailsDialog({
     if (sortedDesc.length > 0) {
       const mostRecent = new Date(sortedDesc[0]);
       mostRecent.setHours(0, 0, 0, 0);
-      
+
       const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff <= 1) {
         currentStreak = 1;
         for (let i = 1; i < sortedDesc.length; i++) {
           const date = new Date(sortedDesc[i]);
           date.setHours(0, 0, 0, 0);
-          
+
           const prevDate = new Date(sortedDesc[i - 1]);
           prevDate.setHours(0, 0, 0, 0);
-          
+
           const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-          
+
           if (diff === 1) {
             currentStreak++;
           } else {
@@ -198,7 +198,7 @@ export function StudentDetailsDialog({
   // Subject-wise attendance
   const subjectAttendance = useMemo(() => {
     const bySubject: Record<string, { present: number; total: number }> = {};
-    
+
     attendance.forEach(record => {
       const subjectId = record.subjectId || 'general';
       if (!bySubject[subjectId]) {
@@ -224,11 +224,11 @@ export function StudentDetailsDialog({
   // Subject-wise test performance
   const subjectPerformance = useMemo(() => {
     const bySubject: Record<string, { total: number; sum: number; tests: { name: string; percentage: number }[] }> = {};
-    
+
     testResults.forEach(result => {
       const test = tests.find(t => t.id === result.testId);
       if (!test) return;
-      
+
       const subject = test.subject;
       if (!bySubject[subject]) {
         bySubject[subject] = { total: 0, sum: 0, tests: [] };
@@ -243,8 +243,8 @@ export function StudentDetailsDialog({
       subject,
       average: data.total > 0 ? data.sum / data.total : 0,
       testCount: data.total,
-      trend: data.tests.length >= 2 
-        ? data.tests[0].percentage - data.tests[data.tests.length - 1].percentage 
+      trend: data.tests.length >= 2
+        ? data.tests[0].percentage - data.tests[data.tests.length - 1].percentage
         : 0
     })).sort((a, b) => b.average - a.average);
   }, [testResults, tests]);
@@ -261,21 +261,39 @@ export function StudentDetailsDialog({
     };
   }).slice(0, 10);
 
-  const avgScore = testsWithResults.length > 0
-    ? Math.round(testsWithResults.reduce((sum, r) => sum + r.percentage, 0) / testsWithResults.length)
+  // Calculate average score including both weekly tests and term exams
+  const allTestPercentages = testResults.map(result => {
+    const test = tests.find(t => t.id === result.testId);
+    return test ? (result.marks / (test.maxMarks || 100)) * 100 : 0;
+  });
+
+  // Add term exam subject percentages
+  termExamResults.forEach(result => {
+    const examSubject = termExamSubjects.find(s =>
+      s.termExamId === result.termExamId &&
+      s.subjectId === result.subjectId
+    );
+    if (examSubject && result.marks !== null && result.marks !== undefined) {
+      const percentage = (result.marks / examSubject.maxMarks) * 100;
+      allTestPercentages.push(percentage);
+    }
+  });
+
+  const avgScore = allTestPercentages.length > 0
+    ? Math.round(allTestPercentages.reduce((sum, p) => sum + p, 0) / allTestPercentages.length)
     : 0;
 
   // Process term exam data
   const termExamData = useMemo(() => {
     const studentTermExams = termExams.filter(exam => exam.class === student.class);
-    
+
     return studentTermExams.map(exam => {
       const examSubjects = termExamSubjects.filter(s => s.termExamId === exam.id);
       const results = termExamResults.filter(r => r.termExamId === exam.id);
-      
+
       let totalMarks = 0;
       let totalMaxMarks = 0;
-      
+
       const subjectResults = examSubjects.map(es => {
         const result = results.find(r => r.subjectId === es.subjectId);
         if (result?.marks !== null && result?.marks !== undefined) {
@@ -290,9 +308,9 @@ export function StudentDetailsDialog({
           grade: result?.grade
         };
       });
-      
+
       const percentage = totalMaxMarks > 0 ? (totalMarks / totalMaxMarks) * 100 : 0;
-      
+
       const getGrade = (pct: number): string => {
         if (pct >= 90) return 'A+';
         if (pct >= 80) return 'A';
@@ -303,7 +321,7 @@ export function StudentDetailsDialog({
         if (pct >= 35) return 'D';
         return 'F';
       };
-      
+
       return {
         ...exam,
         subjectResults,
@@ -384,7 +402,7 @@ export function StudentDetailsDialog({
 
   const handleSaveEdit = () => {
     if (!editName.trim()) return;
-    
+
     onUpdateStudent?.(student.id, {
       name: editName.trim(),
       class: editClass,
@@ -443,8 +461,8 @@ export function StudentDetailsDialog({
                       ))}
                     </SelectContent>
                   </Select>
-                  <Select 
-                    value={editDivisionId || "none"} 
+                  <Select
+                    value={editDivisionId || "none"}
                     onValueChange={(v) => setEditDivisionId(v === "none" ? "" : v)}
                   >
                     <SelectTrigger className="w-32 bg-white">
@@ -592,7 +610,7 @@ export function StudentDetailsDialog({
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
-                    
+
                     <div className="flex items-center gap-2">
                       <Select value={getMonth(calendarMonth).toString()} onValueChange={(v) => setCalendarMonth(setMonth(calendarMonth, parseInt(v)))}>
                         <SelectTrigger className="w-[100px] h-8 text-xs">
@@ -606,7 +624,7 @@ export function StudentDetailsDialog({
                           ))}
                         </SelectContent>
                       </Select>
-                      
+
                       <Select value={getYear(calendarMonth).toString()} onValueChange={(v) => setCalendarMonth(setYear(calendarMonth, parseInt(v)))}>
                         <SelectTrigger className="w-[70px] h-8 text-xs">
                           <SelectValue />
@@ -620,7 +638,7 @@ export function StudentDetailsDialog({
                         </SelectContent>
                       </Select>
                     </div>
-                    
+
                     <Button
                       variant="ghost"
                       size="icon"
@@ -648,7 +666,7 @@ export function StudentDetailsDialog({
                       const dateStr = format(day, 'yyyy-MM-dd');
                       const status = attendanceByDate[dateStr];
                       const isToday = isSameDay(day, new Date());
-                      
+
                       return (
                         <div
                           key={dateStr}
@@ -774,7 +792,7 @@ export function StudentDetailsDialog({
                         </div>
                         <div className="text-right">
                           <p className="font-bold text-sm">{result.marks}/{result.maxMarks}</p>
-                          <Badge 
+                          <Badge
                             variant={result.percentage >= 80 ? 'default' : result.percentage >= 60 ? 'secondary' : 'destructive'}
                             className="text-xs"
                           >
@@ -807,7 +825,7 @@ export function StudentDetailsDialog({
                           </div>
                           <div className="text-right">
                             <div className="font-bold text-sm">{exam.totalMarks}/{exam.totalMaxMarks}</div>
-                            <Badge 
+                            <Badge
                               variant={exam.percentage >= 80 ? 'default' : exam.percentage >= 60 ? 'secondary' : 'destructive'}
                               className="text-xs"
                             >
@@ -815,7 +833,7 @@ export function StudentDetailsDialog({
                             </Badge>
                           </div>
                         </div>
-                        
+
                         {/* Subject-wise breakdown */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mt-2 pt-2 border-t">
                           {exam.subjectResults.map((sr) => (
@@ -955,7 +973,7 @@ export function StudentDetailsDialog({
 
                         return (
                           <div key={fee.id} className="border rounded-lg overflow-hidden">
-                            <div 
+                            <div
                               className="flex items-center justify-between p-3 bg-secondary/30 cursor-pointer hover:bg-secondary/50 transition-colors"
                               onClick={() => setExpandedFeeId(isExpanded ? null : fee.id)}
                             >
@@ -979,7 +997,7 @@ export function StudentDetailsDialog({
                                   {totalPaid > 0 && totalPaid < fee.amount && (
                                     <p className="text-xs text-green-600">Paid: ₹{totalPaid.toLocaleString('en-IN')}</p>
                                   )}
-                                  <Badge 
+                                  <Badge
                                     variant={fee.status === 'paid' ? 'default' : fee.status === 'overdue' ? 'destructive' : 'secondary'}
                                     className="text-xs capitalize"
                                   >

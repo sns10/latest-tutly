@@ -31,48 +31,104 @@ interface Subject {
   name: string;
 }
 
+interface TermExamResult {
+  id: string;
+  term_exam_id: string;
+  subject_id: string;
+  marks: number | null;
+}
+
+interface TermExamSubject {
+  id: string;
+  term_exam_id: string;
+  subject_id: string;
+  max_marks: number;
+  subject?: Subject;
+}
+
+interface TermExam {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
 interface StudentStatsProps {
   testResults: TestResult[];
   tests: Test[];
   attendance: AttendanceRecord[];
   subjects: Subject[];
+  termExamResults?: TermExamResult[];
+  termExamSubjects?: TermExamSubject[];
+  termExams?: TermExam[];
 }
 
-export function StudentStats({ testResults, tests, attendance, subjects }: StudentStatsProps) {
+export function StudentStats({ testResults, tests, attendance, subjects, termExamResults = [], termExamSubjects = [], termExams = [] }: StudentStatsProps) {
   // Calculate academic average
   const academicStats = useMemo(() => {
-    const results = testResults.map(result => {
+    // Process weekly test results
+    const weeklyResults = testResults.map(result => {
       const test = tests.find(t => t.id === result.test_id);
       return {
-        ...result,
-        test,
-        percentage: test ? (result.marks / test.max_marks) * 100 : 0
+        id: result.id,
+        type: 'weekly' as const,
+        subject: test?.subject || '',
+        name: test?.name || '',
+        marks: result.marks,
+        maxMarks: test?.max_marks || 0,
+        percentage: test ? (result.marks / test.max_marks) * 100 : 0,
+        date: test?.test_date || ''
       };
-    }).filter(r => r.test);
+    }).filter(r => r.maxMarks > 0);
 
-    const averageScore = results.length > 0 
-      ? results.reduce((sum, r) => sum + r.percentage, 0) / results.length 
+    // Process term exam results (per subject)
+    const termResults = termExamResults.map(result => {
+      const examSubject = termExamSubjects.find(s =>
+        s.term_exam_id === result.term_exam_id &&
+        s.subject_id === result.subject_id
+      );
+      const exam = termExams.find(e => e.id === result.term_exam_id);
+      const subject = examSubject?.subject || subjects.find(s => s.id === result.subject_id);
+
+      return {
+        id: result.id,
+        type: 'term' as const,
+        subject: subject?.name || '',
+        name: exam?.name || 'Term Exam',
+        marks: result.marks || 0,
+        maxMarks: examSubject?.max_marks || 0,
+        percentage: examSubject && result.marks !== null && result.marks !== undefined
+          ? (result.marks / examSubject.max_marks) * 100
+          : 0,
+        date: exam?.created_at || ''
+      };
+    }).filter(r => r.maxMarks > 0 && r.marks > 0);
+
+    // Combine all results
+    const allResults = [...weeklyResults, ...termResults];
+
+    const averageScore = allResults.length > 0
+      ? allResults.reduce((sum, r) => sum + r.percentage, 0) / allResults.length
       : 0;
 
-    // Calculate subject-wise performance
+    // Calculate subject-wise performance (combining weekly and term)
     const bySubject: Record<string, { total: number; sum: number; tests: { name: string; percentage: number }[] }> = {};
-    results.forEach(r => {
-      if (!r.test) return;
-      const subject = r.test.subject;
+    allResults.forEach(r => {
+      if (!r.subject) return;
+      const subject = r.subject;
       if (!bySubject[subject]) {
         bySubject[subject] = { total: 0, sum: 0, tests: [] };
       }
       bySubject[subject].total++;
       bySubject[subject].sum += r.percentage;
-      bySubject[subject].tests.push({ name: r.test.name, percentage: r.percentage });
+      bySubject[subject].tests.push({ name: r.name, percentage: r.percentage });
     });
 
     const subjectPerformance = Object.entries(bySubject).map(([subject, data]) => ({
       subject,
       average: data.total > 0 ? data.sum / data.total : 0,
       testCount: data.total,
-      trend: data.tests.length >= 2 
-        ? data.tests[0].percentage - data.tests[data.tests.length - 1].percentage 
+      trend: data.tests.length >= 2
+        ? data.tests[0].percentage - data.tests[data.tests.length - 1].percentage
         : 0
     })).sort((a, b) => b.average - a.average);
 
@@ -80,8 +136,8 @@ export function StudentStats({ testResults, tests, attendance, subjects }: Stude
     const bestSubject = subjectPerformance[0];
     const weakestSubject = subjectPerformance[subjectPerformance.length - 1];
 
-    return { averageScore, subjectPerformance, bestSubject, weakestSubject, totalTests: results.length };
-  }, [testResults, tests]);
+    return { averageScore, subjectPerformance, bestSubject, weakestSubject, totalTests: allResults.length };
+  }, [testResults, tests, termExamResults, termExamSubjects, termExams, subjects]);
 
   // Calculate longest streak
   const streakStats = useMemo(() => {
@@ -92,7 +148,7 @@ export function StudentStats({ testResults, tests, attendance, subjects }: Stude
       }
     });
 
-    const dates = Array.from(presentDates).sort((a, b) => 
+    const dates = Array.from(presentDates).sort((a, b) =>
       new Date(a).getTime() - new Date(b).getTime()
     );
 
@@ -105,7 +161,7 @@ export function StudentStats({ testResults, tests, attendance, subjects }: Stude
       const date = new Date(dates[i]);
       const prevDate = new Date(dates[i - 1]);
       const diff = Math.floor((date.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-      
+
       if (diff === 1) {
         currentRunningStreak++;
         longestStreak = Math.max(longestStreak, currentRunningStreak);
@@ -117,8 +173,8 @@ export function StudentStats({ testResults, tests, attendance, subjects }: Stude
     // Calculate current streak
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
-    const sortedDesc = Array.from(presentDates).sort((a, b) => 
+
+    const sortedDesc = Array.from(presentDates).sort((a, b) =>
       new Date(b).getTime() - new Date(a).getTime()
     );
 
@@ -126,19 +182,19 @@ export function StudentStats({ testResults, tests, attendance, subjects }: Stude
     if (sortedDesc.length > 0) {
       const mostRecent = new Date(sortedDesc[0]);
       mostRecent.setHours(0, 0, 0, 0);
-      
+
       const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
       if (daysDiff <= 1) {
         currentStreak = 1;
         for (let i = 1; i < sortedDesc.length; i++) {
           const date = new Date(sortedDesc[i]);
           date.setHours(0, 0, 0, 0);
-          
+
           const prevDate = new Date(sortedDesc[i - 1]);
           prevDate.setHours(0, 0, 0, 0);
-          
+
           const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-          
+
           if (diff === 1) {
             currentStreak++;
           } else {
@@ -154,7 +210,7 @@ export function StudentStats({ testResults, tests, attendance, subjects }: Stude
   // Subject-wise attendance
   const subjectAttendance = useMemo(() => {
     const bySubject: Record<string, { present: number; total: number }> = {};
-    
+
     attendance.forEach(record => {
       const subjectId = record.subject_id || record.subjectId || 'general';
       if (!bySubject[subjectId]) {

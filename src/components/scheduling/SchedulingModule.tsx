@@ -7,7 +7,8 @@ import { ScheduleClassDialog } from './ScheduleClassDialog';
 import { SpecialClassesList } from './SpecialClassesList';
 import { RoomOccupancyVisualizer } from './RoomOccupancyVisualizer';
 import { TimelineView } from './TimelineView';
-import { Calendar, Clock, DoorOpen, CalendarPlus, LayoutGrid } from 'lucide-react';
+import { TomorrowSchedule } from './TomorrowSchedule';
+import { Calendar, Clock, DoorOpen, CalendarPlus, LayoutGrid, CalendarDays } from 'lucide-react';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 
 interface SchedulingModuleProps {
@@ -67,7 +68,7 @@ export function SchedulingModule({
   onDeleteRoom,
 }: SchedulingModuleProps) {
   const { isFeatureEnabled } = useTuitionFeatures();
-  const [activeTab, setActiveTab] = useState('weekly');
+  const [activeTab, setActiveTab] = useState('tomorrow');
   const [editingEntry, setEditingEntry] = useState<Timetable | null>(null);
 
   const handleEditEntry = (entry: Timetable) => {
@@ -99,6 +100,10 @@ export function SchedulingModule({
       {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="bg-white border border-slate-200 p-1 h-auto flex-wrap">
+          <TabsTrigger value="tomorrow" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <CalendarDays className="h-4 w-4 mr-2 hidden sm:inline" />
+            Tomorrow
+          </TabsTrigger>
           <TabsTrigger value="weekly" className="data-[state=active]:bg-blue-600 data-[state=active]:text-white">
             <Clock className="h-4 w-4 mr-2 hidden sm:inline" />
             Weekly
@@ -124,6 +129,20 @@ export function SchedulingModule({
             </TabsTrigger>
           )}
         </TabsList>
+
+        {/* Tomorrow's Schedule */}
+        <TabsContent value="tomorrow" className="mt-4">
+          <TomorrowSchedule
+            timetable={timetable}
+            faculty={faculty}
+            subjects={subjects}
+            rooms={rooms}
+            divisions={divisions}
+            onAddEntry={onAddEntry}
+            onUpdateEntry={onUpdateEntry}
+            onDeleteEntry={onDeleteEntry}
+          />
+        </TabsContent>
 
         {/* Weekly Timetable */}
         <TabsContent value="weekly" className="mt-4">

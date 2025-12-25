@@ -109,6 +109,10 @@ export function Leaderboard({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="4th">4th</SelectItem>
+                  <SelectItem value="5th">5th</SelectItem>
+                  <SelectItem value="6th">6th</SelectItem>
+                  <SelectItem value="7th">7th</SelectItem>
                   <SelectItem value="8th">8th</SelectItem>
                   <SelectItem value="9th">9th</SelectItem>
                   <SelectItem value="10th">10th</SelectItem>

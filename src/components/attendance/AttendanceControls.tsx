@@ -68,6 +68,10 @@ export function AttendanceControls({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="All">All Classes</SelectItem>
+              <SelectItem value="4th">4th Grade</SelectItem>
+              <SelectItem value="5th">5th Grade</SelectItem>
+              <SelectItem value="6th">6th Grade</SelectItem>
+              <SelectItem value="7th">7th Grade</SelectItem>
               <SelectItem value="8th">8th Grade</SelectItem>
               <SelectItem value="9th">9th Grade</SelectItem>
               <SelectItem value="10th">10th Grade</SelectItem>

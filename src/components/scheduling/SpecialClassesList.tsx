@@ -14,14 +14,21 @@ interface SpecialClassesListProps {
 }
 
 const EVENT_TYPE_LABELS: Record<string, { label: string; color: string }> = {
-  exam_revision: { label: 'Exam Revision', color: 'bg-purple-100 text-purple-700' },
-  night_class: { label: 'Night Class', color: 'bg-indigo-100 text-indigo-700' },
-  special_class: { label: 'Special', color: 'bg-blue-100 text-blue-700' },
-  replacement: { label: 'Replacement', color: 'bg-orange-100 text-orange-700' },
-  extra_class: { label: 'Extra', color: 'bg-green-100 text-green-700' },
-  ptm: { label: 'PTM', color: 'bg-pink-100 text-pink-700' },
-  custom: { label: 'Custom', color: 'bg-gray-100 text-gray-700' },
-  class: { label: 'Class', color: 'bg-slate-100 text-slate-700' },
+  // New class type values
+  'Regular': { label: 'Regular', color: 'bg-slate-100 text-slate-700' },
+  'Night Class': { label: 'Night Class', color: 'bg-indigo-100 text-indigo-700' },
+  'Revision': { label: 'Revision', color: 'bg-purple-100 text-purple-700' },
+  'Exam': { label: 'Exam', color: 'bg-red-100 text-red-700' },
+  'Extra Class': { label: 'Extra Class', color: 'bg-green-100 text-green-700' },
+  // Old event type values (for backward compatibility)
+  'class': { label: 'Regular', color: 'bg-slate-100 text-slate-700' },
+  'exam_revision': { label: 'Exam Revision', color: 'bg-purple-100 text-purple-700' },
+  'night_class': { label: 'Night Class', color: 'bg-indigo-100 text-indigo-700' },
+  'special_class': { label: 'Special', color: 'bg-blue-100 text-blue-700' },
+  'replacement': { label: 'Replacement', color: 'bg-orange-100 text-orange-700' },
+  'extra_class': { label: 'Extra', color: 'bg-green-100 text-green-700' },
+  'ptm': { label: 'PTM', color: 'bg-pink-100 text-pink-700' },
+  'custom': { label: 'Custom', color: 'bg-gray-100 text-gray-700' },
 };
 
 export function SpecialClassesList({
@@ -53,8 +60,9 @@ export function SpecialClassesList({
   };
 
   const getEventTypeBadge = (eventType?: string) => {
-    const type = eventType || 'class';
-    const badge = EVENT_TYPE_LABELS[type] || EVENT_TYPE_LABELS.custom;
+    const type = eventType || 'Regular';
+    // Use the eventType as-is if it exists in labels, otherwise treat it as a custom value
+    const badge = EVENT_TYPE_LABELS[type] || { label: type, color: 'bg-gray-100 text-gray-700' };
     return <Badge className={`${badge.color} text-xs`}>{badge.label}</Badge>;
   };
 

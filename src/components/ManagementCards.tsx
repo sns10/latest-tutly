@@ -3,8 +3,6 @@ import { Button } from '@/components/ui/button';
 import { 
   TestTube2, 
   Users, 
-  CalendarDays, 
-  DollarSign, 
   Trophy, 
   Megaphone,
   ChevronRight 
@@ -14,16 +12,12 @@ import { useNavigate } from 'react-router-dom';
 interface ManagementCardsProps {
   testsCount: number;
   studentsCount: number;
-  attendanceToday: number;
-  pendingFees: number;
   activeChallenges: number;
 }
 
 export function ManagementCards({
   testsCount,
   studentsCount,
-  attendanceToday,
-  pendingFees,
   activeChallenges,
 }: ManagementCardsProps) {
   const navigate = useNavigate();
@@ -46,24 +40,6 @@ export function ManagementCards({
       color: 'text-purple-600',
       bgColor: 'bg-purple-50',
       route: '/students',
-    },
-    {
-      title: 'Attendance',
-      icon: CalendarDays,
-      value: `${attendanceToday}%`,
-      description: 'Today',
-      color: 'text-green-600',
-      bgColor: 'bg-green-50',
-      route: '/attendance',
-    },
-    {
-      title: 'Fees',
-      icon: DollarSign,
-      value: pendingFees,
-      description: 'Pending payments',
-      color: 'text-orange-600',
-      bgColor: 'bg-orange-50',
-      route: '/fees',
     },
   ];
 
