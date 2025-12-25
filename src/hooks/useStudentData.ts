@@ -7,6 +7,7 @@ type Student = Tables<'students'>;
 type StudentAttendance = Tables<'student_attendance'>;
 type StudentTestResult = Tables<'student_test_results'>;
 type StudentFee = Tables<'student_fees'>;
+type FeePayment = Tables<'fee_payments'>;
 type WeeklyTest = Tables<'weekly_tests'>;
 type Subject = Tables<'subjects'>;
 type Announcement = Tables<'announcements'>;
@@ -35,6 +36,7 @@ export function useStudentData(selectedStudentId?: string | null) {
   const [testResults, setTestResults] = useState<StudentTestResult[]>([]);
   const [tests, setTests] = useState<WeeklyTest[]>([]);
   const [fees, setFees] = useState<StudentFee[]>([]);
+  const [feePayments, setFeePayments] = useState<FeePayment[]>([]);
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [homework, setHomework] = useState<Homework[]>([]);
@@ -212,7 +214,19 @@ export function useStudentData(selectedStudentId?: string | null) {
       if (attendanceRes.data) setAttendance(attendanceRes.data);
       if (testResultsRes.data) setTestResults(testResultsRes.data);
       if (testsRes.data) setTests(testsRes.data);
-      if (feesRes.data) setFees(feesRes.data);
+      if (feesRes.data) {
+        setFees(feesRes.data);
+        // Fetch fee payments for all fees
+        const feeIds = feesRes.data.map(f => f.id);
+        if (feeIds.length > 0) {
+          const { data: paymentsData } = await supabase
+            .from('fee_payments')
+            .select('*')
+            .in('fee_id', feeIds)
+            .order('payment_date', { ascending: false });
+          if (paymentsData) setFeePayments(paymentsData);
+        }
+      }
       if (subjectsRes.data) setSubjects(subjectsRes.data);
       if (announcementsRes.data) setAnnouncements(announcementsRes.data);
       if (homeworkRes.data) setHomework(homeworkRes.data);
@@ -233,6 +247,7 @@ export function useStudentData(selectedStudentId?: string | null) {
     testResults,
     tests,
     fees,
+    feePayments,
     subjects,
     announcements,
     homework,

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Student } from '@/types';
 import {
   Dialog,
@@ -13,7 +13,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { PlusCircle } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { PlusCircle, Users } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface AddCustomFeeDialogProps {
@@ -48,6 +49,8 @@ export function AddCustomFeeDialog({
   students,
   onAddFee
 }: AddCustomFeeDialogProps) {
+  const [applyToClass, setApplyToClass] = useState(false);
+  const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
   const [feeType, setFeeType] = useState('');
   const [customFeeType, setCustomFeeType] = useState('');
@@ -55,12 +58,19 @@ export function AddCustomFeeDialog({
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
 
-  const handleSubmit = () => {
-    if (!selectedStudent) {
-      toast.error('Please select a student');
-      return;
-    }
+  // Get unique classes from students
+  const availableClasses = useMemo(() => {
+    const classes = new Set(students.map(s => s.class));
+    return Array.from(classes).sort();
+  }, [students]);
 
+  // Get students for selected class
+  const studentsInClass = useMemo(() => {
+    if (!selectedClass) return [];
+    return students.filter(s => s.class === selectedClass);
+  }, [students, selectedClass]);
+
+  const handleSubmit = async () => {
     const finalFeeType = feeType === 'Custom' ? customFeeType : feeType;
     if (!finalFeeType) {
       toast.error('Please select or enter fee type');
@@ -78,18 +88,52 @@ export function AddCustomFeeDialog({
       return;
     }
 
-    onAddFee({
-      studentId: selectedStudent,
-      feeType: finalFeeType,
-      amount: feeAmount,
-      dueDate,
-      status: 'unpaid',
-      notes: notes || undefined
-    });
+    if (applyToClass) {
+      if (!selectedClass) {
+        toast.error('Please select a class');
+        return;
+      }
 
-    toast.success('Custom fee added successfully');
-    
+      // Apply fee to all students in the class
+      const classStudents = students.filter(s => s.class === selectedClass);
+      if (classStudents.length === 0) {
+        toast.error('No students found in this class');
+        return;
+      }
+
+      for (const student of classStudents) {
+        await onAddFee({
+          studentId: student.id,
+          feeType: finalFeeType,
+          amount: feeAmount,
+          dueDate,
+          status: 'unpaid',
+          notes: notes || undefined
+        });
+      }
+
+      toast.success(`Fee added for ${classStudents.length} students in ${selectedClass}`);
+    } else {
+      if (!selectedStudent) {
+        toast.error('Please select a student');
+        return;
+      }
+
+      onAddFee({
+        studentId: selectedStudent,
+        feeType: finalFeeType,
+        amount: feeAmount,
+        dueDate,
+        status: 'unpaid',
+        notes: notes || undefined
+      });
+
+      toast.success('Custom fee added successfully');
+    }
+
     // Reset form
+    setApplyToClass(false);
+    setSelectedClass('');
     setSelectedStudent('');
     setFeeType('');
     setCustomFeeType('');
@@ -114,27 +158,70 @@ export function AddCustomFeeDialog({
             Add Custom Fee
           </DialogTitle>
           <DialogDescription>
-            Add a custom fee for a specific student
+            Add a custom fee for a student or entire class
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Student Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="student">Student</Label>
-            <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select student" />
-              </SelectTrigger>
-              <SelectContent>
-                {students.map(student => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.name} - {student.class}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          {/* Apply to Class Toggle */}
+          <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+            <div className="flex items-center gap-2">
+              <Users className="h-4 w-4 text-muted-foreground" />
+              <Label htmlFor="applyToClass" className="text-sm font-medium">
+                Apply to entire class
+              </Label>
+            </div>
+            <Switch
+              id="applyToClass"
+              checked={applyToClass}
+              onCheckedChange={(checked) => {
+                setApplyToClass(checked);
+                setSelectedStudent('');
+                setSelectedClass('');
+              }}
+            />
           </div>
+
+          {applyToClass ? (
+            /* Class Selection */
+            <div className="space-y-2">
+              <Label htmlFor="class">Select Class</Label>
+              <Select value={selectedClass} onValueChange={setSelectedClass}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select class" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableClasses.map(cls => (
+                    <SelectItem key={cls} value={cls}>
+                      {cls} ({students.filter(s => s.class === cls).length} students)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedClass && (
+                <p className="text-xs text-muted-foreground">
+                  Fee will be added to {studentsInClass.length} students
+                </p>
+              )}
+            </div>
+          ) : (
+            /* Student Selection */
+            <div className="space-y-2">
+              <Label htmlFor="student">Student</Label>
+              <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map(student => (
+                    <SelectItem key={student.id} value={student.id}>
+                      {student.name} - {student.class}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {/* Fee Type */}
           <div className="space-y-2">
@@ -209,7 +296,7 @@ export function AddCustomFeeDialog({
             Cancel
           </Button>
           <Button onClick={handleSubmit}>
-            Add Fee
+            {applyToClass ? `Add Fee to Class` : 'Add Fee'}
           </Button>
         </DialogFooter>
       </DialogContent>
