@@ -95,6 +95,12 @@ export function FeesList({
   const [selectedFeeForHistory, setSelectedFeeForHistory] = useState<StudentFee | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
+  // Memoize current month to avoid function recreation
+  const currentMonth = useMemo(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
+
   function getCurrentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -275,16 +281,16 @@ export function FeesList({
   const totalAmount = filteredFees.reduce((sum, f) => sum + f.amount, 0);
   const paidAmount = filteredFees.reduce((sum, f) => sum + getTotalPaid(f.id), 0);
 
-  // Count active filters
+  // Count active filters - use currentMonth memo instead of function call
   const activeFilterCount = useMemo(() => {
     let count = 0;
-    if (selectedMonth !== getCurrentMonth()) count++;
+    if (selectedMonth !== currentMonth) count++;
     if (selectedClass !== 'All') count++;
     if (statusFilter !== 'All') count++;
     if (selectedStudent !== 'All') count++;
     if (searchQuery !== '') count++;
     return count;
-  }, [selectedMonth, selectedClass, statusFilter, selectedStudent, searchQuery]);
+  }, [selectedMonth, selectedClass, statusFilter, selectedStudent, searchQuery, currentMonth]);
 
   const clearFilters = () => {
     setSelectedMonth(getCurrentMonth());

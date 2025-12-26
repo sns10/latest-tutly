@@ -301,7 +301,8 @@ export function TomorrowSchedule({
 
   const availableFaculty = useMemo(() => {
     if (!addFormData.subjectId) return faculty;
-    return faculty.filter((f) => f.subjects?.some((s) => s.id === addFormData.subjectId));
+    // Safely handle faculty filtering with optional chaining
+    return faculty.filter((f) => f.subjects?.some((s) => s.id === addFormData.subjectId) ?? false);
   }, [faculty, addFormData.subjectId]);
 
   return (
