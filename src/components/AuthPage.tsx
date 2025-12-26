@@ -8,8 +8,10 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Navigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Loader2, Building2 } from 'lucide-react';
+import { Loader2, Building2, AlertTriangle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useLoginRateLimit } from '@/hooks/useLoginRateLimit';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 export function AuthPage() {
   const { user, signIn, signUp, signOut, loading } = useAuth();
@@ -20,6 +22,32 @@ export function AuthPage() {
   const [isPortalUser, setIsPortalUser] = useState<boolean | null>(null);
   const [isLinkedStudent, setIsLinkedStudent] = useState<boolean | null>(null);
   const [checkingPortal, setCheckingPortal] = useState(false);
+  
+  const {
+    isLocked,
+    remainingAttempts,
+    recordFailedAttempt,
+    recordSuccessfulLogin,
+    checkAndResetLockout,
+    getLockoutTimeRemaining
+  } = useLoginRateLimit();
+  
+  const [lockoutSeconds, setLockoutSeconds] = useState(getLockoutTimeRemaining());
+
+  // Update lockout timer
+  useEffect(() => {
+    if (!isLocked) return;
+    
+    const interval = setInterval(() => {
+      const remaining = getLockoutTimeRemaining();
+      setLockoutSeconds(remaining);
+      if (remaining <= 0) {
+        checkAndResetLockout();
+      }
+    }, 1000);
+    
+    return () => clearInterval(interval);
+  }, [isLocked, getLockoutTimeRemaining, checkAndResetLockout]);
 
   // Check if user is a portal user (shared portal email) or a linked student account
   useEffect(() => {
@@ -68,13 +96,27 @@ export function AuthPage() {
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if lockout has expired
+    if (!checkAndResetLockout()) {
+      toast.error(`Too many failed attempts. Please wait ${Math.ceil(lockoutSeconds / 60)} minute(s).`);
+      return;
+    }
+    
     setIsSubmitting(true);
 
     const { error } = await signIn(email, password);
 
     if (error) {
-      toast.error(error.message || 'Failed to sign in');
+      recordFailedAttempt();
+      const attemptsLeft = remainingAttempts - 1;
+      if (attemptsLeft > 0) {
+        toast.error(`${error.message || 'Failed to sign in'}. ${attemptsLeft} attempts remaining.`);
+      } else {
+        toast.error('Too many failed attempts. Please wait 5 minutes before trying again.');
+      }
     } else {
+      recordSuccessfulLogin();
       toast.success('Signed in successfully!');
     }
 
@@ -178,6 +220,14 @@ export function AuthPage() {
           <p className="text-muted-foreground">Tuition Management Platform</p>
         </CardHeader>
         <CardContent>
+          {isLocked && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertDescription>
+                Too many failed login attempts. Please wait {Math.ceil(lockoutSeconds / 60)} minute(s) and {lockoutSeconds % 60} seconds before trying again.
+              </AlertDescription>
+            </Alert>
+          )}
           <form onSubmit={handleSignIn} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="signin-email">Email</Label>
@@ -187,6 +237,7 @@ export function AuthPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                disabled={isLocked}
                 placeholder="Enter your email"
               />
             </div>
@@ -198,15 +249,18 @@ export function AuthPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                disabled={isLocked}
                 placeholder="••••••••"
               />
             </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
+            <Button type="submit" className="w-full" disabled={isSubmitting || isLocked}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                   Signing In...
                 </>
+              ) : isLocked ? (
+                'Locked'
               ) : (
                 'Sign In'
               )}
