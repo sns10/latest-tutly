@@ -110,6 +110,12 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
   }, [fees]);
 
   // Pie chart data
+  // Safe division helper to prevent NaN/Infinity
+  const safeDivide = (numerator: number, denominator: number, fallback = 0) => {
+    if (denominator === 0 || !isFinite(numerator) || !isFinite(denominator)) return fallback;
+    return numerator / denominator;
+  };
+
   const pieData = useMemo(() => [
     { name: 'Paid', value: stats.paidAmount, color: 'hsl(var(--chart-1))' },
     { name: 'Unpaid', value: stats.unpaidAmount, color: 'hsl(var(--chart-2))' },

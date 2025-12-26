@@ -503,13 +503,13 @@ export function useSupabaseData() {
   };
 
   const addXp = async (studentId: string, category: XPCategory, amount: number) => {
-    // Get current XP for this category
+    // Get current XP for this category - use maybeSingle to handle missing records
     const { data: currentXpData, error: fetchError } = await supabase
       .from('student_xp')
       .select('amount')
       .eq('student_id', studentId)
       .eq('category', category)
-      .single();
+      .maybeSingle();
 
     if (fetchError) {
       console.error('Error fetching current XP:', fetchError);
