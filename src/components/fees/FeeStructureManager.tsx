@@ -16,6 +16,13 @@ import {
 import { toast } from 'sonner';
 import { ClassName, ClassFee, Student } from '@/types';
 import { Settings, DollarSign, Calendar, Percent, Save, AlertTriangle } from 'lucide-react';
+import { sanitizeNumber } from '@/lib/validation';
+
+// Validation constants
+const MAX_FEE_AMOUNT = 10000000;
+const MAX_LATE_FEE_PERCENTAGE = 100;
+const MAX_LATE_FEE_AMOUNT = 10000;
+const MAX_GRACE_PERIOD = 365;
 
 const ALL_CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
 
@@ -49,17 +56,21 @@ export function FeeStructureManager({ classFees, students, onUpdateClassFee }: F
   }, [classFees]);
 
   const handleAmountChange = (className: string, value: string) => {
-    const amount = value === '' ? 0 : parseFloat(value);
+    // Sanitize and validate input
+    const cleaned = value.replace(/[^0-9.]/g, '');
+    const amount = cleaned === '' ? 0 : sanitizeNumber(cleaned, 0, MAX_FEE_AMOUNT);
     if (!isNaN(amount)) {
-      setFees(fees.map(fee => fee.class === className ? { ...fee, amount } : fee));
+      setFees(fees.map(fee => fee.class === className ? { ...fee, amount: Math.round(amount) } : fee));
     }
   };
 
   const handleSave = (className: string) => {
     const fee = fees.find(f => f.class === className);
-    if (fee && fee.amount >= 0) {
-      onUpdateClassFee(className, fee.amount);
-      toast.success(`Fee for ${className} updated to ₹${fee.amount}`);
+    if (fee && fee.amount >= 0 && fee.amount <= MAX_FEE_AMOUNT) {
+      onUpdateClassFee(className, Math.round(fee.amount));
+      toast.success(`Fee for ${className} updated to ₹${Math.round(fee.amount).toLocaleString('en-IN')}`);
+    } else if (fee && fee.amount > MAX_FEE_AMOUNT) {
+      toast.error(`Fee cannot exceed ₹${MAX_FEE_AMOUNT.toLocaleString('en-IN')}`);
     }
   };
 
@@ -309,17 +320,19 @@ export function FeeStructureManager({ classFees, students, onUpdateClassFee }: F
                     </Label>
                     <div className="relative">
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={lateFeeConfig.percentage}
-                        onChange={(e) => setLateFeeConfig(prev => ({ 
-                          ...prev, 
-                          percentage: parseFloat(e.target.value) || 0 
-                        }))}
+                        onChange={(e) => {
+                          const val = sanitizeNumber(e.target.value, 0, MAX_LATE_FEE_PERCENTAGE);
+                          setLateFeeConfig(prev => ({ ...prev, percentage: val }));
+                        }}
                         className="pr-8"
+                        maxLength={5}
                       />
                       <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">%</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">Applied on fee amount</p>
+                    <p className="text-xs text-muted-foreground">Applied on fee amount (max {MAX_LATE_FEE_PERCENTAGE}%)</p>
                   </div>
 
                   <div className="space-y-2">
@@ -330,16 +343,18 @@ export function FeeStructureManager({ classFees, students, onUpdateClassFee }: F
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₹</span>
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="decimal"
                         value={lateFeeConfig.fixedAmount}
-                        onChange={(e) => setLateFeeConfig(prev => ({ 
-                          ...prev, 
-                          fixedAmount: parseFloat(e.target.value) || 0 
-                        }))}
+                        onChange={(e) => {
+                          const val = sanitizeNumber(e.target.value, 0, MAX_LATE_FEE_AMOUNT);
+                          setLateFeeConfig(prev => ({ ...prev, fixedAmount: val }));
+                        }}
                         className="pl-7"
+                        maxLength={6}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground">Fixed late fee</p>
+                    <p className="text-xs text-muted-foreground">Fixed late fee (max ₹{MAX_LATE_FEE_AMOUNT.toLocaleString('en-IN')})</p>
                   </div>
 
                   <div className="space-y-2">
@@ -349,17 +364,19 @@ export function FeeStructureManager({ classFees, students, onUpdateClassFee }: F
                     </Label>
                     <div className="relative">
                       <Input
-                        type="number"
+                        type="text"
+                        inputMode="numeric"
                         value={lateFeeConfig.gracePeriod}
-                        onChange={(e) => setLateFeeConfig(prev => ({ 
-                          ...prev, 
-                          gracePeriod: parseInt(e.target.value) || 0 
-                        }))}
+                        onChange={(e) => {
+                          const val = sanitizeNumber(e.target.value, 0, MAX_GRACE_PERIOD);
+                          setLateFeeConfig(prev => ({ ...prev, gracePeriod: Math.round(val) }));
+                        }}
                         className="pr-12"
+                        maxLength={3}
                       />
                       <span className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground text-sm">days</span>
                     </div>
-                    <p className="text-xs text-muted-foreground">After due date</p>
+                    <p className="text-xs text-muted-foreground">After due date (max {MAX_GRACE_PERIOD} days)</p>
                   </div>
                 </div>
               )}

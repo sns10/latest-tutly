@@ -10,6 +10,11 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, AlertTriangle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Timetable, Faculty, Subject, Room, ClassName, Division } from '@/types';
+import { sanitizeString, validateTimeRange, validateFutureDate } from '@/lib/validation';
+
+// Validation constants
+const MAX_EVENT_TYPE_LENGTH = 50;
+const MAX_NOTES_LENGTH = 500;
 
 interface ScheduleClassDialogProps {
   timetable: Timetable[];
@@ -138,18 +143,35 @@ export function ScheduleClassDialog({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.date) {
-      toast.error('Please select a date');
+    // Validate date
+    const dateValidation = validateFutureDate(formData.date);
+    if (!dateValidation.valid) {
+      toast.error(dateValidation.error);
       return;
     }
 
+    // Validate subject
     if (!formData.subjectId) {
       toast.error('Please select a subject');
       return;
     }
 
-    if (formData.startTime >= formData.endTime) {
-      toast.error('End time must be after start time');
+    // Validate time range
+    const timeValidation = validateTimeRange(formData.startTime, formData.endTime);
+    if (!timeValidation.valid) {
+      toast.error(timeValidation.error);
+      return;
+    }
+
+    // Validate event type length
+    if (formData.eventType.length > MAX_EVENT_TYPE_LENGTH) {
+      toast.error(`Event type cannot exceed ${MAX_EVENT_TYPE_LENGTH} characters`);
+      return;
+    }
+
+    // Validate notes length
+    if (formData.notes.length > MAX_NOTES_LENGTH) {
+      toast.error(`Notes cannot exceed ${MAX_NOTES_LENGTH} characters`);
       return;
     }
 
@@ -174,8 +196,8 @@ export function ScheduleClassDialog({
       formData.roomId || undefined,
       undefined,
       formData.date,
-      formData.eventType,
-      formData.notes || undefined,
+      sanitizeString(formData.eventType),
+      formData.notes ? sanitizeString(formData.notes) : undefined,
       formData.divisionId || undefined
     );
 
@@ -207,7 +229,7 @@ export function ScheduleClassDialog({
             <CreatableSelect
               label="Class Type *"
               value={formData.eventType}
-              onValueChange={(value) => setFormData({ ...formData, eventType: value })}
+              onValueChange={(value) => setFormData({ ...formData, eventType: value.slice(0, MAX_EVENT_TYPE_LENGTH) })}
               options={CLASS_TYPES}
               placeholder="Select or type class type..."
             />
@@ -377,11 +399,13 @@ export function ScheduleClassDialog({
               <Label>Notes (optional)</Label>
               <Textarea
                 value={formData.notes}
-                onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, notes: e.target.value.slice(0, MAX_NOTES_LENGTH) })}
                 placeholder="Any additional notes..."
                 className="bg-white"
                 rows={2}
+                maxLength={MAX_NOTES_LENGTH}
               />
+              <p className="text-xs text-muted-foreground mt-1">{formData.notes.length}/{MAX_NOTES_LENGTH}</p>
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t flex-shrink-0 gap-2">

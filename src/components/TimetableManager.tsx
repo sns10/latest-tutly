@@ -8,6 +8,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Plus, Pencil, Trash2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { sanitizeString, validateTimeRange } from '@/lib/validation';
+
+// Validation constants
+const MAX_ROOM_NUMBER_LENGTH = 50;
 
 interface TimetableManagerProps {
   timetable: Timetable[];
@@ -91,15 +95,26 @@ export function TimetableManager({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validate subject and faculty
     if (!formData.subjectId || !formData.facultyId) {
       toast.error('Please select subject and faculty');
       return;
     }
 
-    if (formData.startTime >= formData.endTime) {
-      toast.error('End time must be after start time');
+    // Validate time range
+    const timeValidation = validateTimeRange(formData.startTime, formData.endTime);
+    if (!timeValidation.valid) {
+      toast.error(timeValidation.error);
       return;
     }
+
+    // Validate room number length
+    if (formData.roomNumber.length > MAX_ROOM_NUMBER_LENGTH) {
+      toast.error(`Room number cannot exceed ${MAX_ROOM_NUMBER_LENGTH} characters`);
+      return;
+    }
+
+    const sanitizedRoomNumber = formData.roomNumber ? sanitizeString(formData.roomNumber) : undefined;
 
     if (editingEntry) {
       await onUpdateEntry(
@@ -111,7 +126,7 @@ export function TimetableManager({
         formData.startTime,
         formData.endTime,
         formData.type,
-        formData.roomNumber,
+        sanitizedRoomNumber,
         formData.specificDate,
         formData.startDate,
         formData.endDate
@@ -125,7 +140,7 @@ export function TimetableManager({
         formData.startTime,
         formData.endTime,
         formData.type,
-        formData.roomNumber,
+        sanitizedRoomNumber,
         formData.specificDate,
         formData.startDate,
         formData.endDate
@@ -301,10 +316,12 @@ export function TimetableManager({
                 <Input
                   id="roomNumber"
                   value={formData.roomNumber}
-                  onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value })}
+                  onChange={(e) => setFormData({ ...formData, roomNumber: e.target.value.slice(0, MAX_ROOM_NUMBER_LENGTH) })}
                   placeholder="e.g., Room 101"
                   className="bg-white"
+                  maxLength={MAX_ROOM_NUMBER_LENGTH}
                 />
+                <p className="text-xs text-muted-foreground mt-1">{formData.roomNumber.length}/{MAX_ROOM_NUMBER_LENGTH}</p>
               </div>
 
               <div className="flex gap-2 pt-2">

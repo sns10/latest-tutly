@@ -16,6 +16,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { PlusCircle, Users } from 'lucide-react';
 import { toast } from 'sonner';
+import { sanitizeString, validatePaymentAmount } from '@/lib/validation';
+
+// Validation constants
+const MAX_AMOUNT = 10000000;
+const MAX_CUSTOM_FEE_TYPE_LENGTH = 100;
+const MAX_NOTES_LENGTH = 500;
 
 interface AddCustomFeeDialogProps {
   open: boolean;
@@ -71,20 +77,35 @@ export function AddCustomFeeDialog({
   }, [students, selectedClass]);
 
   const handleSubmit = async () => {
-    const finalFeeType = feeType === 'Custom' ? customFeeType : feeType;
+    // Validate fee type
+    const finalFeeType = feeType === 'Custom' ? sanitizeString(customFeeType) : feeType;
     if (!finalFeeType) {
       toast.error('Please select or enter fee type');
       return;
     }
 
-    const feeAmount = parseFloat(amount);
-    if (isNaN(feeAmount) || feeAmount <= 0) {
-      toast.error('Please enter a valid amount');
+    if (feeType === 'Custom' && customFeeType.length > MAX_CUSTOM_FEE_TYPE_LENGTH) {
+      toast.error(`Custom fee type cannot exceed ${MAX_CUSTOM_FEE_TYPE_LENGTH} characters`);
       return;
     }
 
+    // Validate amount
+    const amountValidation = validatePaymentAmount(amount, MAX_AMOUNT);
+    if (!amountValidation.valid) {
+      toast.error(amountValidation.error);
+      return;
+    }
+    const feeAmount = parseFloat(amount);
+
+    // Validate due date
     if (!dueDate) {
       toast.error('Please select a due date');
+      return;
+    }
+
+    // Validate notes length
+    if (notes.length > MAX_NOTES_LENGTH) {
+      toast.error(`Notes cannot exceed ${MAX_NOTES_LENGTH} characters`);
       return;
     }
 
@@ -108,7 +129,7 @@ export function AddCustomFeeDialog({
           amount: feeAmount,
           dueDate,
           status: 'unpaid',
-          notes: notes || undefined
+          notes: notes ? sanitizeString(notes) : undefined
         });
       }
 
@@ -125,7 +146,7 @@ export function AddCustomFeeDialog({
         amount: feeAmount,
         dueDate,
         status: 'unpaid',
-        notes: notes || undefined
+        notes: notes ? sanitizeString(notes) : undefined
       });
 
       toast.success('Custom fee added successfully');
@@ -245,9 +266,11 @@ export function AddCustomFeeDialog({
               <Input
                 id="customFeeType"
                 value={customFeeType}
-                onChange={(e) => setCustomFeeType(e.target.value)}
+                onChange={(e) => setCustomFeeType(e.target.value.slice(0, MAX_CUSTOM_FEE_TYPE_LENGTH))}
                 placeholder="Enter fee name..."
+                maxLength={MAX_CUSTOM_FEE_TYPE_LENGTH}
               />
+              <p className="text-xs text-muted-foreground">{customFeeType.length}/{MAX_CUSTOM_FEE_TYPE_LENGTH}</p>
             </div>
           )}
 
@@ -258,11 +281,18 @@ export function AddCustomFeeDialog({
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₹</span>
               <Input
                 id="amount"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => {
+                  const sanitized = e.target.value.replace(/[^0-9.]/g, '');
+                  const parts = sanitized.split('.');
+                  const cleaned = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
+                  setAmount(cleaned.slice(0, 12));
+                }}
                 placeholder="0"
                 className="pl-7"
+                maxLength={12}
               />
             </div>
           </div>
@@ -284,10 +314,12 @@ export function AddCustomFeeDialog({
             <Textarea
               id="notes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => setNotes(e.target.value.slice(0, MAX_NOTES_LENGTH))}
               placeholder="Any additional notes..."
               rows={2}
+              maxLength={MAX_NOTES_LENGTH}
             />
+            <p className="text-xs text-muted-foreground">{notes.length}/{MAX_NOTES_LENGTH}</p>
           </div>
         </div>
 
