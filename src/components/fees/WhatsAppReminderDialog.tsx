@@ -13,6 +13,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { MessageSquare, Send, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import { sanitizeString } from '@/lib/validation';
+
+// WhatsApp message limit
+const MAX_MESSAGE_LENGTH = 4096;
 
 interface WhatsAppReminderDialogProps {
   open: boolean;
@@ -53,17 +57,30 @@ Tuition Administration`;
 
   const [message, setMessage] = useState(defaultMessage);
 
+  const handleMessageChange = (value: string) => {
+    // Limit to WhatsApp max length
+    if (value.length <= MAX_MESSAGE_LENGTH) {
+      setMessage(value);
+    }
+  };
+
   const handleSendWhatsApp = () => {
-    // Note: WhatsApp API requires phone number. Since we don't have parent phone in current schema,
-    // we'll open WhatsApp with the message ready to send
-    const encodedMessage = encodeURIComponent(message);
+    if (!message.trim()) {
+      toast.error('Message cannot be empty');
+      return;
+    }
+    
+    // Sanitize and encode the message
+    const sanitizedMessage = sanitizeString(message);
+    const encodedMessage = encodeURIComponent(sanitizedMessage);
     window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
     toast.success('WhatsApp opened with reminder message');
     onOpenChange(false);
   };
 
   const handleCopyMessage = () => {
-    navigator.clipboard.writeText(message);
+    const sanitizedMessage = sanitizeString(message);
+    navigator.clipboard.writeText(sanitizedMessage);
     toast.success('Message copied to clipboard');
   };
 
@@ -101,13 +118,15 @@ Tuition Administration`;
             <Textarea
               id="message"
               value={message}
-              onChange={(e) => setMessage(e.target.value)}
+              onChange={(e) => handleMessageChange(e.target.value)}
               rows={12}
               className="font-mono text-sm"
+              maxLength={MAX_MESSAGE_LENGTH}
             />
-            <p className="text-xs text-muted-foreground">
-              You can edit this message before sending
-            </p>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>You can edit this message before sending</span>
+              <span>{message.length}/{MAX_MESSAGE_LENGTH}</span>
+            </div>
           </div>
         </div>
 

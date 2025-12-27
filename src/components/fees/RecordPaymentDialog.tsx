@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { CreditCard, Banknote, Smartphone, Building } from 'lucide-react';
 import { toast } from 'sonner';
+import { sanitizeString, validatePaymentAmount } from '@/lib/validation';
 
 interface FeePayment {
   id: string;
@@ -44,6 +45,11 @@ const PAYMENT_METHODS = [
   { value: 'card', label: 'Card', icon: CreditCard },
 ];
 
+// Input validation constants
+const MAX_AMOUNT = 10000000; // 1 crore
+const MAX_REFERENCE_LENGTH = 100;
+const MAX_NOTES_LENGTH = 500;
+
 export function RecordPaymentDialog({
   open,
   onOpenChange,
@@ -59,6 +65,7 @@ export function RecordPaymentDialog({
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
+  const [errors, setErrors] = useState<{ amount?: string; reference?: string; notes?: string }>({});
 
   // Reset amount when dialog opens or fee changes
   useEffect(() => {
@@ -68,23 +75,64 @@ export function RecordPaymentDialog({
       setPaymentMethod('cash');
       setReference('');
       setNotes('');
+      setErrors({});
     }
   }, [open, fee, existingPayments]);
 
+  const handleAmountChange = (value: string) => {
+    // Only allow valid numeric input
+    const sanitized = value.replace(/[^0-9.]/g, '');
+    // Prevent multiple decimal points
+    const parts = sanitized.split('.');
+    const cleaned = parts.length > 2 ? parts[0] + '.' + parts.slice(1).join('') : sanitized;
+    setAmount(cleaned);
+    setErrors((prev) => ({ ...prev, amount: undefined }));
+  };
+
+  const handleReferenceChange = (value: string) => {
+    if (value.length <= MAX_REFERENCE_LENGTH) {
+      setReference(sanitizeString(value));
+      setErrors((prev) => ({ ...prev, reference: undefined }));
+    }
+  };
+
+  const handleNotesChange = (value: string) => {
+    if (value.length <= MAX_NOTES_LENGTH) {
+      setNotes(sanitizeString(value));
+      setErrors((prev) => ({ ...prev, notes: undefined }));
+    }
+  };
+
   const handleSubmit = () => {
-    const paymentAmount = parseFloat(amount);
+    const newErrors: typeof errors = {};
     
-    if (isNaN(paymentAmount) || paymentAmount <= 0) {
-      toast.error('Please enter a valid amount');
+    // Validate amount
+    const amountValidation = validatePaymentAmount(amount, Math.min(remainingDue, MAX_AMOUNT));
+    if (!amountValidation.valid) {
+      newErrors.amount = amountValidation.error;
+    }
+
+    // Validate reference if payment method requires it
+    if (['upi', 'bank_transfer', 'cheque'].includes(paymentMethod) && reference && reference.length > MAX_REFERENCE_LENGTH) {
+      newErrors.reference = `Reference cannot exceed ${MAX_REFERENCE_LENGTH} characters`;
+    }
+
+    // Validate notes length
+    if (notes && notes.length > MAX_NOTES_LENGTH) {
+      newErrors.notes = `Notes cannot exceed ${MAX_NOTES_LENGTH} characters`;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      toast.error(Object.values(newErrors)[0]);
       return;
     }
 
-    if (paymentAmount > remainingDue) {
-      toast.error(`Payment amount cannot exceed remaining due amount (₹${remainingDue.toLocaleString('en-IN')})`);
-      return;
-    }
+    const paymentAmount = parseFloat(amount);
+    const sanitizedReference = reference ? sanitizeString(reference) : undefined;
+    const sanitizedNotes = notes ? sanitizeString(notes) : undefined;
 
-    onRecordPayment(paymentAmount, paymentMethod, reference || undefined, notes || undefined);
+    onRecordPayment(paymentAmount, paymentMethod, sanitizedReference, sanitizedNotes);
     onOpenChange(false);
   };
 
@@ -138,12 +186,14 @@ export function RecordPaymentDialog({
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">₹</span>
               <Input
                 id="amount"
-                type="number"
+                type="text"
+                inputMode="decimal"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="pl-7"
-                max={remainingDue}
+                onChange={(e) => handleAmountChange(e.target.value)}
+                className={`pl-7 ${errors.amount ? 'border-destructive' : ''}`}
+                maxLength={12}
               />
+              {errors.amount && <p className="text-xs text-destructive mt-1">{errors.amount}</p>}
             </div>
             <div className="flex gap-2">
               <Button
@@ -215,9 +265,15 @@ export function RecordPaymentDialog({
               <Input
                 id="reference"
                 value={reference}
-                onChange={(e) => setReference(e.target.value)}
+                onChange={(e) => handleReferenceChange(e.target.value)}
                 placeholder={paymentMethod === 'cheque' ? 'Enter cheque number' : 'Enter transaction ID'}
-              />
+                maxLength={MAX_REFERENCE_LENGTH}
+                className={errors.reference ? 'border-destructive' : ''}
+            />
+            <p className="text-xs text-muted-foreground">{notes.length}/{MAX_NOTES_LENGTH}</p>
+            {errors.notes && <p className="text-xs text-destructive">{errors.notes}</p>}
+              <p className="text-xs text-muted-foreground mt-1">{reference.length}/{MAX_REFERENCE_LENGTH}</p>
+              {errors.reference && <p className="text-xs text-destructive">{errors.reference}</p>}
             </div>
           )}
 
@@ -227,9 +283,11 @@ export function RecordPaymentDialog({
             <Textarea
               id="notes"
               value={notes}
-              onChange={(e) => setNotes(e.target.value)}
+              onChange={(e) => handleNotesChange(e.target.value)}
               placeholder="Any additional notes..."
               rows={2}
+              maxLength={MAX_NOTES_LENGTH}
+              className={errors.notes ? 'border-destructive' : ''}
             />
           </div>
         </div>
