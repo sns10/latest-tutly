@@ -8,12 +8,12 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Loader2, Search, Users, GraduationCap, Flame } from 'lucide-react';
+import { Search, Users, GraduationCap, Flame } from 'lucide-react';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
 import { BulkImportStudentsDialog } from '@/components/BulkImportStudentsDialog';
 import { StudentDetailsDialog } from '@/components/StudentDetailsDialog';
 import { useAttendanceStreak } from '@/hooks/useAttendanceStreak';
+import { StudentsPageSkeleton } from '@/components/skeletons/PageSkeletons';
 
 export default function StudentsPage() {
   const { 
@@ -79,12 +79,9 @@ export default function StudentsPage() {
     }
   };
 
+  // Show skeleton during loading
   if (loading || featuresLoading || termExamLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
+    return <StudentsPageSkeleton />;
   }
 
   const showBulkImport = isFeatureEnabled('bulk_import');

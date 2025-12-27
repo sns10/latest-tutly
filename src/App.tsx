@@ -12,6 +12,8 @@ import { AuthPage } from "./components/AuthPage";
 import { PrivacyPolicy } from "@/components/legal/PrivacyPolicy";
 import { TermsOfService } from "@/components/legal/TermsOfService";
 import { Footer } from "@/components/Footer";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { Loader2 } from "lucide-react";
 
 // Lazy load heavy pages for faster initial load
@@ -28,7 +30,23 @@ const Materials = lazy(() => import("./pages/Materials"));
 const Classes = lazy(() => import("./pages/Classes"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 
-const queryClient = new QueryClient();
+// Optimized Query Client with production-ready defaults
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 2, // 2 minutes - data is fresh
+      gcTime: 1000 * 60 * 10, // 10 minutes - cache lifetime (previously cacheTime)
+      retry: 2,
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+      refetchOnWindowFocus: false, // Disable aggressive refetching
+      refetchOnReconnect: true, // Refetch when coming back online
+    },
+    mutations: {
+      retry: 1,
+      retryDelay: 1000,
+    },
+  },
+});
 
 // Loading fallback component
 const PageLoader = () => (
@@ -47,6 +65,9 @@ function AppContent() {
   const isStudentPage = location.pathname.startsWith('/student');
   const isLegalPage = location.pathname === '/privacy' || location.pathname === '/terms';
 
+  // Monitor network status
+  useNetworkStatus();
+
   // Don't show sidebars on auth, super-admin, student, or legal pages
   const showSidebars = !isAuthPage && !isSuperAdminPage && !isStudentPage && !isLegalPage;
 
@@ -64,37 +85,39 @@ function AppContent() {
           )}
           <div className={`flex-1 ${showSidebars ? 'pb-20 md:pb-0' : ''} bg-[#f8f9fa] w-full overflow-x-hidden flex flex-col`}>
             <div className="flex-1">
-              <Suspense fallback={<PageLoader />}>
-                <Routes>
-                  <Route path="/auth" element={<AuthPage />} />
-                  <Route path="/privacy" element={<PrivacyPolicy />} />
-                  <Route path="/terms" element={<TermsOfService />} />
-                  <Route 
-                    path="/super-admin" 
-                    element={
-                      <ProtectedRoute allowedRoles={['super_admin']}>
-                        <SuperAdmin />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/student" 
-                    element={
-                      <ProtectedRoute allowedRoles={['student', 'parent']} allowPortalUsers={true}>
-                        <Student />
-                      </ProtectedRoute>
-                    } 
-                  />
-                  <Route 
-                    path="/*" 
-                    element={
-                      <ProtectedRoute allowedRoles={['tuition_admin']}>
-                        <Index />
-                      </ProtectedRoute>
-                    } 
-                  />
-                </Routes>
-              </Suspense>
+              <ErrorBoundary>
+                <Suspense fallback={<PageLoader />}>
+                  <Routes>
+                    <Route path="/auth" element={<AuthPage />} />
+                    <Route path="/privacy" element={<PrivacyPolicy />} />
+                    <Route path="/terms" element={<TermsOfService />} />
+                    <Route 
+                      path="/super-admin" 
+                      element={
+                        <ProtectedRoute allowedRoles={['super_admin']}>
+                          <SuperAdmin />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/student" 
+                      element={
+                        <ProtectedRoute allowedRoles={['student', 'parent']} allowPortalUsers={true}>
+                          <Student />
+                        </ProtectedRoute>
+                      } 
+                    />
+                    <Route 
+                      path="/*" 
+                      element={
+                        <ProtectedRoute allowedRoles={['tuition_admin']}>
+                          <Index />
+                        </ProtectedRoute>
+                      } 
+                    />
+                  </Routes>
+                </Suspense>
+              </ErrorBoundary>
             </div>
             <Footer />
           </div>
@@ -106,16 +129,18 @@ function AppContent() {
 }
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AuthProvider>
-        <TooltipProvider>
-          <Sonner />
-          <AppContent />
-        </TooltipProvider>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <TooltipProvider>
+            <Sonner />
+            <AppContent />
+          </TooltipProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

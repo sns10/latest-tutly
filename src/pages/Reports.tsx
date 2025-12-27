@@ -1,9 +1,21 @@
+import { Suspense, lazy } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MonthlyAttendanceReport } from '@/components/reports/MonthlyAttendanceReport';
-import { ConsolidatedTestReport } from '@/components/reports/ConsolidatedTestReport';
-import { StudentReportCard } from '@/components/reports/StudentReportCard';
-import { TermExamReport } from '@/components/reports/TermExamReport';
 import { CalendarDays, FileText, GraduationCap, BookOpen } from 'lucide-react';
+import { ReportsSkeleton } from '@/components/skeletons/PageSkeletons';
+
+// Lazy load heavy report components
+const MonthlyAttendanceReport = lazy(() => 
+  import('@/components/reports/MonthlyAttendanceReport').then(m => ({ default: m.MonthlyAttendanceReport }))
+);
+const ConsolidatedTestReport = lazy(() => 
+  import('@/components/reports/ConsolidatedTestReport').then(m => ({ default: m.ConsolidatedTestReport }))
+);
+const StudentReportCard = lazy(() => 
+  import('@/components/reports/StudentReportCard').then(m => ({ default: m.StudentReportCard }))
+);
+const TermExamReport = lazy(() => 
+  import('@/components/reports/TermExamReport').then(m => ({ default: m.TermExamReport }))
+);
 
 export default function ReportsPage() {
   return (
@@ -34,19 +46,27 @@ export default function ReportsPage() {
         </TabsList>
 
         <TabsContent value="attendance" className="mt-4">
-          <MonthlyAttendanceReport />
+          <Suspense fallback={<ReportsSkeleton />}>
+            <MonthlyAttendanceReport />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="tests" className="mt-4">
-          <ConsolidatedTestReport />
+          <Suspense fallback={<ReportsSkeleton />}>
+            <ConsolidatedTestReport />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="term-exams" className="mt-4">
-          <TermExamReport />
+          <Suspense fallback={<ReportsSkeleton />}>
+            <TermExamReport />
+          </Suspense>
         </TabsContent>
 
         <TabsContent value="report-card" className="mt-4">
-          <StudentReportCard />
+          <Suspense fallback={<ReportsSkeleton />}>
+            <StudentReportCard />
+          </Suspense>
         </TabsContent>
       </Tabs>
     </div>
