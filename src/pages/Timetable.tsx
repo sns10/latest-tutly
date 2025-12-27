@@ -1,6 +1,6 @@
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { SchedulingModule } from '@/components/scheduling/SchedulingModule';
-import { Loader2 } from 'lucide-react';
+import { TimetablePageSkeleton } from '@/components/skeletons/PageSkeletons';
 import { ClassName } from '@/types';
 
 export default function TimetablePage() {
@@ -91,12 +91,9 @@ export default function TimetablePage() {
     );
   };
 
+  // Show skeleton during loading
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <TimetablePageSkeleton />;
   }
 
   return (

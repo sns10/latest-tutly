@@ -3,7 +3,7 @@ import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Loader2, LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt, Activity } from 'lucide-react';
+import { LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt, Activity } from 'lucide-react';
 import { 
   FeeDashboard, 
   FeesList, 
@@ -13,6 +13,7 @@ import {
   CustomFeesManager,
   PaymentActivityFeed
 } from '@/components/fees';
+import { FeesPageSkeleton } from '@/components/skeletons/PageSkeletons';
 import { toast } from 'sonner';
 
 interface FeePayment {
@@ -110,12 +111,9 @@ export default function FeesPage() {
     }
   };
 
+  // Show skeleton during loading
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin" />
-      </div>
-    );
+    return <FeesPageSkeleton />;
   }
 
   return (
