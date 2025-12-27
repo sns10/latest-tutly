@@ -20,11 +20,21 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
-    // Use esbuild for minification (built-in, no extra deps)
-    minify: 'esbuild',
-    // Drop console/debugger in production
-    esbuildOptions: {
-      drop: mode === 'production' ? ['console', 'debugger'] : [],
+    // Use terser for advanced minification
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: mode === 'production',
+        drop_debugger: mode === 'production',
+        pure_funcs: mode === 'production' ? ['console.log', 'console.info'] : [],
+        passes: 2, // Multiple passes for better compression
+      },
+      mangle: {
+        safari10: true, // Safari 10 compatibility
+      },
+      format: {
+        comments: false, // Remove all comments
+      },
     },
     // Chunk splitting for better caching
     rollupOptions: {
