@@ -15,6 +15,8 @@ import {
   useAnnouncementsQuery,
   useStudentChallengesQuery,
   useAttendanceQuery,
+  useMarkAttendanceMutation,
+  useBulkMarkAttendanceMutation,
   useFeesQuery,
   useClassFeesQuery,
   useWeeklyTestsQuery,
@@ -381,68 +383,33 @@ export function useSupabaseData() {
     invalidateTests();
   };
 
-  // Attendance operations
-  const markAttendance = async (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => {
-    try {
-      const normalizedSubjectId = subjectId?.trim() || null;
-      const normalizedFacultyId = facultyId?.trim() || null;
+  // Attendance operations - using optimistic mutations for instant UI
+  const markAttendanceMutation = useMarkAttendanceMutation(tuitionId);
+  const bulkMarkAttendanceMutation = useBulkMarkAttendanceMutation(tuitionId);
 
-      let query = supabase.from('student_attendance').select('id').eq('student_id', studentId).eq('date', date);
+  const markAttendance = useCallback((
+    studentId: string, 
+    date: string, 
+    status: 'present' | 'absent' | 'late' | 'excused', 
+    notes?: string, 
+    subjectId?: string, 
+    facultyId?: string
+  ) => {
+    markAttendanceMutation.mutate({ studentId, date, status, notes, subjectId, facultyId });
+  }, [markAttendanceMutation]);
 
-      if (normalizedSubjectId) {
-        query = query.eq('subject_id', normalizedSubjectId);
-      } else {
-        query = query.is('subject_id', null);
-      }
-
-      if (normalizedFacultyId) {
-        query = query.eq('faculty_id', normalizedFacultyId);
-      } else {
-        query = query.is('faculty_id', null);
-      }
-
-      const { data: existingAttendance, error: checkError } = await query.maybeSingle();
-
-      if (checkError) {
-        console.error('Error checking existing attendance:', checkError);
-        toast.error('Failed to mark attendance - please try again');
-        return;
-      }
-
-      if (existingAttendance) {
-        const { error } = await supabase
-          .from('student_attendance')
-          .update({ status, notes: notes || null, updated_at: new Date().toISOString() })
-          .eq('id', existingAttendance.id);
-
-        if (error) {
-          console.error('Error updating attendance:', error);
-          toast.error('Failed to update attendance');
-          return;
-        }
-      } else {
-        const { error } = await supabase.from('student_attendance').insert({
-          student_id: studentId,
-          date,
-          status,
-          notes: notes || null,
-          subject_id: normalizedSubjectId,
-          faculty_id: normalizedFacultyId,
-        });
-
-        if (error) {
-          console.error('Error marking attendance:', error);
-          toast.error('Failed to mark attendance');
-          return;
-        }
-      }
-
-      invalidateAttendance();
-    } catch (error) {
-      console.error('Error marking attendance:', error);
-      toast.error('Network error - please check your connection and try again');
-    }
-  };
+  const bulkMarkAttendance = useCallback((
+    records: Array<{
+      studentId: string;
+      date: string;
+      status: 'present' | 'absent' | 'late' | 'excused';
+      notes?: string;
+      subjectId?: string;
+      facultyId?: string;
+    }>
+  ) => {
+    bulkMarkAttendanceMutation.mutate(records);
+  }, [bulkMarkAttendanceMutation]);
 
   // Fee operations
   const addFee = async (newFee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => {
@@ -882,6 +849,7 @@ export function useSupabaseData() {
     completeChallenge,
     addAnnouncement,
     markAttendance,
+    bulkMarkAttendance,
     addFee,
     updateFeeStatus,
     updateClassFee,

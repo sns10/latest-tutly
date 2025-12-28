@@ -11,7 +11,8 @@ export default function AttendancePage() {
     faculty,
     divisions,
     loading,
-    markAttendance
+    markAttendance,
+    bulkMarkAttendance
   } = useSupabaseData();
 
   if (loading) {
@@ -31,6 +32,7 @@ export default function AttendancePage() {
       faculty={faculty}
       divisions={divisions}
       onMarkAttendance={markAttendance}
+      onBulkMarkAttendance={bulkMarkAttendance}
     />
   );
 }

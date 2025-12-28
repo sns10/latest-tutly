@@ -23,6 +23,14 @@ interface AttendanceTrackerProps {
   faculty?: Faculty[];
   divisions?: Division[];
   onMarkAttendance: (studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused', notes?: string, subjectId?: string, facultyId?: string) => void;
+  onBulkMarkAttendance?: (records: Array<{
+    studentId: string;
+    date: string;
+    status: 'present' | 'absent' | 'late' | 'excused';
+    notes?: string;
+    subjectId?: string;
+    facultyId?: string;
+  }>) => void;
 }
 
 const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
@@ -42,7 +50,8 @@ export function AttendanceTracker({
   subjects = [], 
   faculty = [], 
   divisions = [],
-  onMarkAttendance 
+  onMarkAttendance,
+  onBulkMarkAttendance
 }: AttendanceTrackerProps) {
   const { isFeatureEnabled } = useTuitionFeatures();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -284,22 +293,36 @@ export function AttendanceTracker({
   }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
-    let markedCount = 0;
-    
-    filteredStudentsBase.forEach(student => {
+    // Collect all students that need marking
+    const studentsToMark = filteredStudentsBase.filter(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
-      if (!existingAttendance) {
-        onMarkAttendance(student.id, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
-        markedCount++;
-      }
+      return !existingAttendance;
     });
     
-    if (markedCount > 0) {
-      toast.success(`${markedCount} students marked as ${status}`);
-    } else {
+    if (studentsToMark.length === 0) {
       toast.info('All students already have attendance marked');
+      return;
     }
-  }, [filteredStudentsBase, getAttendanceForStudent, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
+
+    // Use bulk handler if available for single API call
+    if (onBulkMarkAttendance) {
+      const records = studentsToMark.map(student => ({
+        studentId: student.id,
+        date: selectedDateStr,
+        status,
+        subjectId: selectedSubject || undefined,
+        facultyId: selectedFaculty || undefined,
+      }));
+      onBulkMarkAttendance(records);
+      toast.success(`${studentsToMark.length} students marked as ${status}`);
+    } else {
+      // Fallback to individual calls
+      studentsToMark.forEach(student => {
+        onMarkAttendance(student.id, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
+      });
+      toast.success(`${studentsToMark.length} students marked as ${status}`);
+    }
+  }, [filteredStudentsBase, getAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   const handleSwitchToManual = () => {
     setIsManualMode(true);
