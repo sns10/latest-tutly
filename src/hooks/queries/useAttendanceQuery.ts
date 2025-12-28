@@ -153,18 +153,74 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
         if (error) throw error;
       }
 
-      return { studentId, date, status };
+      return { studentId, date, status, notes, subjectId: normalizedSubjectId, facultyId: normalizedFacultyId };
     },
-    onSuccess: (data) => {
-      // Invalidate only the relevant date's attendance
-      queryClient.invalidateQueries({ 
-        queryKey: ['attendance', tuitionId],
-        refetchType: 'active'
-      });
+    // Optimistic update for instant UI feedback
+    onMutate: async (params) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['attendance', tuitionId] });
+
+      // Snapshot previous value
+      const previousAttendance = queryClient.getQueryData<StudentAttendance[]>(['attendance', tuitionId, undefined]);
+
+      // Optimistically update the cache
+      if (previousAttendance) {
+        const { studentId, date, status, notes, subjectId, facultyId } = params;
+        const normalizedSubjectId = subjectId?.trim() || null;
+        const normalizedFacultyId = facultyId?.trim() || null;
+        
+        const existingIndex = previousAttendance.findIndex(a => 
+          a.studentId === studentId && 
+          a.date === date &&
+          (normalizedSubjectId ? a.subjectId === normalizedSubjectId : !a.subjectId) &&
+          (normalizedFacultyId ? a.facultyId === normalizedFacultyId : !a.facultyId)
+        );
+
+        const newAttendance = [...previousAttendance];
+        const now = new Date().toISOString();
+
+        if (existingIndex >= 0) {
+          // Update existing
+          newAttendance[existingIndex] = {
+            ...newAttendance[existingIndex],
+            status: status as 'present' | 'absent' | 'late' | 'excused',
+            notes,
+            updatedAt: now,
+          };
+        } else {
+          // Add new
+          newAttendance.unshift({
+            id: `temp-${Date.now()}`,
+            studentId,
+            date,
+            status: status as 'present' | 'absent' | 'late' | 'excused',
+            notes,
+            subjectId: normalizedSubjectId || undefined,
+            facultyId: normalizedFacultyId || undefined,
+            createdAt: now,
+            updatedAt: now,
+          });
+        }
+
+        queryClient.setQueryData(['attendance', tuitionId, undefined], newAttendance);
+      }
+
+      return { previousAttendance };
     },
-    onError: (error) => {
+    onError: (error, _params, context) => {
+      // Rollback on error
+      if (context?.previousAttendance) {
+        queryClient.setQueryData(['attendance', tuitionId, undefined], context.previousAttendance);
+      }
       console.error('Error marking attendance:', error);
       toast.error('Failed to mark attendance');
+    },
+    onSettled: () => {
+      // Refetch in background to ensure sync (but UI already updated)
+      queryClient.invalidateQueries({ 
+        queryKey: ['attendance', tuitionId],
+        refetchType: 'none' // Don't refetch immediately, just mark stale
+      });
     },
   });
 }
@@ -201,12 +257,66 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       if (error) throw error;
       return records;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
+    // Optimistic update for bulk operations
+    onMutate: async (records) => {
+      await queryClient.cancelQueries({ queryKey: ['attendance', tuitionId] });
+      
+      const previousAttendance = queryClient.getQueryData<StudentAttendance[]>(['attendance', tuitionId, undefined]);
+
+      if (previousAttendance) {
+        const newAttendance = [...previousAttendance];
+        const now = new Date().toISOString();
+
+        records.forEach(({ studentId, date, status, notes, subjectId, facultyId }) => {
+          const normalizedSubjectId = subjectId?.trim() || null;
+          const normalizedFacultyId = facultyId?.trim() || null;
+          
+          const existingIndex = newAttendance.findIndex(a => 
+            a.studentId === studentId && 
+            a.date === date &&
+            (normalizedSubjectId ? a.subjectId === normalizedSubjectId : !a.subjectId) &&
+            (normalizedFacultyId ? a.facultyId === normalizedFacultyId : !a.facultyId)
+          );
+
+          if (existingIndex >= 0) {
+            newAttendance[existingIndex] = {
+              ...newAttendance[existingIndex],
+              status: status as 'present' | 'absent' | 'late' | 'excused',
+              notes,
+              updatedAt: now,
+            };
+          } else {
+            newAttendance.unshift({
+              id: `temp-${Date.now()}-${studentId}`,
+              studentId,
+              date,
+              status: status as 'present' | 'absent' | 'late' | 'excused',
+              notes,
+              subjectId: normalizedSubjectId || undefined,
+              facultyId: normalizedFacultyId || undefined,
+              createdAt: now,
+              updatedAt: now,
+            });
+          }
+        });
+
+        queryClient.setQueryData(['attendance', tuitionId, undefined], newAttendance);
+      }
+
+      return { previousAttendance };
     },
-    onError: (error) => {
+    onError: (error, _records, context) => {
+      if (context?.previousAttendance) {
+        queryClient.setQueryData(['attendance', tuitionId, undefined], context.previousAttendance);
+      }
       console.error('Error bulk marking attendance:', error);
       toast.error('Failed to save attendance');
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ 
+        queryKey: ['attendance', tuitionId],
+        refetchType: 'none'
+      });
     },
   });
 }
