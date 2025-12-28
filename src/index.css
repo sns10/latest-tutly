@@ -80,6 +80,14 @@
     position: relative;
     -webkit-tap-highlight-color: transparent;
     -webkit-touch-callout: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  
+  /* Optimize iOS scrolling */
+  body {
+    -webkit-overflow-scrolling: touch;
   }
   
   #root {
@@ -101,6 +109,15 @@
   /* Optimize rendering for mobile */
   .will-change-transform {
     will-change: transform;
+  }
+
+  /* Safe area for bottom nav on notched devices */
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+  
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top, 0);
   }
 
   /* Text size variants */
