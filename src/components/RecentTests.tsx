@@ -1,4 +1,3 @@
-import { memo, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,53 +14,7 @@ interface RecentTestsProps {
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
 
-// Memoized test item component
-const TestItem = memo(({ 
-  test, 
-  stats, 
-  students, 
-  testResults,
-  divisions,
-  onAddTestResult,
-  onAwardXP
-}: { 
-  test: WeeklyTest; 
-  stats: { completed: number; total: number };
-  students: Student[];
-  testResults: StudentTestResult[];
-  divisions: Division[];
-  onAddTestResult: (result: StudentTestResult) => void;
-  onAwardXP: (studentId: string, amount: number, reason: string) => void;
-}) => (
-  <div
-    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 sm:p-3 bg-secondary/30 rounded-lg"
-    style={{ contain: 'content' }}
-  >
-    <div className="flex-1 min-w-0">
-      <p className="text-xs sm:text-sm font-medium truncate">{test.name}</p>
-      <div className="flex items-center gap-2 mt-1">
-        <Badge variant="outline" className="text-[10px] sm:text-xs">{test.subject}</Badge>
-        <span className="text-[10px] sm:text-xs text-muted-foreground">
-          {stats.completed}/{stats.total}
-        </span>
-      </div>
-    </div>
-    <div className="sm:ml-2 w-full sm:w-auto">
-      <EnterMarksDialog 
-        test={test} 
-        students={students}
-        existingResults={testResults.filter(r => r.testId === test.id)}
-        divisions={divisions}
-        onAddResult={onAddTestResult}
-        onAwardXP={onAwardXP}
-      />
-    </div>
-  </div>
-));
-
-TestItem.displayName = 'TestItem';
-
-export const RecentTests = memo(function RecentTests({ 
+export function RecentTests({ 
   tests, 
   testResults, 
   students,
@@ -69,37 +22,29 @@ export const RecentTests = memo(function RecentTests({
   onAddTestResult,
   onAwardXP 
 }: RecentTestsProps) {
-  const recentTests = useMemo(() => tests.slice(0, 3), [tests]);
+  const recentTests = tests.slice(0, 3);
 
-  const getTestStats = useMemo(() => {
-    const cache = new Map<string, { completed: number; total: number }>();
+  const getTestStats = (test: WeeklyTest) => {
+    const eligibleStudents = test.class === "All" 
+      ? students 
+      : students.filter(s => s.class === test.class);
     
-    return (test: WeeklyTest) => {
-      if (cache.has(test.id)) {
-        return cache.get(test.id)!;
-      }
-      
-      const eligibleStudents = test.class === "All" 
-        ? students 
-        : students.filter(s => s.class === test.class);
-      
-      const results = testResults.filter(r => r.testId === test.id);
-      const stats = {
-        completed: results.length,
-        total: eligibleStudents.length,
-      };
-      
-      cache.set(test.id, stats);
-      return stats;
+    const results = testResults.filter(r => r.testId === test.id);
+    const totalStudents = eligibleStudents.length;
+    const studentsCompleted = results.length;
+
+    return {
+      completed: studentsCompleted,
+      total: totalStudents,
     };
-  }, [students, testResults]);
+  };
 
   return (
-    <Card className="bg-white border border-gray-100 shadow-sm w-full" style={{ contain: 'content' }}>
+    <Card className="bg-white border border-gray-100 shadow-sm w-full">
       <CardHeader className="pb-2 sm:pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm sm:text-base font-semibold text-gray-900">Recent Tests</CardTitle>
-          <Button variant="ghost" size="sm" className="h-7 sm:h-8 text-[10px] sm:text-xs px-2 touch-manipulation">
+          <Button variant="ghost" size="sm" className="h-7 sm:h-8 text-[10px] sm:text-xs px-2">
             View All
             <ChevronRight className="h-3 w-3 ml-1" />
           </Button>
@@ -111,20 +56,37 @@ export const RecentTests = memo(function RecentTests({
             No tests created yet
           </p>
         ) : (
-          recentTests.map((test) => (
-            <TestItem
-              key={test.id}
-              test={test}
-              stats={getTestStats(test)}
-              students={students}
-              testResults={testResults}
-              divisions={divisions}
-              onAddTestResult={onAddTestResult}
-              onAwardXP={onAwardXP}
-            />
-          ))
+          recentTests.map((test) => {
+            const stats = getTestStats(test);
+            return (
+              <div
+                key={test.id}
+                className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-2 sm:p-3 bg-secondary/30 rounded-lg"
+              >
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs sm:text-sm font-medium truncate">{test.name}</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant="outline" className="text-[10px] sm:text-xs">{test.subject}</Badge>
+                    <span className="text-[10px] sm:text-xs text-muted-foreground">
+                      {stats.completed}/{stats.total}
+                    </span>
+                  </div>
+                </div>
+                <div className="sm:ml-2 w-full sm:w-auto">
+                  <EnterMarksDialog 
+                    test={test} 
+                    students={students}
+                    existingResults={testResults.filter(r => r.testId === test.id)}
+                    divisions={divisions}
+                    onAddResult={onAddTestResult}
+                    onAwardXP={onAwardXP}
+                  />
+                </div>
+              </div>
+            );
+          })
         )}
       </CardContent>
     </Card>
   );
-});
+}
