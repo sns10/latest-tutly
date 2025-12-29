@@ -8,8 +8,9 @@ const corsHeaders = {
 
 interface BackupRequest {
   tuitionId: string;
-  action: 'export' | 'create' | 'list' | 'download';
+  action: 'export' | 'create' | 'list' | 'download' | 'restore';
   backupId?: string;
+  backupData?: any; // For restore from file upload
 }
 
 const MAX_BACKUPS_PER_TUITION = 2;
@@ -97,8 +98,7 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
-
-    const { tuitionId, action, backupId }: BackupRequest = await req.json();
+    const { tuitionId, action, backupId, backupData: uploadedBackupData }: BackupRequest = await req.json();
 
     if (!tuitionId || !action) {
       return new Response(
@@ -298,6 +298,256 @@ const handler = async (req: Request): Promise<Response> => {
 
       return new Response(
         JSON.stringify({ success: true, backup: backup.backup_data }),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // RESTORE: Restore data from backup
+    if (action === 'restore') {
+      console.log('Restoring data for tuition:', tuitionId);
+      
+      let dataToRestore: any = null;
+
+      // Get backup data either from backupId or uploaded data
+      if (backupId) {
+        const { data: backup, error: fetchError } = await supabaseAdmin
+          .from('tuition_backups')
+          .select('backup_data')
+          .eq('id', backupId)
+          .eq('tuition_id', tuitionId)
+          .single();
+
+        if (fetchError || !backup) {
+          return new Response(
+            JSON.stringify({ error: 'Backup not found' }),
+            { status: 404, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+          );
+        }
+        dataToRestore = backup.backup_data;
+      } else if (uploadedBackupData) {
+        dataToRestore = uploadedBackupData;
+      } else {
+        return new Response(
+          JSON.stringify({ error: 'No backup data provided' }),
+          { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      // Validate backup data structure
+      if (!dataToRestore?.data || !dataToRestore?.metadata) {
+        return new Response(
+          JSON.stringify({ error: 'Invalid backup format' }),
+          { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+
+      const restoreResults: Record<string, { success: boolean; count: number; error?: string }> = {};
+
+      // Restore in order of dependencies
+      // 1. Divisions first (no dependencies)
+      if (dataToRestore.data.divisions?.length > 0) {
+        try {
+          const divisionsToRestore = dataToRestore.data.divisions.map((d: any) => ({
+            ...d,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('divisions')
+            .upsert(divisionsToRestore, { onConflict: 'id' });
+          restoreResults.divisions = { success: !error, count: divisionsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.divisions = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 2. Faculty
+      if (dataToRestore.data.faculty?.length > 0) {
+        try {
+          const facultyToRestore = dataToRestore.data.faculty.map((f: any) => ({
+            ...f,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('faculty')
+            .upsert(facultyToRestore, { onConflict: 'id' });
+          restoreResults.faculty = { success: !error, count: facultyToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.faculty = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 3. Subjects
+      if (dataToRestore.data.subjects?.length > 0) {
+        try {
+          const subjectsToRestore = dataToRestore.data.subjects.map((s: any) => ({
+            ...s,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('subjects')
+            .upsert(subjectsToRestore, { onConflict: 'id' });
+          restoreResults.subjects = { success: !error, count: subjectsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.subjects = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 4. Rooms
+      if (dataToRestore.data.rooms?.length > 0) {
+        try {
+          const roomsToRestore = dataToRestore.data.rooms.map((r: any) => ({
+            ...r,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('rooms')
+            .upsert(roomsToRestore, { onConflict: 'id' });
+          restoreResults.rooms = { success: !error, count: roomsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.rooms = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 5. Students (depends on divisions)
+      if (dataToRestore.data.students?.length > 0) {
+        try {
+          const studentsToRestore = dataToRestore.data.students.map((s: any) => ({
+            ...s,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('students')
+            .upsert(studentsToRestore, { onConflict: 'id' });
+          restoreResults.students = { success: !error, count: studentsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.students = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 6. Tests
+      if (dataToRestore.data.tests?.length > 0) {
+        try {
+          const testsToRestore = dataToRestore.data.tests.map((t: any) => ({
+            ...t,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('weekly_tests')
+            .upsert(testsToRestore, { onConflict: 'id' });
+          restoreResults.tests = { success: !error, count: testsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.tests = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 7. Homework
+      if (dataToRestore.data.homework?.length > 0) {
+        try {
+          const homeworkToRestore = dataToRestore.data.homework.map((h: any) => ({
+            ...h,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('homework')
+            .upsert(homeworkToRestore, { onConflict: 'id' });
+          restoreResults.homework = { success: !error, count: homeworkToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.homework = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 8. Announcements
+      if (dataToRestore.data.announcements?.length > 0) {
+        try {
+          const announcementsToRestore = dataToRestore.data.announcements.map((a: any) => ({
+            ...a,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('announcements')
+            .upsert(announcementsToRestore, { onConflict: 'id' });
+          restoreResults.announcements = { success: !error, count: announcementsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.announcements = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 9. Timetable (depends on subjects, faculty, rooms)
+      if (dataToRestore.data.timetable?.length > 0) {
+        try {
+          const timetableToRestore = dataToRestore.data.timetable.map((t: any) => ({
+            ...t,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('timetable')
+            .upsert(timetableToRestore, { onConflict: 'id' });
+          restoreResults.timetable = { success: !error, count: timetableToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.timetable = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 10. Attendance (depends on students)
+      if (dataToRestore.data.attendance?.length > 0) {
+        try {
+          // Remove the nested students data before upserting
+          const attendanceToRestore = dataToRestore.data.attendance.map((a: any) => {
+            const { students, ...attendanceData } = a;
+            return attendanceData;
+          });
+          const { error } = await supabaseAdmin
+            .from('student_attendance')
+            .upsert(attendanceToRestore, { onConflict: 'id' });
+          restoreResults.attendance = { success: !error, count: attendanceToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.attendance = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 11. Fees (depends on students)
+      if (dataToRestore.data.fees?.length > 0) {
+        try {
+          const feesToRestore = dataToRestore.data.fees.map((f: any) => {
+            const { students, ...feeData } = f;
+            return feeData;
+          });
+          const { error } = await supabaseAdmin
+            .from('student_fees')
+            .upsert(feesToRestore, { onConflict: 'id' });
+          restoreResults.fees = { success: !error, count: feesToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.fees = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 12. Test Results (depends on students, tests)
+      if (dataToRestore.data.testResults?.length > 0) {
+        try {
+          const testResultsToRestore = dataToRestore.data.testResults.map((tr: any) => {
+            const { students, ...resultData } = tr;
+            return resultData;
+          });
+          const { error } = await supabaseAdmin
+            .from('student_test_results')
+            .upsert(testResultsToRestore, { onConflict: 'id' });
+          restoreResults.testResults = { success: !error, count: testResultsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.testResults = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      const successCount = Object.values(restoreResults).filter(r => r.success).length;
+      const totalCount = Object.keys(restoreResults).length;
+
+      console.log('Restore completed:', restoreResults);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `Restored ${successCount}/${totalCount} data types successfully`,
+          results: restoreResults
+        }),
         { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
