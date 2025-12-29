@@ -2,6 +2,8 @@ import { useState, useMemo } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 import { useTermExamData } from '@/hooks/useTermExamData';
+import { useStudentAttendanceQuery } from '@/hooks/queries';
+import { useUserTuition } from '@/hooks/useUserTuition';
 import { Student, Division } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -19,7 +21,7 @@ export default function StudentsPage() {
   const { 
     students, 
     divisions,
-    attendance,
+    attendance, // Still needed for streak calculation
     testResults,
     weeklyTests,
     fees,
@@ -38,11 +40,18 @@ export default function StudentsPage() {
   
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
   const { termExams, termExamSubjects, termExamResults, loading: termExamLoading } = useTermExamData();
+  const { tuitionId } = useUserTuition();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('All');
   const [divisionFilter, setDivisionFilter] = useState('All');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  // Fetch full attendance history for selected student (no 30-day limit)
+  const { data: selectedStudentAttendance = [] } = useStudentAttendanceQuery(
+    tuitionId, 
+    selectedStudent?.id || null
+  );
 
   // Get divisions for selected class
   const availableDivisions = classFilter === "All" 
@@ -242,7 +251,7 @@ export default function StudentsPage() {
       {selectedStudent && (
         <StudentDetailsDialog
           student={selectedStudent}
-          attendance={attendance.filter(a => a.studentId === selectedStudent.id)}
+          attendance={selectedStudentAttendance}
           testResults={testResults.filter(r => r.studentId === selectedStudent.id)}
           tests={weeklyTests}
           fees={fees.filter(f => f.studentId === selectedStudent.id)}

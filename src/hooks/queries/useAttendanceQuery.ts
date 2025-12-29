@@ -81,6 +81,73 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
   });
 }
 
+// For reports and historical views - fetches based on date range from filters
+export function useHistoricalAttendanceQuery(tuitionId: string | null, startDate?: string, endDate?: string) {
+  const queryKey = ['attendance', tuitionId, 'historical', startDate, endDate];
+
+  return useQuery({
+    queryKey,
+    queryFn: async () => {
+      if (!tuitionId) return [];
+
+      let query = supabase
+        .from('student_attendance')
+        .select('*')
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
+
+      // Apply date range if provided
+      if (startDate) {
+        query = query.gte('date', startDate);
+      }
+      if (endDate) {
+        query = query.lte('date', endDate);
+      }
+
+      // No limit for historical data - we need all records for reports
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching historical attendance:', error);
+        throw error;
+      }
+
+      return formatAttendance(data || []);
+    },
+    enabled: !!tuitionId && !!startDate && !!endDate,
+    staleTime: 5 * 60 * 1000, // 5 minutes for historical data
+    gcTime: 30 * 60 * 1000, // 30 minutes cache
+  });
+}
+
+// For student details - fetches all attendance for a specific student
+export function useStudentAttendanceQuery(tuitionId: string | null, studentId: string | null) {
+  const queryKey = ['attendance', tuitionId, 'student', studentId];
+
+  return useQuery({
+    queryKey,
+    queryFn: async () => {
+      if (!tuitionId || !studentId) return [];
+
+      const { data, error } = await supabase
+        .from('student_attendance')
+        .select('*')
+        .eq('student_id', studentId)
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching student attendance:', error);
+        throw error;
+      }
+
+      return formatAttendance(data || []);
+    },
+    enabled: !!tuitionId && !!studentId,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
 // For current day attendance - most common use case
 export function useTodayAttendanceQuery(tuitionId: string | null) {
   const today = new Date().toISOString().split('T')[0];
