@@ -193,16 +193,28 @@ export function WeeklyTestManager({
               <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span className="hidden xs:inline">Students</span>
             </TabsTrigger>
-            {showAttendanceTab && (
+            {showAttendanceTab && isFeatureEnabled('attendance') && (
               <TabsTrigger value="attendance" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
                 <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span className="hidden xs:inline">Attend</span>
               </TabsTrigger>
             )}
-            {showFeesTab && (
+            {showFeesTab && isFeatureEnabled('fees') && (
               <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
                 <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>Fees</span>
+              </TabsTrigger>
+            )}
+            {isFeatureEnabled('challenges') && (
+              <TabsTrigger value="challenges" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+                <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Challenges</span>
+              </TabsTrigger>
+            )}
+            {isFeatureEnabled('announcements') && (
+              <TabsTrigger value="announcements" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
+                <Megaphone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span>Announce</span>
               </TabsTrigger>
             )}
             {isFeatureEnabled('term_exams') && (
@@ -413,7 +425,7 @@ export function WeeklyTestManager({
           </Card>
         </TabsContent>
 
-        {showAttendanceTab && onMarkAttendance && (
+        {showAttendanceTab && onMarkAttendance && isFeatureEnabled('attendance') && (
           <TabsContent value="attendance">
             <AttendanceTracker 
               students={students}
@@ -423,7 +435,7 @@ export function WeeklyTestManager({
           </TabsContent>
         )}
 
-        {showFeesTab && onAddFee && onUpdateFeeStatus && onUpdateClassFee && (
+        {showFeesTab && onAddFee && onUpdateFeeStatus && onUpdateClassFee && isFeatureEnabled('fees') && (
           <TabsContent value="fees" className="space-y-6">
             <ClassFeeManager 
               classFees={classFees}
@@ -439,22 +451,26 @@ export function WeeklyTestManager({
           </TabsContent>
         )}
 
-        <TabsContent value="challenges">
-          <ChallengesManager 
-            challenges={challenges}
-            studentChallenges={studentChallenges}
-            students={students}
-            onAddChallenge={onAddChallenge}
-            onCompleteChallenge={onCompleteChallenge}
-          />
-        </TabsContent>
+        {isFeatureEnabled('challenges') && (
+          <TabsContent value="challenges">
+            <ChallengesManager 
+              challenges={challenges}
+              studentChallenges={studentChallenges}
+              students={students}
+              onAddChallenge={onAddChallenge}
+              onCompleteChallenge={onCompleteChallenge}
+            />
+          </TabsContent>
+        )}
 
-        <TabsContent value="announcements">
-          <AnnouncementsManager 
-            announcements={announcements}
-            onAddAnnouncement={onAddAnnouncement}
-          />
-        </TabsContent>
+        {isFeatureEnabled('announcements') && (
+          <TabsContent value="announcements">
+            <AnnouncementsManager 
+              announcements={announcements}
+              onAddAnnouncement={onAddAnnouncement}
+            />
+          </TabsContent>
+        )}
 
         <TabsContent value="reports">
           <TestResultsView 

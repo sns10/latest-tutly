@@ -31,6 +31,8 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
     logo_url: '',
     is_active: true,
     subscription_status: 'active',
+    subscription_start_date: '',
+    subscription_end_date: '',
   });
   const [enabledFeatures, setEnabledFeatures] = useState<FeatureKey[]>(ALL_FEATURES.map(f => f.key));
 
@@ -44,6 +46,12 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
         logo_url: tuition.logo_url || '',
         is_active: tuition.is_active ?? true,
         subscription_status: tuition.subscription_status || 'active',
+        subscription_start_date: tuition.subscription_start_date 
+          ? new Date(tuition.subscription_start_date).toISOString().split('T')[0] 
+          : '',
+        subscription_end_date: tuition.subscription_end_date 
+          ? new Date(tuition.subscription_end_date).toISOString().split('T')[0] 
+          : '',
       });
       // Load features
       if (tuition.features && Array.isArray(tuition.features) && tuition.features.length > 0) {
@@ -77,6 +85,8 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
           logo_url: formData.logo_url || null,
           is_active: formData.is_active,
           subscription_status: formData.subscription_status,
+          subscription_start_date: formData.subscription_start_date || null,
+          subscription_end_date: formData.subscription_end_date || null,
           features: enabledFeatures,
           updated_at: new Date().toISOString(),
         })
@@ -174,6 +184,27 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
                 <SelectItem value="suspended">Suspended</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="subscription_start_date">Subscription Start Date</Label>
+              <Input
+                id="subscription_start_date"
+                type="date"
+                value={formData.subscription_start_date}
+                onChange={(e) => setFormData({ ...formData, subscription_start_date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="subscription_end_date">Subscription End Date</Label>
+              <Input
+                id="subscription_end_date"
+                type="date"
+                value={formData.subscription_end_date}
+                onChange={(e) => setFormData({ ...formData, subscription_end_date: e.target.value })}
+              />
+            </div>
           </div>
 
           <div className="flex items-center justify-between py-2">
