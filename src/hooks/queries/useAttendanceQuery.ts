@@ -82,6 +82,7 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
 }
 
 // For reports and historical views - fetches based on date range from filters
+// Uses pagination to fetch ALL records (Supabase default limit is 1000)
 export function useHistoricalAttendanceQuery(tuitionId: string | null, startDate?: string, endDate?: string) {
   const queryKey = ['attendance', tuitionId, 'historical', startDate, endDate];
 
@@ -90,29 +91,44 @@ export function useHistoricalAttendanceQuery(tuitionId: string | null, startDate
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      let query = supabase
-        .from('student_attendance')
-        .select('*')
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
+      const allRecords: any[] = [];
+      const pageSize = 1000;
+      let offset = 0;
+      let hasMore = true;
 
-      // Apply date range if provided
-      if (startDate) {
-        query = query.gte('date', startDate);
+      while (hasMore) {
+        let query = supabase
+          .from('student_attendance')
+          .select('*')
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        // Apply date range if provided
+        if (startDate) {
+          query = query.gte('date', startDate);
+        }
+        if (endDate) {
+          query = query.lte('date', endDate);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error fetching historical attendance:', error);
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          allRecords.push(...data);
+          offset += pageSize;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
       }
-      if (endDate) {
-        query = query.lte('date', endDate);
-      }
 
-      // No limit for historical data - we need all records for reports
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching historical attendance:', error);
-        throw error;
-      }
-
-      return formatAttendance(data || []);
+      return formatAttendance(allRecords);
     },
     enabled: !!tuitionId && !!startDate && !!endDate,
     staleTime: 5 * 60 * 1000, // 5 minutes for historical data
