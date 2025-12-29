@@ -117,63 +117,169 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Helper function to fetch all tuition data
+    // Helper function to fetch all tuition data with pagination
+    const fetchAllPages = async (table: string, query: any) => {
+      const allData: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
+
+      while (hasMore) {
+        const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
+        if (error) {
+          console.error(`Error fetching ${table}:`, error);
+          break;
+        }
+        if (data && data.length > 0) {
+          allData.push(...data);
+          if (data.length < pageSize) hasMore = false;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+      return allData;
+    };
+
     const fetchTuitionData = async () => {
+      // Fetch all data with pagination for large tables
       const [
         studentsRes,
-        attendanceRes,
-        feesRes,
-        testsRes,
-        testResultsRes,
         subjectsRes,
         facultyRes,
         divisionsRes,
+        roomsRes,
+        testsRes,
         homeworkRes,
         announcementsRes,
-        timetableRes,
-        roomsRes,
+        classFeesRes,
+        challengesRes,
+        termExamsRes,
+        termExamSubjectsRes,
       ] = await Promise.all([
         supabaseAdmin.from('students').select('*').eq('tuition_id', tuitionId),
-        supabaseAdmin.from('student_attendance').select('*, students!inner(tuition_id)').eq('students.tuition_id', tuitionId),
-        supabaseAdmin.from('student_fees').select('*, students!inner(tuition_id)').eq('students.tuition_id', tuitionId),
-        supabaseAdmin.from('weekly_tests').select('*').eq('tuition_id', tuitionId),
-        supabaseAdmin.from('student_test_results').select('*, students!inner(tuition_id)').eq('students.tuition_id', tuitionId),
         supabaseAdmin.from('subjects').select('*').eq('tuition_id', tuitionId),
         supabaseAdmin.from('faculty').select('*').eq('tuition_id', tuitionId),
         supabaseAdmin.from('divisions').select('*').eq('tuition_id', tuitionId),
+        supabaseAdmin.from('rooms').select('*').eq('tuition_id', tuitionId),
+        supabaseAdmin.from('weekly_tests').select('*').eq('tuition_id', tuitionId),
         supabaseAdmin.from('homework').select('*').eq('tuition_id', tuitionId),
         supabaseAdmin.from('announcements').select('*').eq('tuition_id', tuitionId),
-        supabaseAdmin.from('timetable').select('*').eq('tuition_id', tuitionId),
-        supabaseAdmin.from('rooms').select('*').eq('tuition_id', tuitionId),
+        supabaseAdmin.from('class_fees').select('*').eq('tuition_id', tuitionId),
+        supabaseAdmin.from('challenges').select('*').eq('tuition_id', tuitionId),
+        supabaseAdmin.from('term_exams').select('*').eq('tuition_id', tuitionId),
+        supabaseAdmin.from('term_exam_subjects').select('*, term_exams!inner(tuition_id)').eq('term_exams.tuition_id', tuitionId),
       ]);
+
+      // Fetch large tables with pagination
+      const studentIds = (studentsRes.data || []).map((s: any) => s.id);
+      
+      let attendance: any[] = [];
+      let fees: any[] = [];
+      let feePayments: any[] = [];
+      let testResults: any[] = [];
+      let studentXp: any[] = [];
+      let studentBadges: any[] = [];
+      let studentRewards: any[] = [];
+      let studentChallenges: any[] = [];
+      let termExamResults: any[] = [];
+      let timetable: any[] = [];
+      let facultySubjects: any[] = [];
+
+      if (studentIds.length > 0) {
+        // Batch fetch for student-related data
+        const batchSize = 100;
+        for (let i = 0; i < studentIds.length; i += batchSize) {
+          const batchIds = studentIds.slice(i, i + batchSize);
+          
+          const [attRes, feesRes, testResRes, xpRes, badgesRes, rewardsRes, chalRes, termResRes] = await Promise.all([
+            supabaseAdmin.from('student_attendance').select('*').in('student_id', batchIds),
+            supabaseAdmin.from('student_fees').select('*').in('student_id', batchIds),
+            supabaseAdmin.from('student_test_results').select('*').in('student_id', batchIds),
+            supabaseAdmin.from('student_xp').select('*').in('student_id', batchIds),
+            supabaseAdmin.from('student_badges').select('*').in('student_id', batchIds),
+            supabaseAdmin.from('student_rewards').select('*').in('student_id', batchIds),
+            supabaseAdmin.from('student_challenges').select('*').in('student_id', batchIds),
+            supabaseAdmin.from('term_exam_results').select('*').in('student_id', batchIds),
+          ]);
+
+          attendance.push(...(attRes.data || []));
+          fees.push(...(feesRes.data || []));
+          testResults.push(...(testResRes.data || []));
+          studentXp.push(...(xpRes.data || []));
+          studentBadges.push(...(badgesRes.data || []));
+          studentRewards.push(...(rewardsRes.data || []));
+          studentChallenges.push(...(chalRes.data || []));
+          termExamResults.push(...(termResRes.data || []));
+        }
+
+        // Fetch fee payments for all fees
+        const feeIds = fees.map((f: any) => f.id);
+        if (feeIds.length > 0) {
+          for (let i = 0; i < feeIds.length; i += batchSize) {
+            const batchFeeIds = feeIds.slice(i, i + batchSize);
+            const { data } = await supabaseAdmin.from('fee_payments').select('*').in('fee_id', batchFeeIds);
+            feePayments.push(...(data || []));
+          }
+        }
+      }
+
+      // Fetch timetable
+      const timetableRes = await supabaseAdmin.from('timetable').select('*').eq('tuition_id', tuitionId);
+      timetable = timetableRes.data || [];
+
+      // Fetch faculty subjects
+      const facultyIds = (facultyRes.data || []).map((f: any) => f.id);
+      if (facultyIds.length > 0) {
+        const { data } = await supabaseAdmin.from('faculty_subjects').select('*').in('faculty_id', facultyIds);
+        facultySubjects = data || [];
+      }
 
       return {
         metadata: {
           tuitionId,
           createdAt: new Date().toISOString(),
-          version: '1.0',
+          version: '2.0',
         },
         data: {
           students: studentsRes.data || [],
-          attendance: attendanceRes.data || [],
-          fees: feesRes.data || [],
+          attendance,
+          fees,
+          feePayments,
           tests: testsRes.data || [],
-          testResults: testResultsRes.data || [],
+          testResults,
           subjects: subjectsRes.data || [],
           faculty: facultyRes.data || [],
+          facultySubjects,
           divisions: divisionsRes.data || [],
           homework: homeworkRes.data || [],
           announcements: announcementsRes.data || [],
-          timetable: timetableRes.data || [],
+          timetable,
           rooms: roomsRes.data || [],
+          classFees: classFeesRes.data || [],
+          challenges: challengesRes.data || [],
+          studentChallenges,
+          studentXp,
+          studentBadges,
+          studentRewards,
+          termExams: termExamsRes.data || [],
+          termExamSubjects: termExamSubjectsRes.data || [],
+          termExamResults,
         },
         stats: {
           studentsCount: studentsRes.data?.length || 0,
-          attendanceRecords: attendanceRes.data?.length || 0,
-          feeRecords: feesRes.data?.length || 0,
+          attendanceRecords: attendance.length,
+          feeRecords: fees.length,
           testsCount: testsRes.data?.length || 0,
           subjectsCount: subjectsRes.data?.length || 0,
           facultyCount: facultyRes.data?.length || 0,
+          divisionsCount: divisionsRes.data?.length || 0,
+          roomsCount: roomsRes.data?.length || 0,
+          homeworkCount: homeworkRes.data?.length || 0,
+          announcementsCount: announcementsRes.data?.length || 0,
+          challengesCount: challengesRes.data?.length || 0,
+          termExamsCount: termExamsRes.data?.length || 0,
+          timetableCount: timetable.length,
         }
       };
     };
@@ -534,6 +640,154 @@ const handler = async (req: Request): Promise<Response> => {
           restoreResults.testResults = { success: !error, count: testResultsToRestore.length, error: error?.message };
         } catch (e: any) {
           restoreResults.testResults = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 13. Class Fees
+      if (dataToRestore.data.classFees?.length > 0) {
+        try {
+          const classFeesToRestore = dataToRestore.data.classFees.map((cf: any) => ({
+            ...cf,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('class_fees')
+            .upsert(classFeesToRestore, { onConflict: 'id' });
+          restoreResults.classFees = { success: !error, count: classFeesToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.classFees = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 14. Fee Payments (depends on fees)
+      if (dataToRestore.data.feePayments?.length > 0) {
+        try {
+          const { error } = await supabaseAdmin
+            .from('fee_payments')
+            .upsert(dataToRestore.data.feePayments, { onConflict: 'id' });
+          restoreResults.feePayments = { success: !error, count: dataToRestore.data.feePayments.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.feePayments = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 15. Challenges
+      if (dataToRestore.data.challenges?.length > 0) {
+        try {
+          const challengesToRestore = dataToRestore.data.challenges.map((c: any) => ({
+            ...c,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('challenges')
+            .upsert(challengesToRestore, { onConflict: 'id' });
+          restoreResults.challenges = { success: !error, count: challengesToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.challenges = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 16. Student Challenges
+      if (dataToRestore.data.studentChallenges?.length > 0) {
+        try {
+          const { error } = await supabaseAdmin
+            .from('student_challenges')
+            .upsert(dataToRestore.data.studentChallenges, { onConflict: 'id' });
+          restoreResults.studentChallenges = { success: !error, count: dataToRestore.data.studentChallenges.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.studentChallenges = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 17. Student XP
+      if (dataToRestore.data.studentXp?.length > 0) {
+        try {
+          const { error } = await supabaseAdmin
+            .from('student_xp')
+            .upsert(dataToRestore.data.studentXp, { onConflict: 'id' });
+          restoreResults.studentXp = { success: !error, count: dataToRestore.data.studentXp.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.studentXp = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 18. Student Badges
+      if (dataToRestore.data.studentBadges?.length > 0) {
+        try {
+          const { error } = await supabaseAdmin
+            .from('student_badges')
+            .upsert(dataToRestore.data.studentBadges, { onConflict: 'id' });
+          restoreResults.studentBadges = { success: !error, count: dataToRestore.data.studentBadges.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.studentBadges = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 19. Student Rewards
+      if (dataToRestore.data.studentRewards?.length > 0) {
+        try {
+          const { error } = await supabaseAdmin
+            .from('student_rewards')
+            .upsert(dataToRestore.data.studentRewards, { onConflict: 'id' });
+          restoreResults.studentRewards = { success: !error, count: dataToRestore.data.studentRewards.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.studentRewards = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 20. Faculty Subjects
+      if (dataToRestore.data.facultySubjects?.length > 0) {
+        try {
+          const { error } = await supabaseAdmin
+            .from('faculty_subjects')
+            .upsert(dataToRestore.data.facultySubjects, { onConflict: 'id' });
+          restoreResults.facultySubjects = { success: !error, count: dataToRestore.data.facultySubjects.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.facultySubjects = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 21. Term Exams
+      if (dataToRestore.data.termExams?.length > 0) {
+        try {
+          const termExamsToRestore = dataToRestore.data.termExams.map((te: any) => ({
+            ...te,
+            tuition_id: tuitionId,
+          }));
+          const { error } = await supabaseAdmin
+            .from('term_exams')
+            .upsert(termExamsToRestore, { onConflict: 'id' });
+          restoreResults.termExams = { success: !error, count: termExamsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.termExams = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 22. Term Exam Subjects
+      if (dataToRestore.data.termExamSubjects?.length > 0) {
+        try {
+          const termExamSubjectsToRestore = dataToRestore.data.termExamSubjects.map((tes: any) => {
+            const { term_exams, ...data } = tes;
+            return data;
+          });
+          const { error } = await supabaseAdmin
+            .from('term_exam_subjects')
+            .upsert(termExamSubjectsToRestore, { onConflict: 'id' });
+          restoreResults.termExamSubjects = { success: !error, count: termExamSubjectsToRestore.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.termExamSubjects = { success: false, count: 0, error: e.message };
+        }
+      }
+
+      // 23. Term Exam Results
+      if (dataToRestore.data.termExamResults?.length > 0) {
+        try {
+          const { error } = await supabaseAdmin
+            .from('term_exam_results')
+            .upsert(dataToRestore.data.termExamResults, { onConflict: 'id' });
+          restoreResults.termExamResults = { success: !error, count: dataToRestore.data.termExamResults.length, error: error?.message };
+        } catch (e: any) {
+          restoreResults.termExamResults = { success: false, count: 0, error: e.message };
         }
       }
 

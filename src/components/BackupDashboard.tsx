@@ -25,6 +25,13 @@ interface BackupStats {
   testsCount: number;
   subjectsCount: number;
   facultyCount: number;
+  divisionsCount?: number;
+  roomsCount?: number;
+  homeworkCount?: number;
+  announcementsCount?: number;
+  challengesCount?: number;
+  termExamsCount?: number;
+  timetableCount?: number;
 }
 
 interface BackupRecord {
@@ -403,11 +410,24 @@ export function BackupDashboard() {
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-medium">What's included in backups:</p>
-                <p className="mt-1">
-                  Students, attendance records, fees, test results, subjects, faculty, divisions, 
-                  homework, announcements, timetable, and room data.
-                </p>
+                <p className="font-medium">Complete Data Backup includes:</p>
+                <div className="mt-1 grid grid-cols-2 sm:grid-cols-3 gap-1">
+                  <span>• Students</span>
+                  <span>• Attendance</span>
+                  <span>• Fees & Payments</span>
+                  <span>• Tests & Results</span>
+                  <span>• Term Exams</span>
+                  <span>• Subjects</span>
+                  <span>• Faculty</span>
+                  <span>• Divisions</span>
+                  <span>• Timetable</span>
+                  <span>• Rooms</span>
+                  <span>• Homework</span>
+                  <span>• Announcements</span>
+                  <span>• Challenges</span>
+                  <span>• XP & Badges</span>
+                  <span>• Rewards</span>
+                </div>
               </div>
             </div>
           </div>
