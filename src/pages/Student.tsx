@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react';
 import { useStudentData } from '@/hooks/useStudentData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { useStudentLeaderboard } from '@/hooks/useStudentLeaderboard';
+import { useTuitionFeaturesById } from '@/hooks/useTuitionFeaturesById';
 import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -41,8 +42,10 @@ export default function Student() {
   } = useStudentData(selectedStudentId);
 
   const { tuition } = useTuitionInfo();
+  const studentTuitionId = student?.tuition_id || sharedTuition?.id || null;
+  const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeaturesById(studentTuitionId);
   const { leaderboardStudents, loading: leaderboardLoading } = useStudentLeaderboard(
-    student?.tuition_id || sharedTuition?.id || null
+    studentTuitionId
   );
 
   // Calculate attendance streak - must be before any returns
@@ -303,7 +306,7 @@ export default function Student() {
         <div className="flex-1">
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-2xl md:text-3xl font-bold">{student.name}</h1>
-            {attendanceStreak > 0 && (
+            {isFeatureEnabled('gamification') && attendanceStreak > 0 && (
               <Badge variant="secondary" className="gap-1 bg-orange-100 text-orange-700 border-orange-300">
                 <Flame className="h-3 w-3" />
                 {attendanceStreak} day streak
@@ -338,48 +341,62 @@ export default function Student() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total XP</CardTitle>
-            <Award className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{student.total_xp}</div>
-            <p className="text-xs text-muted-foreground mt-1">Gamification points</p>
-          </CardContent>
-        </Card>
+        {isFeatureEnabled('gamification') && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total XP</CardTitle>
+              <Award className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{student.total_xp}</div>
+              <p className="text-xs text-muted-foreground mt-1">Gamification points</p>
+            </CardContent>
+          </Card>
+        )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">₹{(totalFees - paidFees).toFixed(2)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{pendingFees.length} pending</p>
-          </CardContent>
-        </Card>
+        {isFeatureEnabled('fees') && (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">₹{(totalFees - paidFees).toFixed(2)}</div>
+              <p className="text-xs text-muted-foreground mt-1">{pendingFees.length} pending</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
       {/* Tabs */}
       <Tabs defaultValue="overview" className="space-y-3 sm:space-y-4">
-        <TabsList className="grid w-full grid-cols-7 h-auto p-1">
-          <TabsTrigger value="overview" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
+        <TabsList className="flex w-full h-auto p-1 flex-wrap justify-start gap-1">
+          <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">
             <span className="hidden sm:inline">Overview</span>
             <span className="sm:hidden">Stats</span>
           </TabsTrigger>
-          <TabsTrigger value="tests" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">Tests</TabsTrigger>
-          <TabsTrigger value="attendance" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
-            <span className="hidden sm:inline">Attendance</span>
-            <span className="sm:hidden">Att.</span>
-          </TabsTrigger>
-          <TabsTrigger value="homework" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">HW</TabsTrigger>
-          <TabsTrigger value="fees" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">Fees</TabsTrigger>
-          <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">
-            <Trophy className="h-3 w-3 sm:hidden" />
-            <span className="hidden sm:inline">Rank</span>
-          </TabsTrigger>
-          <TabsTrigger value="announcements" className="text-xs sm:text-sm px-1 sm:px-3 py-1.5">News</TabsTrigger>
+          <TabsTrigger value="tests" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">Tests</TabsTrigger>
+          {isFeatureEnabled('attendance') && (
+            <TabsTrigger value="attendance" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">
+              <span className="hidden sm:inline">Attendance</span>
+              <span className="sm:hidden">Att.</span>
+            </TabsTrigger>
+          )}
+          {isFeatureEnabled('homework') && (
+            <TabsTrigger value="homework" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">HW</TabsTrigger>
+          )}
+          {isFeatureEnabled('fees') && (
+            <TabsTrigger value="fees" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">Fees</TabsTrigger>
+          )}
+          {isFeatureEnabled('leaderboard') && (
+            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">
+              <Trophy className="h-3 w-3 sm:hidden" />
+              <span className="hidden sm:inline">Rank</span>
+            </TabsTrigger>
+          )}
+          {isFeatureEnabled('announcements') && (
+            <TabsTrigger value="announcements" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">News</TabsTrigger>
+          )}
         </TabsList>
 
         {/* Overview Tab - Stats */}
@@ -480,152 +497,162 @@ export default function Student() {
         </TabsContent>
 
         {/* Attendance Tab */}
-        <TabsContent value="attendance">
-          <div className="space-y-6">
-            {/* Attendance Calendar */}
-            <AttendanceCalendar attendance={attendance} subjects={subjects} showSubjectFilter />
+        {isFeatureEnabled('attendance') && (
+          <TabsContent value="attendance">
+            <div className="space-y-6">
+              {/* Attendance Calendar */}
+              <AttendanceCalendar attendance={attendance} subjects={subjects} showSubjectFilter />
 
-            {/* Subject-wise Attendance */}
+              {/* Subject-wise Attendance */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>Subject-wise Attendance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {Object.keys(attendanceBySubject).length > 0 ? (
+                    <div className="space-y-3">
+                      {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
+                        const subject = subjects.find(s => s.id === subjectId);
+                        const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                        return (
+                          <div key={subjectId} className="p-3 border rounded">
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="font-medium">{subject?.name || 'General'}</div>
+                              <Badge variant={rate >= 75 ? 'default' : rate >= 60 ? 'secondary' : 'destructive'}>
+                                {rate.toFixed(1)}%
+                              </Badge>
+                            </div>
+                            <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                              <span>Present: {stats.present}</span>
+                              <span>Total: {stats.total}</span>
+                            </div>
+                            <Progress value={rate} className="h-2" />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">No attendance records yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
+
+        {/* Homework Tab */}
+        {isFeatureEnabled('homework') && (
+          <TabsContent value="homework">
+            <HomeworkSection homework={homework} subjects={subjects} />
+          </TabsContent>
+        )}
+
+        {/* Fees Tab */}
+        {isFeatureEnabled('fees') && (
+          <TabsContent value="fees">
             <Card>
               <CardHeader>
-                <CardTitle>Subject-wise Attendance</CardTitle>
+                <CardTitle>Fee Status</CardTitle>
               </CardHeader>
               <CardContent>
-                {Object.keys(attendanceBySubject).length > 0 ? (
+                {fees.length > 0 ? (
                   <div className="space-y-3">
-                    {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
-                      const subject = subjects.find(s => s.id === subjectId);
-                      const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
-                      return (
-                        <div key={subjectId} className="p-3 border rounded">
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="font-medium">{subject?.name || 'General'}</div>
-                            <Badge variant={rate >= 75 ? 'default' : rate >= 60 ? 'secondary' : 'destructive'}>
-                              {rate.toFixed(1)}%
-                            </Badge>
+                    {fees.map((fee) => (
+                      <div key={fee.id} className="flex justify-between items-center p-3 border rounded">
+                        <div>
+                          <div className="font-medium">{fee.fee_type || 'Tuition Fee'}</div>
+                          <div className="text-sm text-muted-foreground">
+                            Due: {new Date(fee.due_date).toLocaleDateString()}
                           </div>
-                          <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                            <span>Present: {stats.present}</span>
-                            <span>Total: {stats.total}</span>
-                          </div>
-                          <Progress value={rate} className="h-2" />
                         </div>
-                      );
-                    })}
+                        <div className="text-right">
+                          <div className="font-bold">₹{fee.amount.toFixed(2)}</div>
+                          <Badge variant={
+                            fee.status === 'paid' ? 'default' :
+                              fee.status === 'overdue' ? 'destructive' : 'secondary'
+                          }>
+                            {fee.status}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 ) : (
-                  <p className="text-center text-muted-foreground py-8">No attendance records yet</p>
+                  <p className="text-center text-muted-foreground py-8">No fee records yet</p>
                 )}
               </CardContent>
             </Card>
-          </div>
-        </TabsContent>
-
-        {/* Homework Tab */}
-        <TabsContent value="homework">
-          <HomeworkSection homework={homework} subjects={subjects} />
-        </TabsContent>
-
-        {/* Fees Tab */}
-        <TabsContent value="fees">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fee Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {fees.length > 0 ? (
-                <div className="space-y-3">
-                  {fees.map((fee) => (
-                    <div key={fee.id} className="flex justify-between items-center p-3 border rounded">
-                      <div>
-                        <div className="font-medium">{fee.fee_type || 'Tuition Fee'}</div>
-                        <div className="text-sm text-muted-foreground">
-                          Due: {new Date(fee.due_date).toLocaleDateString()}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="font-bold">₹{fee.amount.toFixed(2)}</div>
-                        <Badge variant={
-                          fee.status === 'paid' ? 'default' :
-                            fee.status === 'overdue' ? 'destructive' : 'secondary'
-                        }>
-                          {fee.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No fee records yet</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+          </TabsContent>
+        )}
 
         {/* Leaderboard Tab */}
-        <TabsContent value="leaderboard">
-          {leaderboardLoading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            </div>
-          ) : (
-            <StudentPortalLeaderboard
-              students={leaderboardStudents.map(s => ({
-                id: s.id,
-                name: s.name,
-                class: s.class,
-                avatar: s.avatar,
-                totalXp: s.totalXp,
-                attendanceStreak: s.attendanceStreak,
-                division: s.division ? { id: s.division.id, name: s.division.name, class: s.class, createdAt: '' } : undefined,
-                divisionId: s.division?.id,
-              }))}
-              currentStudentId={student.id}
-              classFilter={student.class}
-            />
-          )}
-        </TabsContent>
+        {isFeatureEnabled('leaderboard') && (
+          <TabsContent value="leaderboard">
+            {leaderboardLoading ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary" />
+              </div>
+            ) : (
+              <StudentPortalLeaderboard
+                students={leaderboardStudents.map(s => ({
+                  id: s.id,
+                  name: s.name,
+                  class: s.class,
+                  avatar: s.avatar,
+                  totalXp: s.totalXp,
+                  attendanceStreak: s.attendanceStreak,
+                  division: s.division ? { id: s.division.id, name: s.division.name, class: s.class, createdAt: '' } : undefined,
+                  divisionId: s.division?.id,
+                }))}
+                currentStudentId={student.id}
+                classFilter={student.class}
+              />
+            )}
+          </TabsContent>
+        )}
 
         {/* Announcements Tab */}
-        <TabsContent value="announcements">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="h-5 w-5" />
-                Announcements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {announcements.length > 0 ? (
-                <div className="space-y-4">
-                  {announcements.map((announcement) => (
-                    <div key={announcement.id} className="p-4 border rounded">
-                      <div className="flex justify-between items-start mb-2">
-                        <h3 className="font-semibold">{announcement.title}</h3>
-                        <Badge variant="outline">
-                          {new Date(announcement.published_at).toLocaleDateString()}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {announcement.body}
-                      </p>
-                      {announcement.xp_bonus && announcement.xp_bonus > 0 && (
-                        <div className="mt-2">
-                          <Badge variant="default" className="gap-1">
-                            <Award className="h-3 w-3" />
-                            +{announcement.xp_bonus} XP Bonus
+        {isFeatureEnabled('announcements') && (
+          <TabsContent value="announcements">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  Announcements
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {announcements.length > 0 ? (
+                  <div className="space-y-4">
+                    {announcements.map((announcement) => (
+                      <div key={announcement.id} className="p-4 border rounded">
+                        <div className="flex justify-between items-start mb-2">
+                          <h3 className="font-semibold">{announcement.title}</h3>
+                          <Badge variant="outline">
+                            {new Date(announcement.published_at).toLocaleDateString()}
                           </Badge>
                         </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-center text-muted-foreground py-8">No announcements yet</p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                          {announcement.body}
+                        </p>
+                        {isFeatureEnabled('gamification') && announcement.xp_bonus && announcement.xp_bonus > 0 && (
+                          <div className="mt-2">
+                            <Badge variant="default" className="gap-1">
+                              <Award className="h-3 w-3" />
+                              +{announcement.xp_bonus} XP Bonus
+                            </Badge>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-center text-muted-foreground py-8">No announcements yet</p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );
