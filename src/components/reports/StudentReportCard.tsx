@@ -10,17 +10,23 @@ import { Download, Printer, User, CalendarDays, BookOpen, TrendingUp } from 'luc
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useTermExamData } from '@/hooks/useTermExamData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
+import { useStudentAttendanceQuery } from '@/hooks/queries';
+import { useUserTuition } from '@/hooks/useUserTuition';
 import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
 export function StudentReportCard() {
-  const { students, weeklyTests, testResults, attendance, divisions, subjects } = useSupabaseData();
+  const { students, weeklyTests, testResults, divisions, subjects } = useSupabaseData();
   const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
+  const { tuitionId } = useUserTuition();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 90), 'yyyy-MM-dd'));
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // Fetch all attendance for the selected student - no date limit
+  const { data: attendance = [] } = useStudentAttendanceQuery(tuitionId, selectedStudent || null);
 
   const classes = useMemo(() => 
     [...new Set(students.map(s => s.class))].sort(),
