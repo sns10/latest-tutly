@@ -15,6 +15,7 @@ import { PortalEmailConfig } from "@/components/PortalEmailConfig";
 import { HomeworkManager } from "@/components/HomeworkManager";
 import { BackupDashboard } from "@/components/BackupDashboard";
 import { AttendanceNotificationAlert } from "@/components/AttendanceNotificationAlert";
+import { SubscriptionExpiryAlert } from "@/components/SubscriptionExpiryAlert";
 import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,9 @@ const Index = () => {
       <Routes>
         <Route path="/" element={
           <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
+          {/* Subscription Expiry Alert */}
+          <SubscriptionExpiryAlert subscriptionEndDate={tuition?.subscription_end_date} />
+          
           <div className="flex items-center justify-between mb-4 gap-2">
             <TuitionBranding 
               name={tuition?.name || 'Dashboard'} 
