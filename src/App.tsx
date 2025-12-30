@@ -16,19 +16,48 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { Loader2 } from "lucide-react";
 
-// Lazy load heavy pages for faster initial load
-const Index = lazy(() => import("./pages/Index"));
-const SuperAdmin = lazy(() => import("./pages/SuperAdmin"));
-const Student = lazy(() => import("./pages/Student"));
-const NotFound = lazy(() => import("./pages/NotFound"));
-const Attendance = lazy(() => import("./pages/Attendance"));
-const Students = lazy(() => import("./pages/Students"));
-const Fees = lazy(() => import("./pages/Fees"));
-const Reports = lazy(() => import("./pages/Reports"));
-const Timetable = lazy(() => import("./pages/Timetable"));
-const Materials = lazy(() => import("./pages/Materials"));
-const Classes = lazy(() => import("./pages/Classes"));
-const Leaderboard = lazy(() => import("./pages/Leaderboard"));
+// Retry wrapper for lazy imports to handle chunk loading failures on mobile
+const lazyWithRetry = (componentImport: () => Promise<any>, retries = 3) =>
+  lazy(async () => {
+    for (let i = 0; i < retries; i++) {
+      try {
+        return await componentImport();
+      } catch (error) {
+        // On chunk load failure, try refreshing the page cache
+        if (i === retries - 1) {
+          // Last retry: check if it's a chunk error and reload
+          const isChunkError = 
+            error instanceof Error && 
+            (error.message.includes('Failed to fetch dynamically imported module') ||
+             error.message.includes('Loading chunk') ||
+             error.message.includes('Loading CSS chunk'));
+          
+          if (isChunkError) {
+            // Clear caches and reload on chunk errors
+            window.location.reload();
+          }
+          throw error;
+        }
+        // Wait before retrying (exponential backoff)
+        await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+      }
+    }
+    throw new Error('Failed to load component after retries');
+  });
+
+// Lazy load heavy pages for faster initial load with retry logic
+const Index = lazyWithRetry(() => import("./pages/Index"));
+const SuperAdmin = lazyWithRetry(() => import("./pages/SuperAdmin"));
+const Student = lazyWithRetry(() => import("./pages/Student"));
+const NotFound = lazyWithRetry(() => import("./pages/NotFound"));
+const Attendance = lazyWithRetry(() => import("./pages/Attendance"));
+const Students = lazyWithRetry(() => import("./pages/Students"));
+const Fees = lazyWithRetry(() => import("./pages/Fees"));
+const Reports = lazyWithRetry(() => import("./pages/Reports"));
+const Timetable = lazyWithRetry(() => import("./pages/Timetable"));
+const Materials = lazyWithRetry(() => import("./pages/Materials"));
+const Classes = lazyWithRetry(() => import("./pages/Classes"));
+const Leaderboard = lazyWithRetry(() => import("./pages/Leaderboard"));
 
 // Optimized Query Client with production-ready defaults
 const queryClient = new QueryClient({
