@@ -9,6 +9,7 @@ interface TuitionInfo {
   phone: string | null;
   logo_url: string | null;
   portal_email: string | null;
+  subscription_end_date: string | null;
 }
 
 export function useTuitionInfo() {
@@ -26,7 +27,7 @@ export function useTuitionInfo() {
     try {
       const { data, error } = await supabase
         .from('tuitions')
-        .select('id, name, email, phone, logo_url, portal_email')
+        .select('id, name, email, phone, logo_url, portal_email, subscription_end_date')
         .eq('id', tuitionId)
         .maybeSingle();
 
