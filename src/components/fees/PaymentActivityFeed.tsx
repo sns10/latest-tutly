@@ -16,11 +16,9 @@ interface FeePayment {
 
 interface StudentFee {
   id: string;
-  student_id?: string | null;
-  studentId?: string;
+  studentId: string;
   amount: number;
-  fee_type?: string | null;
-  feeType?: string;
+  feeType: string;
   status: string;
 }
 
@@ -55,8 +53,7 @@ export function PaymentActivityFeed({ feePayments, fees, students }: PaymentActi
   const getStudentForPayment = (payment: FeePayment) => {
     const fee = fees.find(f => f.id === payment.fee_id);
     if (!fee) return null;
-    const studentId = fee.student_id || fee.studentId;
-    return students.find(s => s.id === studentId);
+    return students.find(s => s.id === fee.studentId);
   };
 
   const getFeeForPayment = (payment: FeePayment) => {
@@ -138,10 +135,10 @@ export function PaymentActivityFeed({ feePayments, fees, students }: PaymentActi
                           </p>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
                             <span>{student?.class || 'N/A'}</span>
-                            {(fee?.fee_type || fee?.feeType) && (
+                            {fee?.feeType && (
                               <>
                                 <span>•</span>
-                                <span className="capitalize">{fee.fee_type || fee.feeType}</span>
+                                <span className="capitalize">{fee.feeType}</span>
                               </>
                             )}
                             {payment.payment_method && (
