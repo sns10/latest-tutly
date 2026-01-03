@@ -50,6 +50,7 @@ import { PaymentHistoryDialog } from './PaymentHistoryDialog';
 import { FloatingActionButton } from './FloatingActionButton';
 import { FeeCard } from './FeeCard';
 import { getStatusBadge } from './feeHelpers';
+import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 
 interface FeePayment {
   id: string;
@@ -81,6 +82,7 @@ export function FeesList({
   onUpdateFeeStatus,
   onRecordPayment
 }: FeesListProps) {
+  const { tuition } = useTuitionInfo();
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
   const [selectedClass, setSelectedClass] = useState<string>('All');
@@ -714,7 +716,9 @@ export function FeesList({
           onOpenChange={setHistoryDialogOpen}
           fee={selectedFeeForHistory}
           studentName={getStudentName(selectedFeeForHistory.studentId)}
+          studentClass={getStudentClass(selectedFeeForHistory.studentId)}
           payments={getFeePayments(selectedFeeForHistory.id)}
+          tuition={tuition}
         />
       )}
 
