@@ -11,6 +11,7 @@ import {
   MessageSquare,
   History,
   MoreHorizontal,
+  Printer,
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -35,6 +36,7 @@ interface FeeCardProps {
   onRecordPayment: () => void;
   onSendReminder: () => void;
   onViewHistory: () => void;
+  onPrintReceipt?: () => void;
 }
 
 export function FeeCard({
@@ -50,6 +52,7 @@ export function FeeCard({
   onRecordPayment,
   onSendReminder,
   onViewHistory,
+  onPrintReceipt,
 }: FeeCardProps) {
 
   return (
@@ -104,6 +107,12 @@ export function FeeCard({
                   <History className="h-4 w-4 mr-2" />
                   Payment History {paymentCount > 0 && `(${paymentCount})`}
                 </DropdownMenuItem>
+                {paymentCount > 0 && onPrintReceipt && (
+                  <DropdownMenuItem onClick={onPrintReceipt}>
+                    <Printer className="h-4 w-4 mr-2" />
+                    Print Receipt
+                  </DropdownMenuItem>
+                )}
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
