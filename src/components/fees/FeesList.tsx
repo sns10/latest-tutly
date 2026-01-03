@@ -34,7 +34,8 @@ import {
   MoreHorizontal,
   History,
   Filter,
-  X
+  X,
+  Printer
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -49,6 +50,7 @@ import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
 import { FloatingActionButton } from './FloatingActionButton';
 import { FeeCard } from './FeeCard';
+import { FeeReceipt } from './FeeReceipt';
 import { getStatusBadge } from './feeHelpers';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 
@@ -96,6 +98,11 @@ export function FeesList({
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedFeeForHistory, setSelectedFeeForHistory] = useState<StudentFee | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  
+  // Receipt state for automatic receipt after payment
+  const [receiptOpen, setReceiptOpen] = useState(false);
+  const [receiptFee, setReceiptFee] = useState<StudentFee | null>(null);
+  const [receiptPayment, setReceiptPayment] = useState<FeePayment | null>(null);
 
   // Memoize current month to avoid function recreation
   const currentMonth = useMemo(() => {
@@ -645,6 +652,19 @@ export function FeesList({
                                 <History className="h-4 w-4 mr-2" />
                                 Payment History {paymentCount > 0 && `(${paymentCount})`}
                               </DropdownMenuItem>
+                              {paymentCount > 0 && (
+                                <DropdownMenuItem onClick={() => {
+                                  const feePayments = getFeePayments(fee.id);
+                                  if (feePayments.length > 0) {
+                                    setReceiptFee(fee);
+                                    setReceiptPayment(feePayments[0]);
+                                    setReceiptOpen(true);
+                                  }
+                                }}>
+                                  <Printer className="h-4 w-4 mr-2" />
+                                  Print Receipt
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -687,6 +707,14 @@ export function FeesList({
                 onRecordPayment={() => handleRecordPayment(fee)}
                 onSendReminder={() => handleSendReminder(fee.studentId)}
                 onViewHistory={() => handleViewHistory(fee)}
+                onPrintReceipt={paymentCount > 0 ? () => {
+                  const feePayments = getFeePayments(fee.id);
+                  if (feePayments.length > 0) {
+                    setReceiptFee(fee);
+                    setReceiptPayment(feePayments[0]); // Most recent payment
+                    setReceiptOpen(true);
+                  }
+                } : undefined}
               />
             );
           })
@@ -702,10 +730,43 @@ export function FeesList({
           studentName={getStudentName(selectedFeeForPayment.studentId)}
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
           onRecordPayment={(amount, method, reference, notes) => {
+            // Create a temporary payment object for receipt
+            const newPayment: FeePayment = {
+              id: `temp-${Date.now()}`,
+              feeId: selectedFeeForPayment.id,
+              amount: amount,
+              paymentDate: new Date().toISOString().split('T')[0],
+              paymentMethod: method,
+              paymentReference: reference,
+              notes: notes,
+              createdAt: new Date().toISOString()
+            };
+            
+            // Record the payment
             onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes);
+            
+            // Show receipt automatically
+            setReceiptFee(selectedFeeForPayment);
+            setReceiptPayment(newPayment);
+            setReceiptOpen(true);
+            
             setPaymentDialogOpen(false);
             setSelectedFeeForPayment(null);
           }}
+        />
+      )}
+      
+      {/* Automatic Receipt after Payment */}
+      {receiptFee && receiptPayment && (
+        <FeeReceipt
+          open={receiptOpen}
+          onOpenChange={setReceiptOpen}
+          fee={receiptFee}
+          studentName={getStudentName(receiptFee.studentId)}
+          studentClass={getStudentClass(receiptFee.studentId)}
+          payment={receiptPayment}
+          tuition={tuition}
+          receiptNumber={`RCP-${Date.now().toString().slice(-8)}`}
         />
       )}
 
