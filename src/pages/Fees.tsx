@@ -59,10 +59,10 @@ export default function FeesPage() {
       return;
     }
 
-    setPayments(data.map(p => ({
+    setPayments((data || []).map(p => ({
       id: p.id,
       feeId: p.fee_id,
-      amount: Number(p.amount),
+      amount: Number(p.amount) || 0,
       paymentDate: p.payment_date,
       paymentMethod: p.payment_method || 'cash',
       paymentReference: p.payment_reference || undefined,

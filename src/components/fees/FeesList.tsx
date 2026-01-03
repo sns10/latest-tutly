@@ -194,7 +194,7 @@ export function FeesList({
   };
 
   const getTotalPaid = (feeId: string) => {
-    return payments.filter(p => p.feeId === feeId).reduce((sum, p) => sum + p.amount, 0);
+    return payments.filter(p => p.feeId === feeId).reduce((sum, p) => sum + Number(p.amount), 0);
   };
 
   const handleMarkAsPaid = (feeId: string) => {

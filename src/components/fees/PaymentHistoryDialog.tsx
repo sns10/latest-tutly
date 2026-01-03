@@ -78,8 +78,8 @@ export function PaymentHistoryDialog({
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<FeePayment | null>(null);
   
-  const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-  const remaining = fee.amount - totalPaid;
+  const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+  const remaining = Number(fee.amount) - totalPaid;
 
   const handlePrintReceipt = (payment: FeePayment) => {
     setSelectedPaymentForReceipt(payment);
