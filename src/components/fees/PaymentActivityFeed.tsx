@@ -18,7 +18,7 @@ interface StudentFee {
   id: string;
   studentId: string;
   amount: number;
-  feeType: string;
+  feeType?: string;
   status: string;
 }
 
@@ -52,7 +52,7 @@ export function PaymentActivityFeed({ feePayments, fees, students }: PaymentActi
 
   const getStudentForPayment = (payment: FeePayment) => {
     const fee = fees.find(f => f.id === payment.fee_id);
-    if (!fee) return null;
+    if (!fee || !fee.studentId) return null;
     return students.find(s => s.id === fee.studentId);
   };
 

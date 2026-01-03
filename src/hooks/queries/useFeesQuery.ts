@@ -15,9 +15,9 @@ interface FeeFilters {
 const formatFees = (data: any[]): StudentFee[] => {
   return data.map(fee => ({
     id: fee.id,
-    studentId: fee.student_id,
-    feeType: fee.fee_type,
-    amount: Number(fee.amount),
+    studentId: fee.student_id || '',
+    feeType: fee.fee_type || 'Monthly Fee',
+    amount: Number(fee.amount) || 0,
     dueDate: fee.due_date,
     paidDate: fee.paid_date || undefined,
     status: fee.status as 'paid' | 'unpaid' | 'partial' | 'overdue',
