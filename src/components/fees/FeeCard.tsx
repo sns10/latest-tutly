@@ -103,6 +103,18 @@ export function FeeCard({
                     <DropdownMenuSeparator />
                   </>
                 )}
+
+                {/* If a fee was marked paid without a payment entry, allow adding it for accurate history/receipts */}
+                {fee.status === 'paid' && paymentCount === 0 && (
+                  <>
+                    <DropdownMenuItem onClick={onRecordPayment}>
+                      <CreditCard className="h-4 w-4 mr-2" />
+                      Record Payment
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                  </>
+                )}
+
                 <DropdownMenuItem onClick={onViewHistory}>
                   <History className="h-4 w-4 mr-2" />
                   Payment History {paymentCount > 0 && `(${paymentCount})`}
