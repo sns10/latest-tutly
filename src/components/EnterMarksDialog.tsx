@@ -64,6 +64,15 @@ export function EnterMarksDialog({
   }, [classFilteredStudents, selectedDivision]);
 
   const handleMarkChange = (studentId: string, value: string) => {
+    // Allow empty string to clear the input
+    if (value === '' || value === undefined) {
+      setMarks(prev => {
+        const { [studentId]: removed, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+    
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue >= 0 && numValue <= test.maxMarks) {
       setMarks(prev => ({ ...prev, [studentId]: numValue }));
@@ -318,7 +327,11 @@ export function EnterMarksDialog({
           </Badge>
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[90vh] sm:max-h-[80vh] overflow-y-auto">
+      <DialogContent 
+        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle className="text-base sm:text-lg pr-6">Enter Marks - {test.name}</DialogTitle>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
@@ -361,7 +374,7 @@ export function EnterMarksDialog({
           )}
           
           <TabsContent value="manual" className="space-y-4">
-            <ScrollArea className="h-[50vh] sm:h-96 pr-2 sm:pr-4">
+            <ScrollArea className="flex-1 max-h-[50vh] sm:max-h-[400px] pr-2 sm:pr-4">
               <div className="space-y-3 sm:space-y-4">
                 {filteredStudents.map((student) => {
                   const existingMark = getExistingMark(student.id);
@@ -393,13 +406,14 @@ export function EnterMarksDialog({
                         <Input
                           id={`marks-${student.id}`}
                           type="number"
+                          inputMode="decimal"
                           min="0"
                           max={test.maxMarks}
                           step="0.5"
                           placeholder={hasResult ? existingMark.toString() : "0"}
-                          value={currentMark || ''}
+                          value={currentMark ?? ''}
                           onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                          className="w-16 sm:w-20 text-sm"
+                          className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
                         />
                         <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
                       </div>

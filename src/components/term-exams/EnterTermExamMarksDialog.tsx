@@ -66,6 +66,15 @@ export function EnterTermExamMarksDialog({
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
 
   const handleMarkChange = (studentId: string, value: string) => {
+    // Allow empty string to clear the input
+    if (value === '' || value === undefined) {
+      setMarks(prev => {
+        const { [studentId]: removed, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+    
     const numValue = parseFloat(value);
     const maxMarks = selectedExamSubject?.maxMarks || 100;
     if (!isNaN(numValue) && numValue >= 0 && numValue <= maxMarks) {
@@ -311,7 +320,7 @@ export function EnterTermExamMarksDialog({
             </div>
 
             {selectedSubjectId && (
-              <ScrollArea className="h-[50vh] pr-4">
+              <ScrollArea className="flex-1 max-h-[45vh] sm:max-h-[400px] pr-4">
                 <div className="space-y-3">
                   {filteredStudents.map(student => {
                     const existingMark = getExistingMark(student.id);
@@ -319,11 +328,11 @@ export function EnterTermExamMarksDialog({
                     const maxMarks = selectedExamSubject?.maxMarks || 100;
 
                     return (
-                      <div key={student.id} className="flex items-center gap-4 p-3 rounded-lg border">
+                      <div key={student.id} className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
                         <div className="flex-1 min-w-0">
-                          <div className="font-semibold truncate">{student.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {student.division?.name ? `Division ${student.division.name}` : ''}
+                          <div className="font-medium text-sm truncate">{student.name}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {student.division?.name ? `Div ${student.division.name}` : ''}
                           </div>
                         </div>
 
@@ -333,16 +342,17 @@ export function EnterTermExamMarksDialog({
                           </Badge>
                         )}
 
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 shrink-0">
                           <Input
                             type="number"
+                            inputMode="decimal"
                             min="0"
                             max={maxMarks}
                             step="0.5"
                             placeholder={existingMark?.toString() || "0"}
-                            value={currentMark || ''}
+                            value={currentMark ?? ''}
                             onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                            className="w-20"
+                            className="w-16 h-10 text-base text-center"
                           />
                           <span className="text-sm text-muted-foreground">/{maxMarks}</span>
                         </div>
