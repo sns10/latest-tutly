@@ -205,9 +205,45 @@ export function FeesList({
   };
 
   const handleMarkAsPaid = (feeId: string) => {
-    onUpdateFeeStatus(feeId, 'paid', new Date().toISOString().split('T')[0]);
+    const fee = fees.find((f) => f.id === feeId);
+    const paidDate = new Date().toISOString().split('T')[0];
+
+    // If we can't locate the fee record, fall back to just updating status.
+    if (!fee) {
+      onUpdateFeeStatus(feeId, 'paid', paidDate);
+      toast.success('Fee marked as paid');
+      return;
+    }
+
+    // Keep data accurate: "Paid" should always have a matching payment entry.
+    const totalPaid = getTotalPaid(feeId);
+    const remaining = fee.amount - totalPaid;
+
+    if (remaining > 0) {
+      const newPayment: FeePayment = {
+        id: `temp-${Date.now()}`,
+        feeId,
+        amount: remaining,
+        paymentDate: paidDate,
+        paymentMethod: 'cash',
+        paymentReference: undefined,
+        notes: 'Marked as paid',
+        createdAt: new Date().toISOString(),
+      };
+
+      onRecordPayment(feeId, remaining, 'cash', undefined, 'Marked as paid');
+
+      // Show receipt automatically
+      setReceiptFee(fee);
+      setReceiptPayment(newPayment);
+      setReceiptOpen(true);
+      return;
+    }
+
+    onUpdateFeeStatus(feeId, 'paid', paidDate);
     toast.success('Fee marked as paid');
   };
+
 
   const handleBulkMarkPaid = () => {
     if (selectedFees.size === 0) {
@@ -648,19 +684,33 @@ export function FeesList({
                                   <DropdownMenuSeparator />
                                 </>
                               )}
+
+                              {/* If a fee was marked paid without a payment entry, allow adding it for accurate history/receipts */}
+                              {fee.status === 'paid' && paymentCount === 0 && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleRecordPayment(fee)}>
+                                    <CreditCard className="h-4 w-4 mr-2" />
+                                    Record Payment
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                </>
+                              )}
+
                               <DropdownMenuItem onClick={() => handleViewHistory(fee)}>
                                 <History className="h-4 w-4 mr-2" />
                                 Payment History {paymentCount > 0 && `(${paymentCount})`}
                               </DropdownMenuItem>
                               {paymentCount > 0 && (
-                                <DropdownMenuItem onClick={() => {
-                                  const feePayments = getFeePayments(fee.id);
-                                  if (feePayments.length > 0) {
-                                    setReceiptFee(fee);
-                                    setReceiptPayment(feePayments[0]);
-                                    setReceiptOpen(true);
-                                  }
-                                }}>
+                                <DropdownMenuItem
+                                  onClick={() => {
+                                    const feePayments = getFeePayments(fee.id);
+                                    if (feePayments.length > 0) {
+                                      setReceiptFee(fee);
+                                      setReceiptPayment(feePayments[0]);
+                                      setReceiptOpen(true);
+                                    }
+                                  }}
+                                >
                                   <Printer className="h-4 w-4 mr-2" />
                                   Print Receipt
                                 </DropdownMenuItem>

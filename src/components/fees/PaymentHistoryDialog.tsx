@@ -124,7 +124,7 @@ export function PaymentHistoryDialog({
               <div className="space-y-3">
                 {payments.length === 0 ? (
                   <p className="text-sm text-muted-foreground text-center py-4">
-                    No payments recorded yet
+                    No payments recorded yet. Use “Record Payment” to add an entry and enable receipts.
                   </p>
                 ) : (
                   payments.map((payment, index) => (
