@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -320,7 +319,7 @@ export function EnterTermExamMarksDialog({
             </div>
 
             {selectedSubjectId && (
-              <ScrollArea className="flex-1 max-h-[45vh] sm:max-h-[400px] pr-4">
+              <div className="max-h-[45vh] sm:max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y pr-4">
                 <div className="space-y-3">
                   {filteredStudents.map(student => {
                     const existingMark = getExistingMark(student.id);
@@ -360,7 +359,7 @@ export function EnterTermExamMarksDialog({
                     );
                   })}
                 </div>
-              </ScrollArea>
+              </div>
             )}
 
             {!selectedSubjectId && (
