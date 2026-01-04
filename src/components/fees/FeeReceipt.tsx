@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, Download, X } from 'lucide-react';
+import { Printer, MessageCircle } from 'lucide-react';
 
 interface FeePayment {
   id: string;
@@ -255,12 +255,42 @@ export function FeeReceipt({
 
   const generatedReceiptNumber = receiptNumber || `RCP-${payment.id.substring(0, 8).toUpperCase()}`;
 
+  const handleWhatsAppShare = () => {
+    const receiptText = `*FEE RECEIPT*
+${tuition?.name || 'Tuition Center'}
+━━━━━━━━━━━━━━━
+
+*Receipt No:* ${generatedReceiptNumber}
+*Date:* ${new Date(payment.paymentDate).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })}
+
+*Student:* ${studentName}
+*Class:* ${studentClass}
+*Fee Type:* ${fee.feeType}
+
+*Amount Paid:* ₹${payment.amount.toLocaleString('en-IN')}
+*Payment Method:* ${formatPaymentMethod(payment.paymentMethod)}${payment.paymentReference ? `\n*Reference:* ${payment.paymentReference}` : ''}
+
+━━━━━━━━━━━━━━━
+Thank you for your payment!`;
+
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(receiptText)}`;
+    window.open(whatsappUrl, '_blank');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Fee Receipt</DialogTitle>
           <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={handleWhatsAppShare}>
+              <MessageCircle className="h-4 w-4 mr-2" />
+              WhatsApp
+            </Button>
             <Button size="sm" variant="outline" onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Print
