@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -328,7 +327,7 @@ export function EnterMarksDialog({
         </Button>
       </DialogTrigger>
       <DialogContent 
-        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] overflow-hidden flex flex-col"
+        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] overflow-y-auto"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
@@ -374,7 +373,7 @@ export function EnterMarksDialog({
           )}
           
           <TabsContent value="manual" className="space-y-4">
-            <ScrollArea className="flex-1 max-h-[50vh] sm:max-h-[400px] pr-2 sm:pr-4">
+            <div className="max-h-[50vh] sm:max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y pr-2 sm:pr-4">
               <div className="space-y-3 sm:space-y-4">
                 {filteredStudents.map((student) => {
                   const existingMark = getExistingMark(student.id);
@@ -430,7 +429,7 @@ export function EnterMarksDialog({
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
 
             <DialogFooter>
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 w-full">
