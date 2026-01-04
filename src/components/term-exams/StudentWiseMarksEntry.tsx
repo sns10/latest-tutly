@@ -99,14 +99,20 @@ export function StudentWiseMarksEntry({
   };
 
   const handleMarkChange = (subjectId: string, value: string) => {
+    // Allow empty string to clear the input
+    if (value === '' || value === undefined) {
+      setMarks(prev => {
+        const { [subjectId]: removed, ...rest } = prev;
+        return rest;
+      });
+      return;
+    }
+    
     const numValue = parseFloat(value);
     const examSubject = examSubjects.find(es => es.subjectId === subjectId);
     const maxMarks = examSubject?.maxMarks || 100;
     
-    if (value === '') {
-      const { [subjectId]: removed, ...rest } = marks;
-      setMarks(rest);
-    } else if (!isNaN(numValue) && numValue >= 0 && numValue <= maxMarks) {
+    if (!isNaN(numValue) && numValue >= 0 && numValue <= maxMarks) {
       setMarks(prev => ({ ...prev, [subjectId]: numValue }));
     }
   };
