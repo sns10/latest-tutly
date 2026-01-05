@@ -13,7 +13,7 @@ interface BackupRequest {
   backupData?: any; // For restore from file upload
 }
 
-const MAX_BACKUPS_PER_TUITION = 2;
+const MAX_BACKUPS_PER_TUITION = 5;
 const BACKUP_RETENTION_DAYS = 60;
 
 // Simple in-memory rate limiting (resets on function cold start)
