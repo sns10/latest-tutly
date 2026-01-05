@@ -1,21 +1,16 @@
-import { useState, useMemo } from "react";
-import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassName, ClassFee, Subject, Faculty, Division, TermExam, TermExamSubject, TermExamResult } from "@/types";
+import { useState } from "react";
+import { WeeklyTest, StudentTestResult, Student, Challenge, StudentChallenge, Announcement, ClassFee, Subject, Faculty, Division, TermExam, TermExamSubject, TermExamResult } from "@/types";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CreateTestDialog } from "./CreateTestDialog";
 import { EnterMarksDialog } from "./EnterMarksDialog";
 import { TestResultsView } from "./TestResultsView";
-
-import { AnnouncementsManager } from "./AnnouncementsManager";
 import { AttendanceTracker } from "./AttendanceTracker";
 import { FeeManagement } from "./FeeManagement";
-import { StudentDashboard } from "./StudentDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { TestTube2, Users, BarChart3, Monitor, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2, Search, BookOpen } from "lucide-react";
+import { TestTube2, Users, CalendarDays, DollarSign, Trash2, BookOpen } from "lucide-react";
 import { ClassFeeManager } from "./ClassFeeManager";
 import { TermExamManager } from "./term-exams/TermExamManager";
 import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
@@ -91,17 +86,6 @@ export function WeeklyTestManager({
 }: WeeklyTestManagerProps) {
   const { isFeatureEnabled } = useTuitionFeatures();
   const [selectedTest, setSelectedTest] = useState<WeeklyTest | null>(null);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [studentSearch, setStudentSearch] = useState('');
-  const [studentClassFilter, setStudentClassFilter] = useState<string>('all');
-
-  const filteredStudents = useMemo(() => {
-    return students.filter(student => {
-      const matchesSearch = student.name.toLowerCase().includes(studentSearch.toLowerCase());
-      const matchesClass = studentClassFilter === 'all' || student.class === studentClassFilter;
-      return matchesSearch && matchesClass;
-    });
-  }, [students, studentSearch, studentClassFilter]);
 
   const getTestStats = (test: WeeklyTest) => {
     // Filter students by test class
@@ -153,20 +137,6 @@ export function WeeklyTestManager({
     );
   }
 
-  if (selectedStudent) {
-    return (
-      <StudentDashboard
-        student={selectedStudent}
-        testResults={testResults}
-        tests={tests}
-        attendance={attendance.filter(a => a.studentId === selectedStudent.id)}
-        fees={fees.filter(f => f.studentId === selectedStudent.id)}
-        subjects={subjects}
-        faculty={faculty}
-        onClose={() => setSelectedStudent(null)}
-      />
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -189,10 +159,6 @@ export function WeeklyTestManager({
               <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
               <span>Marks</span>
             </TabsTrigger>
-            <TabsTrigger value="students" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
-              <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              <span className="hidden xs:inline">Students</span>
-            </TabsTrigger>
             {showAttendanceTab && isFeatureEnabled('attendance') && (
               <TabsTrigger value="attendance" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
                 <CalendarDays className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
@@ -203,12 +169,6 @@ export function WeeklyTestManager({
               <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
                 <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>Fees</span>
-              </TabsTrigger>
-            )}
-            {isFeatureEnabled('announcements') && (
-              <TabsTrigger value="announcements" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
-                <Megaphone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>Announce</span>
               </TabsTrigger>
             )}
             {isFeatureEnabled('term_exams') && (
@@ -357,67 +317,6 @@ export function WeeklyTestManager({
           )}
         </TabsContent>
 
-        <TabsContent value="students">
-          <Card>
-            <CardHeader>
-              <CardTitle>Student Dashboard</CardTitle>
-              <p className="text-muted-foreground">Click on a student to view their detailed information</p>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row gap-3 mb-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search students..."
-                    value={studentSearch}
-                    onChange={(e) => setStudentSearch(e.target.value)}
-                    className="pl-9"
-                  />
-                </div>
-                <Select value={studentClassFilter} onValueChange={setStudentClassFilter}>
-                  <SelectTrigger className="w-full sm:w-36">
-                    <SelectValue placeholder="All Classes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Classes</SelectItem>
-                    <SelectItem value="4th">4th</SelectItem>
-                    <SelectItem value="5th">5th</SelectItem>
-                    <SelectItem value="6th">6th</SelectItem>
-                    <SelectItem value="7th">7th</SelectItem>
-                    <SelectItem value="8th">8th</SelectItem>
-                    <SelectItem value="9th">9th</SelectItem>
-                    <SelectItem value="10th">10th</SelectItem>
-                    <SelectItem value="11th">11th</SelectItem>
-                    <SelectItem value="12th">12th</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student) => (
-                    <Card key={student.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelectedStudent(student)}>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            {student.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div>
-                            <div className="font-medium">{student.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              Class: {student.class} | XP: {student.totalXp}
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <p className="text-muted-foreground col-span-full text-center py-4">No students found.</p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
 
         {showAttendanceTab && onMarkAttendance && isFeatureEnabled('attendance') && (
           <TabsContent value="attendance">
@@ -445,15 +344,6 @@ export function WeeklyTestManager({
           </TabsContent>
         )}
 
-
-        {isFeatureEnabled('announcements') && (
-          <TabsContent value="announcements">
-            <AnnouncementsManager 
-              announcements={announcements}
-              onAddAnnouncement={onAddAnnouncement}
-            />
-          </TabsContent>
-        )}
 
         <TabsContent value="reports">
           <TestResultsView 
