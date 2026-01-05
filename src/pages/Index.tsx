@@ -145,12 +145,12 @@ const Index = () => {
           {/* Subscription Expiry Alert */}
           <SubscriptionExpiryAlert subscriptionEndDate={tuition?.subscription_end_date} />
           
-          <div className="flex items-center justify-between mb-4 gap-2">
+          <div className="mb-4 space-y-3">
             <TuitionBranding 
               name={tuition?.name || 'Dashboard'} 
               logoUrl={tuition?.logo_url}
             />
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 flex-wrap">
               {tuitionId && (
                 <PortalEmailConfig
                   tuitionId={tuitionId}
@@ -162,15 +162,15 @@ const Index = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={handleSharePortalLink}
-                className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50 h-7 text-xs px-2"
               >
-                {copied ? <Check className="h-4 w-4" /> : <Share2 className="h-4 w-4" />}
+                {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
                 <span className="hidden sm:inline">{copied ? 'Copied!' : 'Share Portal'}</span>
               </Button>
               <Sheet>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <Settings className="h-4 w-4" />
+                  <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs px-2">
+                    <Settings className="h-3 w-3" />
                     <span className="hidden sm:inline">Settings</span>
                   </Button>
                 </SheetTrigger>
@@ -186,8 +186,8 @@ const Index = () => {
                   </div>
                 </SheetContent>
               </Sheet>
-              <Button variant="outline" size="sm" onClick={signOut} className="gap-2">
-                <LogOut className="h-4 w-4" />
+              <Button variant="outline" size="sm" onClick={signOut} className="gap-1.5 h-7 text-xs px-2">
+                <LogOut className="h-3 w-3" />
                 <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
