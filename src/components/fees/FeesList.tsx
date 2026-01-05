@@ -70,6 +70,7 @@ interface FeesListProps {
   fees: StudentFee[];
   classFees: ClassFee[];
   payments: FeePayment[];
+  divisions?: { id: string; name: string; class: string }[];
   onAddFee: (fee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
   onRecordPayment: (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => void;
@@ -80,6 +81,7 @@ export function FeesList({
   fees,
   classFees,
   payments,
+  divisions = [],
   onAddFee,
   onUpdateFeeStatus,
   onRecordPayment
@@ -88,6 +90,7 @@ export function FeesList({
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
   const [selectedClass, setSelectedClass] = useState<string>('All');
+  const [selectedDivision, setSelectedDivision] = useState<string>('All');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFees, setSelectedFees] = useState<Set<string>>(new Set());
@@ -174,11 +177,12 @@ export function FeesList({
       const monthMatch = fee.feeType?.includes(selectedMonth) ||
         (fee.feeType === 'monthly' && fee.dueDate?.startsWith(selectedMonth));
       const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
+      const divisionMatch = selectedDivision === 'All' || (student && student.divisionId === selectedDivision);
       const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
       const searchMatch = searchQuery === '' || (student && student.name.toLowerCase().includes(searchQuery.toLowerCase()));
-      return studentMatch && monthMatch && classMatch && statusMatch && searchMatch;
+      return studentMatch && monthMatch && classMatch && divisionMatch && statusMatch && searchMatch;
     });
-  }, [fees, students, selectedStudent, selectedMonth, selectedClass, statusFilter, searchQuery]);
+  }, [fees, students, selectedStudent, selectedMonth, selectedClass, selectedDivision, statusFilter, searchQuery]);
 
   const getStudentName = (studentId: string) => {
     const student = students.find(s => s.id === studentId);
@@ -331,15 +335,23 @@ export function FeesList({
     let count = 0;
     if (selectedMonth !== currentMonth) count++;
     if (selectedClass !== 'All') count++;
+    if (selectedDivision !== 'All') count++;
     if (statusFilter !== 'All') count++;
     if (selectedStudent !== 'All') count++;
     if (searchQuery !== '') count++;
     return count;
-  }, [selectedMonth, selectedClass, statusFilter, selectedStudent, searchQuery, currentMonth]);
+  }, [selectedMonth, selectedClass, selectedDivision, statusFilter, selectedStudent, searchQuery, currentMonth]);
+
+  // Get divisions for selected class
+  const filteredDivisions = useMemo(() => {
+    if (selectedClass === 'All') return divisions;
+    return divisions.filter(d => d.class === selectedClass);
+  }, [divisions, selectedClass]);
 
   const clearFilters = () => {
     setSelectedMonth(getCurrentMonth());
     setSelectedClass('All');
+    setSelectedDivision('All');
     setStatusFilter('All');
     setSelectedStudent('All');
     setSearchQuery('');
@@ -373,6 +385,22 @@ export function FeesList({
               <SelectItem value="All">All Classes</SelectItem>
               {uniqueClasses.map(className => (
                 <SelectItem key={className} value={className}>{className}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Division Filter */}
+        <div>
+          <label className="text-sm font-medium mb-1.5 block">Division</label>
+          <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+            <SelectTrigger>
+              <SelectValue placeholder="Division" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All Divisions</SelectItem>
+              {filteredDivisions.map(div => (
+                <SelectItem key={div.id} value={div.id}>{div.name} ({div.class})</SelectItem>
               ))}
             </SelectContent>
           </Select>

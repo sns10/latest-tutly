@@ -142,14 +142,13 @@ export function TomorrowSchedule({
 
   const classNames = Object.keys(tomorrowClasses).sort() as ClassName[];
 
-  // Format time for WhatsApp (e.g., "evening 4:00")
+  // Format time for WhatsApp (e.g., "4:00 PM")
   const formatTimeForWhatsApp = (time: string) => {
     const [hours, minutes] = time.split(':');
     const hour = parseInt(hours);
-    // Morning: 6 AM - 11:59 AM, Evening: 12 PM - 11:59 PM
-    const period = hour >= 12 ? 'evening' : hour >= 6 ? 'morning' : 'evening';
+    const period = hour >= 12 ? 'PM' : 'AM';
     const displayHour = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    return `${period} ${displayHour}:${minutes}`;
+    return `${displayHour}:${minutes} ${period}`;
   };
 
   // Generate WhatsApp message for a class
@@ -158,20 +157,33 @@ export function TomorrowSchedule({
     if (!classes || classes.length === 0) return '';
 
     const dateFormatted = format(tomorrow, 'dd/MM/yyyy');
-    let message = `📅 *Tomorrow's Class Schedule (${dateFormatted})*\n`;
-    message += `*Class ${className}:*\n`;
+    let message = `📅 *Tomorrow's Class Schedule*\n`;
+    message += `📆 Date: ${dateFormatted}\n`;
+    message += `🎓 *Class ${className}*\n`;
+    message += `━━━━━━━━━━━━━━━\n\n`;
 
-    classes.forEach((entry) => {
-      const timeStr = formatTimeForWhatsApp(entry.startTime);
+    classes.forEach((entry, index) => {
+      const startTimeStr = formatTimeForWhatsApp(entry.startTime);
+      const endTimeStr = formatTimeForWhatsApp(entry.endTime);
       const subjectName = entry.subject?.name || 'Unknown Subject';
-      message += `• ${timeStr} : ${subjectName}`;
+      
+      message += `📚 *${subjectName}*\n`;
+      message += `⏰ Time: ${startTimeStr} - ${endTimeStr}`;
       if (entry.faculty) {
-        message += ` (${entry.faculty.name})`;
+        message += `\n👨‍🏫 Teacher: ${entry.faculty.name}`;
       }
-      message += '\n';
+      if (entry.room) {
+        message += `\n🏫 Room: ${entry.room.name}`;
+      }
+      
+      // Add spacing between classes
+      if (index < classes.length - 1) {
+        message += '\n\n';
+      }
     });
 
-    message += '\nPlease be on time!';
+    message += '\n\n━━━━━━━━━━━━━━━\n';
+    message += '✅ Please be on time!';
     return message;
   };
 
