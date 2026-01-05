@@ -22,7 +22,7 @@ export function TuitionBranding({
   const classes = sizeClasses[size];
 
   return (
-    <div className="flex items-center gap-3 min-w-0">
+    <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
       {logoUrl ? (
         <img 
           src={logoUrl} 
@@ -34,12 +34,12 @@ export function TuitionBranding({
           <Building2 className={`${classes.icon} text-white`} />
         </div>
       )}
-      <div className="min-w-0">
-        <h2 className={`${classes.title} font-bold text-gray-900 truncate`}>
+      <div className="min-w-0 flex-1">
+        <h2 className={`${classes.title} font-bold text-gray-900 truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none`}>
           {name || 'Dashboard'}
         </h2>
         {showPoweredBy && (
-          <p className={`${classes.sub} text-gray-500`}>
+          <p className={`${classes.sub} text-gray-500 truncate`}>
             Powered by <span className="font-semibold text-indigo-600">Upskillr Tutly</span>
           </p>
         )}
