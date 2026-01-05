@@ -62,8 +62,8 @@ export function PortalEmailConfig({ tuitionId, currentEmail, onUpdate }: PortalE
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="gap-2">
-          <Settings className="h-4 w-4" />
+        <Button variant="outline" size="sm" className="gap-1.5 h-7 text-xs px-2">
+          <Settings className="h-3 w-3" />
           <span className="hidden sm:inline">Portal Settings</span>
         </Button>
       </DialogTrigger>
