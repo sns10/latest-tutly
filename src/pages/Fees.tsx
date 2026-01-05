@@ -32,6 +32,7 @@ export default function FeesPage() {
     students, 
     fees, 
     classFees, 
+    divisions,
     loading,
     addFee,
     updateFeeStatus,
@@ -195,6 +196,7 @@ export default function FeesPage() {
             fees={fees}
             classFees={classFees}
             payments={payments}
+            divisions={divisions}
             onAddFee={addFee}
             onUpdateFeeStatus={updateFeeStatus}
             onRecordPayment={handleRecordPayment}

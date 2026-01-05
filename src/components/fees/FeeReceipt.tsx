@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Printer, MessageCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface FeePayment {
   id: string;
@@ -111,7 +112,10 @@ export function FeeReceipt({
     if (!printContent) return;
 
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    if (!printWindow) {
+      toast.error('Please allow popups to print the receipt');
+      return;
+    }
 
     printWindow.document.write(`
       <!DOCTYPE html>
@@ -123,6 +127,8 @@ export function FeeReceipt({
               margin: 0;
               padding: 0;
               box-sizing: border-box;
+              -webkit-print-color-adjust: exact !important;
+              print-color-adjust: exact !important;
             }
             body {
               font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -135,6 +141,7 @@ export function FeeReceipt({
               margin: 0 auto;
               border: 2px solid #1a1a1a;
               padding: 24px;
+              background: white;
             }
             .header {
               text-align: center;
@@ -142,21 +149,26 @@ export function FeeReceipt({
               padding-bottom: 16px;
               margin-bottom: 16px;
             }
+            .header img {
+              max-height: 60px;
+              width: auto;
+              margin-bottom: 8px;
+            }
             .header h1 {
-              font-size: 24px;
+              font-size: 22px;
               font-weight: bold;
               color: #1a1a1a;
               margin-bottom: 4px;
             }
             .header p {
-              font-size: 12px;
+              font-size: 11px;
               color: #666;
             }
             .receipt-title {
               text-align: center;
-              font-size: 18px;
+              font-size: 16px;
               font-weight: bold;
-              background: #f0f0f0;
+              background: #f0f0f0 !important;
               padding: 8px;
               margin-bottom: 16px;
               border: 1px solid #ddd;
@@ -165,21 +177,21 @@ export function FeeReceipt({
               display: flex;
               justify-content: space-between;
               margin-bottom: 16px;
-              font-size: 13px;
+              font-size: 12px;
             }
             .student-info {
-              background: #f9f9f9;
+              background: #f9f9f9 !important;
               padding: 12px;
               margin-bottom: 16px;
               border-left: 4px solid #1a1a1a;
             }
             .student-info p {
               margin-bottom: 4px;
-              font-size: 13px;
+              font-size: 12px;
             }
             .student-info strong {
               display: inline-block;
-              width: 120px;
+              width: 100px;
             }
             .payment-details {
               margin-bottom: 16px;
@@ -190,30 +202,38 @@ export function FeeReceipt({
             }
             .payment-details th, .payment-details td {
               border: 1px solid #ddd;
-              padding: 10px;
+              padding: 8px;
               text-align: left;
-              font-size: 13px;
+              font-size: 12px;
             }
             .payment-details th {
-              background: #f0f0f0;
+              background: #f0f0f0 !important;
               font-weight: 600;
             }
             .amount-row td {
               font-weight: bold;
-              font-size: 15px;
+              font-size: 14px;
+              background: #f5f5f5 !important;
             }
             .amount-words {
-              background: #f9f9f9;
-              padding: 12px;
+              background: #f9f9f9 !important;
+              padding: 10px;
               margin-bottom: 16px;
               font-style: italic;
-              font-size: 12px;
+              font-size: 11px;
               border: 1px dashed #ccc;
+            }
+            .payment-method {
+              font-size: 12px;
+              margin-bottom: 16px;
+            }
+            .payment-method p {
+              margin-bottom: 4px;
             }
             .signatures {
               display: flex;
               justify-content: space-between;
-              margin-top: 48px;
+              margin-top: 40px;
               padding-top: 16px;
             }
             .signature-box {
@@ -223,24 +243,95 @@ export function FeeReceipt({
             .signature-line {
               border-top: 1px solid #1a1a1a;
               padding-top: 8px;
-              font-size: 12px;
+              font-size: 11px;
             }
             .footer {
               text-align: center;
-              margin-top: 24px;
+              margin-top: 20px;
               padding-top: 16px;
               border-top: 2px dashed #ccc;
-              font-size: 11px;
+              font-size: 10px;
               color: #666;
             }
             @media print {
-              body { padding: 0; }
-              .receipt { border-width: 1px; }
+              body { 
+                padding: 0; 
+                margin: 0;
+              }
+              .receipt { 
+                border-width: 1px; 
+                box-shadow: none;
+              }
             }
           </style>
         </head>
         <body>
-          ${printContent.innerHTML}
+          <div class="receipt">
+            <div class="header">
+              ${tuition?.logo_url ? `<img src="${tuition.logo_url}" alt="Logo" />` : ''}
+              <h1>${tuition?.name || 'Tuition Center'}</h1>
+              ${tuition?.address ? `<p>${tuition.address}</p>` : ''}
+              ${(tuition?.phone || tuition?.email) ? `<p>${tuition?.phone ? `Ph: ${tuition.phone}` : ''}${tuition?.phone && tuition?.email ? ' | ' : ''}${tuition?.email ? `Email: ${tuition.email}` : ''}</p>` : ''}
+            </div>
+            
+            <div class="receipt-title">FEE RECEIPT</div>
+            
+            <div class="receipt-meta">
+              <div><strong>Receipt No:</strong> ${generatedReceiptNumber}</div>
+              <div><strong>Date:</strong> ${new Date(payment.paymentDate).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            </div>
+            
+            <div class="student-info">
+              <p><strong>Student Name:</strong> ${studentName}</p>
+              <p><strong>Class:</strong> ${studentClass}</p>
+              <p><strong>Fee Type:</strong> ${fee.feeType}</p>
+            </div>
+            
+            <div class="payment-details">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Description</th>
+                    <th style="text-align: right; width: 120px;">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>${fee.feeType} - ${new Date(fee.dueDate).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</td>
+                    <td style="text-align: right;">₹${fee.amount.toLocaleString('en-IN')}</td>
+                  </tr>
+                  <tr class="amount-row">
+                    <td>Amount Paid</td>
+                    <td style="text-align: right;">₹${payment.amount.toLocaleString('en-IN')}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            
+            <div class="amount-words">
+              <strong>Amount in Words:</strong> Rupees ${numberToWords(Math.round(payment.amount))} Only
+            </div>
+            
+            <div class="payment-method">
+              <p><strong>Payment Method:</strong> ${formatPaymentMethod(payment.paymentMethod)}</p>
+              ${payment.paymentReference ? `<p><strong>Reference:</strong> ${payment.paymentReference}</p>` : ''}
+              ${payment.notes ? `<p><strong>Notes:</strong> ${payment.notes}</p>` : ''}
+            </div>
+            
+            <div class="signatures">
+              <div class="signature-box">
+                <div class="signature-line">Received By</div>
+              </div>
+              <div class="signature-box">
+                <div class="signature-line">Authorized Signature</div>
+              </div>
+            </div>
+            
+            <div class="footer">
+              <p>This is a computer-generated receipt.</p>
+              <p>Thank you for your payment!</p>
+            </div>
+          </div>
         </body>
       </html>
     `);
@@ -250,7 +341,7 @@ export function FeeReceipt({
     setTimeout(() => {
       printWindow.print();
       printWindow.close();
-    }, 250);
+    }, 300);
   };
 
   const generatedReceiptNumber = receiptNumber || `RCP-${payment.id.substring(0, 8).toUpperCase()}`;
