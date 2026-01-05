@@ -8,14 +8,14 @@ import { Badge } from "@/components/ui/badge";
 import { CreateTestDialog } from "./CreateTestDialog";
 import { EnterMarksDialog } from "./EnterMarksDialog";
 import { TestResultsView } from "./TestResultsView";
-import { ChallengesManager } from "./ChallengesManager";
+
 import { AnnouncementsManager } from "./AnnouncementsManager";
 import { AttendanceTracker } from "./AttendanceTracker";
 import { FeeManagement } from "./FeeManagement";
 import { StudentDashboard } from "./StudentDashboard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { TestTube2, Users, BarChart3, Monitor, Trophy, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2, Search, BookOpen } from "lucide-react";
+import { TestTube2, Users, BarChart3, Monitor, Megaphone, CalendarDays, DollarSign, UserCheck, Trash2, Search, BookOpen } from "lucide-react";
 import { ClassFeeManager } from "./ClassFeeManager";
 import { TermExamManager } from "./term-exams/TermExamManager";
 import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
@@ -203,12 +203,6 @@ export function WeeklyTestManager({
               <TabsTrigger value="fees" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
                 <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 <span>Fees</span>
-              </TabsTrigger>
-            )}
-            {isFeatureEnabled('challenges') && (
-              <TabsTrigger value="challenges" className="flex items-center gap-1 sm:gap-1.5 text-xs sm:text-sm px-2 sm:px-3">
-                <Trophy className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>Challenges</span>
               </TabsTrigger>
             )}
             {isFeatureEnabled('announcements') && (
@@ -451,17 +445,6 @@ export function WeeklyTestManager({
           </TabsContent>
         )}
 
-        {isFeatureEnabled('challenges') && (
-          <TabsContent value="challenges">
-            <ChallengesManager 
-              challenges={challenges}
-              studentChallenges={studentChallenges}
-              students={students}
-              onAddChallenge={onAddChallenge}
-              onCompleteChallenge={onCompleteChallenge}
-            />
-          </TabsContent>
-        )}
 
         {isFeatureEnabled('announcements') && (
           <TabsContent value="announcements">
