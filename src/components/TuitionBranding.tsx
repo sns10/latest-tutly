@@ -35,7 +35,7 @@ export function TuitionBranding({
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <h2 className={`${classes.title} font-bold text-gray-900 truncate max-w-[120px] xs:max-w-[160px] sm:max-w-none`}>
+        <h2 className={`${classes.title} font-bold text-gray-900 truncate max-w-[180px] xs:max-w-[220px] sm:max-w-[280px] md:max-w-none`}>
           {name || 'Dashboard'}
         </h2>
         {showPoweredBy && (
