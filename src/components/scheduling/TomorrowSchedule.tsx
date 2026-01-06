@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CreatableSelect } from '@/components/ui/creatable-select';
-import { Pencil, Trash2, Clock, User, BookOpen, Share2, Plus } from 'lucide-react';
+import { Pencil, Trash2, Clock, User, BookOpen, Share2, Plus, Copy } from 'lucide-react';
+import { toast } from 'sonner';
 import { Timetable, Faculty, Subject, Room, ClassName, Division } from '@/types';
 
 interface TomorrowScheduleProps {
@@ -195,6 +196,17 @@ export function TomorrowSchedule({
     window.open(whatsappUrl, '_blank');
   };
 
+  // Copy schedule to clipboard
+  const copyToClipboard = async (className: ClassName) => {
+    const message = generateWhatsAppMessage(className);
+    try {
+      await navigator.clipboard.writeText(message);
+      toast.success('Schedule copied to clipboard!');
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
+
   // Handle edit - convert regular to special for tomorrow
   const handleEdit = (entry: Timetable) => {
     setEditingEntry(entry);
@@ -350,15 +362,26 @@ export function TomorrowSchedule({
                     <CardTitle className="text-lg font-semibold">
                       Class {className}
                     </CardTitle>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => shareToWhatsApp(className)}
-                      className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
-                    >
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share to WhatsApp
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(className)}
+                        className="bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
+                      >
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => shareToWhatsApp(className)}
+                        className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share to WhatsApp
+                      </Button>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
