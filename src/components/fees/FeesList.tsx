@@ -72,6 +72,7 @@ interface FeesListProps {
   payments: FeePayment[];
   divisions?: { id: string; name: string; class: string }[];
   onAddFee: (fee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onAddFeesBatch?: (fees: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
   onRecordPayment: (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => void;
 }
@@ -83,6 +84,7 @@ export function FeesList({
   payments,
   divisions = [],
   onAddFee,
+  onAddFeesBatch,
   onUpdateFeeStatus,
   onRecordPayment
 }: FeesListProps) {
@@ -126,7 +128,7 @@ export function FeesList({
 
     const currentMonth = getCurrentMonth();
     const currentYear = new Date().getFullYear();
-    let feesGenerated = 0;
+    const feesToCreate: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>> = [];
 
     students.forEach(student => {
       const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${currentMonth}`);
@@ -135,20 +137,25 @@ export function FeesList({
         const feeAmount = classFee ? classFee.amount : 0;
         if (feeAmount > 0) {
           const dueDate = new Date(currentYear, new Date().getMonth(), 5);
-          onAddFee({
+          feesToCreate.push({
             studentId: student.id,
             feeType: `Monthly Fee - ${currentMonth}`,
             amount: feeAmount,
             dueDate: dueDate.toISOString().split('T')[0],
             status: 'unpaid'
           });
-          feesGenerated++;
         }
       }
     });
 
-    if (feesGenerated > 0) {
-      toast.success(`Generated fees for ${feesGenerated} students`);
+    if (feesToCreate.length > 0) {
+      if (onAddFeesBatch) {
+        onAddFeesBatch(feesToCreate);
+      } else {
+        // Fallback to individual adds if batch not available
+        feesToCreate.forEach(fee => onAddFee(fee));
+        toast.success(`Generated fees for ${feesToCreate.length} students`);
+      }
     } else {
       toast.info('All students already have fees for this month');
     }

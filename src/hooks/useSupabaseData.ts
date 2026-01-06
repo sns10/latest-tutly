@@ -432,6 +432,32 @@ export function useSupabaseData() {
     toast.success('Fee added successfully!');
   };
 
+  // Batch fee insertion - single API call for multiple fees
+  const addFeesBatch = async (newFees: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    if (newFees.length === 0) return;
+
+    const feeRecords = newFees.map(fee => ({
+      student_id: fee.studentId,
+      fee_type: fee.feeType,
+      amount: fee.amount,
+      due_date: fee.dueDate,
+      paid_date: fee.paidDate || null,
+      status: fee.status,
+      notes: fee.notes || null,
+    }));
+
+    const { error } = await supabase.from('student_fees').insert(feeRecords);
+
+    if (error) {
+      console.error('Error adding fees batch:', error);
+      toast.error('Failed to generate fees');
+      return;
+    }
+
+    invalidateFees();
+    toast.success(`Generated fees for ${newFees.length} students`);
+  };
+
   const updateFeeStatus = async (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => {
     const { error } = await supabase.from('student_fees').update({ status, paid_date: paidDate || null }).eq('id', feeId);
     if (error) {
@@ -851,6 +877,7 @@ export function useSupabaseData() {
     markAttendance,
     bulkMarkAttendance,
     addFee,
+    addFeesBatch,
     updateFeeStatus,
     updateClassFee,
     addFaculty,

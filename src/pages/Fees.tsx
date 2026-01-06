@@ -35,6 +35,7 @@ export default function FeesPage() {
     divisions,
     loading,
     addFee,
+    addFeesBatch,
     updateFeeStatus,
     updateClassFee,
     deleteFee,
@@ -198,6 +199,7 @@ export default function FeesPage() {
             payments={payments}
             divisions={divisions}
             onAddFee={addFee}
+            onAddFeesBatch={addFeesBatch}
             onUpdateFeeStatus={updateFeeStatus}
             onRecordPayment={handleRecordPayment}
           />
