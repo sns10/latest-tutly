@@ -7,8 +7,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Printer, MessageCircle } from 'lucide-react';
+import { Printer, MessageCircle, Download, Copy } from 'lucide-react';
 import { toast } from 'sonner';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 interface FeePayment {
   id: string;
@@ -107,17 +109,11 @@ export function FeeReceipt({
 }: FeeReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
 
-  const handlePrint = () => {
-    const printContent = receiptRef.current;
-    if (!printContent) return;
+  // Move this before handlePrint so it's available in the HTML template
+  const generatedReceiptNumber = receiptNumber || `RCP-${payment.id.substring(0, 8).toUpperCase()}`;
 
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) {
-      toast.error('Please allow popups to print the receipt');
-      return;
-    }
-
-    printWindow.document.write(`
+  const getReceiptHTML = () => {
+    return `
       <!DOCTYPE html>
       <html>
         <head>
@@ -334,17 +330,136 @@ export function FeeReceipt({
           </div>
         </body>
       </html>
-    `);
-
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 300);
+    `;
   };
 
-  const generatedReceiptNumber = receiptNumber || `RCP-${payment.id.substring(0, 8).toUpperCase()}`;
+  // Improved print using iframe for better iOS compatibility
+  const handlePrint = () => {
+    const htmlContent = getReceiptHTML();
+    
+    // Create a hidden iframe
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'absolute';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.left = '-9999px';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      toast.error('Unable to print. Please try downloading the PDF instead.');
+      document.body.removeChild(iframe);
+      return;
+    }
+
+    iframeDoc.open();
+    iframeDoc.write(htmlContent);
+    iframeDoc.close();
+
+    // Wait for content to load then print
+    iframe.onload = () => {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (e) {
+        toast.error('Print failed. Please try downloading the PDF instead.');
+      }
+      // Clean up after a delay
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    };
+
+    // Trigger load if already complete
+    if (iframe.contentDocument?.readyState === 'complete') {
+      try {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      } catch (e) {
+        toast.error('Print failed. Please try downloading the PDF instead.');
+      }
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+      }, 1000);
+    }
+  };
+
+  // Download as PDF
+  const handleDownloadPDF = async () => {
+    const receiptElement = receiptRef.current;
+    if (!receiptElement) {
+      toast.error('Receipt not found');
+      return;
+    }
+
+    const loadingToast = toast.loading('Generating PDF...');
+
+    try {
+      const canvas = await html2canvas(receiptElement, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 10;
+      
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      
+      const fileName = `Receipt_${studentName.replace(/\s+/g, '_')}_${generatedReceiptNumber}.pdf`;
+      pdf.save(fileName);
+      
+      toast.dismiss(loadingToast);
+      toast.success('PDF downloaded successfully!');
+    } catch (error) {
+      toast.dismiss(loadingToast);
+      toast.error('Failed to generate PDF. Please try again.');
+      console.error('PDF generation error:', error);
+    }
+  };
+
+  // Copy receipt text to clipboard
+  const handleCopyReceipt = async () => {
+    const receiptText = `FEE RECEIPT
+${tuition?.name || 'Tuition Center'}
+━━━━━━━━━━━━━━━
+
+Receipt No: ${generatedReceiptNumber}
+Date: ${new Date(payment.paymentDate).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    })}
+
+Student: ${studentName}
+Class: ${studentClass}
+Fee Type: ${fee.feeType}
+
+Amount Paid: ₹${payment.amount.toLocaleString('en-IN')}
+Payment Method: ${formatPaymentMethod(payment.paymentMethod)}${payment.paymentReference ? `\nReference: ${payment.paymentReference}` : ''}
+
+━━━━━━━━━━━━━━━
+Thank you for your payment!`;
+
+    try {
+      await navigator.clipboard.writeText(receiptText);
+      toast.success('Receipt copied to clipboard!');
+    } catch (err) {
+      toast.error('Failed to copy to clipboard');
+    }
+  };
 
   const handleWhatsAppShare = () => {
     const receiptText = `*FEE RECEIPT*
@@ -377,14 +492,22 @@ Thank you for your payment!`;
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Fee Receipt</DialogTitle>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={handleWhatsAppShare}>
-              <MessageCircle className="h-4 w-4 mr-2" />
-              WhatsApp
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={handleDownloadPDF}>
+              <Download className="h-4 w-4 mr-2" />
+              PDF
             </Button>
             <Button size="sm" variant="outline" onClick={handlePrint}>
               <Printer className="h-4 w-4 mr-2" />
               Print
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleCopyReceipt}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copy
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleWhatsAppShare}>
+              <MessageCircle className="h-4 w-4 mr-2" />
+              WhatsApp
             </Button>
           </div>
         </DialogHeader>
@@ -498,7 +621,7 @@ Thank you for your payment!`;
           </div>
 
           {/* Footer */}
-          <div className="footer text-center mt-6 pt-4 border-t-2 border-dashed text-xs text-muted-foreground">
+          <div className="footer text-center mt-5 pt-4 border-t-2 border-dashed border-muted text-xs text-muted-foreground">
             <p>This is a computer-generated receipt.</p>
             <p>Thank you for your payment!</p>
           </div>
