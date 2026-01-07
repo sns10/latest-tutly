@@ -9,6 +9,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +57,9 @@ export function EnterTermExamMarksDialog({
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreviewData, setBulkPreviewData] = useState<any[]>([]);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingResults, setPendingResults] = useState<{ termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string }[]>([]);
+  const [isBulkConfirm, setIsBulkConfirm] = useState(false);
 
   // Filter students by exam class
   const classStudents = students.filter(s => s.class === exam.class);
@@ -94,23 +107,37 @@ export function EnterTermExamMarksDialog({
       return;
     }
 
-    let resultsAdded = 0;
+    const resultsToAdd: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string }[] = [];
     Object.entries(marks).forEach(([studentId, markValue]) => {
       const maxMarks = selectedExamSubject?.maxMarks || 100;
       if (markValue >= 0 && markValue <= maxMarks) {
-        onAddResult({
+        resultsToAdd.push({
           termExamId: exam.id,
           studentId,
           subjectId: selectedSubjectId,
           marks: markValue,
         });
-        resultsAdded++;
       }
     });
 
-    if (resultsAdded > 0) {
-      toast.success(`Added marks for ${resultsAdded} students!`);
+    if (resultsToAdd.length === 0) return;
+
+    // Show confirmation dialog
+    setPendingResults(resultsToAdd);
+    setIsBulkConfirm(false);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmSaveMarks = async () => {
+    if (pendingResults.length === 0) return;
+
+    // Use batch function for reliability
+    const success = await onBulkAddResults(pendingResults);
+    if (success) {
+      toast.success(`Added marks for ${pendingResults.length} students!`);
       setMarks({});
+      setPendingResults([]);
+      setShowConfirmDialog(false);
     }
   };
 
@@ -226,17 +253,29 @@ export function EnterTermExamMarksDialog({
       }
     });
 
-    if (results.length > 0) {
-      const success = await onBulkAddResults(results);
-      if (success) {
-        toast.success(`Successfully imported ${results.length} marks!`);
-        setBulkFile(null);
-        setBulkPreviewData([]);
-        setBulkErrors([]);
-        setIsOpen(false);
-      }
-    } else {
+    if (results.length === 0) {
       toast.error("No valid marks found to import");
+      return;
+    }
+
+    // Show confirmation dialog
+    setPendingResults(results);
+    setIsBulkConfirm(true);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmBulkSaveMarks = async () => {
+    if (pendingResults.length === 0) return;
+
+    const success = await onBulkAddResults(pendingResults);
+    if (success) {
+      toast.success(`Successfully imported ${pendingResults.length} marks!`);
+      setBulkFile(null);
+      setBulkPreviewData([]);
+      setBulkErrors([]);
+      setPendingResults([]);
+      setShowConfirmDialog(false);
+      setIsOpen(false);
     }
   };
 
@@ -472,6 +511,30 @@ export function EnterTermExamMarksDialog({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Save Marks</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>You are about to save marks for <strong>{pendingResults.length} entries</strong> in exam "{exam.name}".</p>
+              <p className="text-sm">This action will update existing marks if any.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowConfirmDialog(false);
+              setPendingResults([]);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={isBulkConfirm ? confirmBulkSaveMarks : confirmSaveMarks}>
+              Save {pendingResults.length} Marks
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
