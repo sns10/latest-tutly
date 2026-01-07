@@ -34,6 +34,7 @@ interface WeeklyTestManagerProps {
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onDeleteTest: (testId: string) => void;
   onAddTestResult: (result: StudentTestResult) => void;
+  onAddTestResultsBatch?: (results: StudentTestResult[]) => void;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
   onAddChallenge: (challenge: Omit<Challenge, 'id' | 'createdAt'>) => void;
   onCompleteChallenge: (studentId: string, challengeId: string) => void;
@@ -69,6 +70,7 @@ export function WeeklyTestManager({
   onAddTest,
   onDeleteTest,
   onAddTestResult,
+  onAddTestResultsBatch,
   onAwardXP,
   onAddChallenge,
   onCompleteChallenge,
@@ -238,6 +240,7 @@ export function WeeklyTestManager({
                             existingResults={testResults.filter(r => r.testId === test.id)}
                             divisions={divisions}
                             onAddResult={onAddTestResult}
+                            onAddResultsBatch={onAddTestResultsBatch}
                             onAwardXP={onAwardXP}
                           />
                           <Button 
@@ -307,6 +310,7 @@ export function WeeklyTestManager({
                         existingResults={testResults.filter(r => r.testId === test.id)}
                         divisions={divisions}
                         onAddResult={onAddTestResult}
+                        onAddResultsBatch={onAddTestResultsBatch}
                         onAwardXP={onAwardXP}
                       />
                     </CardTitle>

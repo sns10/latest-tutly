@@ -135,7 +135,7 @@ export function useAddTestResultMutation(tuitionId: string | null) {
           test_id: result.testId,
           student_id: result.studentId,
           marks: result.marks,
-        });
+        }, { onConflict: 'test_id,student_id' });
 
       if (error) throw error;
     },
@@ -145,6 +145,37 @@ export function useAddTestResultMutation(tuitionId: string | null) {
     onError: (error) => {
       console.error('Error adding test result:', error);
       toast.error('Failed to save test result');
+    },
+  });
+}
+
+// Batch mutation for adding multiple test results at once
+export function useAddTestResultsBatchMutation(tuitionId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (results: StudentTestResult[]) => {
+      if (results.length === 0) return;
+
+      const records = results.map(result => ({
+        test_id: result.testId,
+        student_id: result.studentId,
+        marks: result.marks,
+      }));
+
+      const { error } = await supabase
+        .from('student_test_results')
+        .upsert(records, { onConflict: 'test_id,student_id' });
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['testResults', tuitionId] });
+      toast.success('Marks saved successfully!');
+    },
+    onError: (error) => {
+      console.error('Error adding test results:', error);
+      toast.error('Failed to save test results');
     },
   });
 }

@@ -1,6 +1,5 @@
 
 import { useState, useMemo } from "react";
-import { useForm } from "react-hook-form";
 import { WeeklyTest, Student, StudentTestResult, Division } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Trophy, TrendingUp, Upload, Download } from "lucide-react";
+import { Edit, Trophy, TrendingUp, Upload, Download, Search } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
 
@@ -27,6 +26,7 @@ interface EnterMarksDialogProps {
   existingResults: StudentTestResult[];
   divisions?: Division[];
   onAddResult: (result: StudentTestResult) => void;
+  onAddResultsBatch?: (results: StudentTestResult[]) => void;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
 
@@ -36,6 +36,7 @@ export function EnterMarksDialog({
   existingResults,
   divisions = [],
   onAddResult,
+  onAddResultsBatch,
   onAwardXP 
 }: EnterMarksDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -44,6 +45,7 @@ export function EnterMarksDialog({
   const [bulkPreviewData, setBulkPreviewData] = useState<any[]>([]);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [selectedDivision, setSelectedDivision] = useState<string>('');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Filter students by class if test has a specific class
   const classFilteredStudents = test.class && test.class !== "All" 
@@ -56,11 +58,24 @@ export function EnterMarksDialog({
     return divisions.filter(d => d.class === test.class);
   }, [divisions, test.class]);
 
-  // Filter by division if selected
+  // Filter by division and search query
   const filteredStudents = useMemo(() => {
-    if (!selectedDivision) return classFilteredStudents;
-    return classFilteredStudents.filter(s => s.divisionId === selectedDivision);
-  }, [classFilteredStudents, selectedDivision]);
+    let result = classFilteredStudents;
+    
+    if (selectedDivision) {
+      result = result.filter(s => s.divisionId === selectedDivision);
+    }
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase().trim();
+      result = result.filter(s => 
+        s.name.toLowerCase().includes(query) ||
+        s.rollNo?.toString().includes(query)
+      );
+    }
+    
+    return result;
+  }, [classFilteredStudents, selectedDivision, searchQuery]);
 
   const handleMarkChange = (studentId: string, value: string) => {
     // Allow empty string to clear the input
@@ -107,32 +122,39 @@ export function EnterMarksDialog({
   };
 
   const handleSubmit = () => {
-    let resultsAdded = 0;
+    const resultsToAdd: StudentTestResult[] = [];
     
     Object.entries(marks).forEach(([studentId, markValue]) => {
       if (markValue >= 0 && markValue <= test.maxMarks) {
-        const result: StudentTestResult = {
+        resultsToAdd.push({
           testId: test.id,
           studentId,
           marks: markValue
-        };
-        
-        onAddResult(result);
-        resultsAdded++;
-
-        // Award XP based on performance
-        const { xpAmount, reasons } = calculateXPRewards(studentId, markValue);
-        if (xpAmount > 0) {
-          onAwardXP(studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
-        }
+        });
       }
     });
 
-    if (resultsAdded > 0) {
-      toast.success(`Added marks for ${resultsAdded} students and awarded XP!`);
-      setMarks({});
-      setIsOpen(false);
+    if (resultsToAdd.length === 0) return;
+
+    // Use batch function if available, otherwise fall back to individual calls
+    if (onAddResultsBatch) {
+      onAddResultsBatch(resultsToAdd);
+    } else {
+      resultsToAdd.forEach(result => onAddResult(result));
+      toast.success(`Added marks for ${resultsToAdd.length} students!`);
     }
+
+    // Award XP based on performance
+    resultsToAdd.forEach(result => {
+      const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
+      if (xpAmount > 0) {
+        onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
+      }
+    });
+
+    setMarks({});
+    setSearchQuery('');
+    setIsOpen(false);
   };
 
   // Bulk upload functions
@@ -265,11 +287,11 @@ export function EnterMarksDialog({
       return;
     }
 
-    let resultsAdded = 0;
+    const resultsToAdd: StudentTestResult[] = [];
 
     bulkPreviewData.forEach(row => {
       // Find student by ID (primary) or name (fallback)
-      const student = filteredStudents.find(s => 
+      const student = classFilteredStudents.find(s => 
         s.id === row["Student ID"] || s.name === row["Student Name"]
       );
 
@@ -277,32 +299,42 @@ export function EnterMarksDialog({
       if (student && marksOrGrade !== undefined && marksOrGrade !== "") {
         const markValue = parseMarksOrGrade(marksOrGrade);
         if (markValue >= 0 && markValue <= test.maxMarks) {
-          const result: StudentTestResult = {
+          resultsToAdd.push({
             testId: test.id,
             studentId: student.id,
             marks: markValue
-          };
-          
-          onAddResult(result);
-          resultsAdded++;
-
-          // Award XP based on performance
-          const { xpAmount, reasons } = calculateXPRewards(student.id, markValue);
-          if (xpAmount > 0) {
-            onAwardXP(student.id, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
-          }
+          });
         }
       }
     });
 
-    if (resultsAdded > 0) {
-      toast.success(`Successfully imported marks for ${resultsAdded} students!`);
-      // Reset bulk upload state
-      setBulkFile(null);
-      setBulkPreviewData([]);
-      setBulkErrors([]);
-      setIsOpen(false);
+    if (resultsToAdd.length === 0) {
+      toast.error("No valid marks found to import");
+      return;
     }
+
+    // Use batch function if available
+    if (onAddResultsBatch) {
+      onAddResultsBatch(resultsToAdd);
+    } else {
+      resultsToAdd.forEach(result => onAddResult(result));
+      toast.success(`Successfully imported marks for ${resultsToAdd.length} students!`);
+    }
+
+    // Award XP based on performance
+    resultsToAdd.forEach(result => {
+      const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
+      if (xpAmount > 0) {
+        onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
+      }
+    });
+
+    // Reset bulk upload state
+    setBulkFile(null);
+    setBulkPreviewData([]);
+    setBulkErrors([]);
+    setSearchQuery('');
+    setIsOpen(false);
   };
 
   const getExistingMark = (studentId: string) => {
@@ -349,85 +381,105 @@ export function EnterMarksDialog({
             <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           </TabsList>
 
-          {/* Division Filter */}
-          {availableDivisions.length > 0 && (
-            <div className="py-3">
-              <Label className="text-sm mb-2 block">Filter by Division</Label>
-              <Select 
-                value={selectedDivision || "all"} 
-                onValueChange={(v) => setSelectedDivision(v === "all" ? "" : v)}
-              >
-                <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All divisions" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All divisions</SelectItem>
-                  {availableDivisions.map(div => (
-                    <SelectItem key={div.id} value={div.id}>
-                      Division {div.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          {/* Search and Division Filter */}
+          <div className="py-3 space-y-3">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search student by name or roll no..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
             </div>
-          )}
+            
+            {/* Division Filter */}
+            {availableDivisions.length > 0 && (
+              <div>
+                <Label className="text-sm mb-2 block">Filter by Division</Label>
+                <Select 
+                  value={selectedDivision || "all"} 
+                  onValueChange={(v) => setSelectedDivision(v === "all" ? "" : v)}
+                >
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="All divisions" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All divisions</SelectItem>
+                    {availableDivisions.map(div => (
+                      <SelectItem key={div.id} value={div.id}>
+                        Division {div.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
           
           <TabsContent value="manual" className="space-y-4">
             <div className="max-h-[50vh] sm:max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y pr-2 sm:pr-4">
               <div className="space-y-3 sm:space-y-4">
-                {filteredStudents.map((student) => {
-                  const existingMark = getExistingMark(student.id);
-                  const currentMark = marks[student.id];
-                  const hasResult = existingMark !== undefined;
-                  
-                  return (
-                    <div key={student.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
-                      <div className="flex-1 min-w-0">
-                        <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
-                        <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
-                      </div>
-                      
-                      {hasResult && (
+                {filteredStudents.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No students found matching "{searchQuery}"
+                  </div>
+                ) : (
+                  filteredStudents.map((student) => {
+                    const existingMark = getExistingMark(student.id);
+                    const currentMark = marks[student.id];
+                    const hasResult = existingMark !== undefined;
+                    
+                    return (
+                      <div key={student.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
+                        <div className="flex-1 min-w-0">
+                          <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
+                        </div>
+                        
+                        {hasResult && (
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="bg-green-50 text-xs">
+                              {existingMark}/{test.maxMarks}
+                            </Badge>
+                            <span className="text-xs sm:text-sm text-green-600">
+                              {Math.round((existingMark / test.maxMarks) * 100)}%
+                            </span>
+                          </div>
+                        )}
+                        
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-xs">
-                            {existingMark}/{test.maxMarks}
-                          </Badge>
-                          <span className="text-xs sm:text-sm text-green-600">
-                            {Math.round((existingMark / test.maxMarks) * 100)}%
-                          </span>
+                          <Label htmlFor={`marks-${student.id}`} className="sr-only">
+                            Marks for {student.name}
+                          </Label>
+                          <Input
+                            id={`marks-${student.id}`}
+                            type="number"
+                            inputMode="decimal"
+                            min="0"
+                            max={test.maxMarks}
+                            step="0.5"
+                            placeholder={hasResult ? existingMark.toString() : "0"}
+                            value={currentMark ?? ''}
+                            onChange={(e) => handleMarkChange(student.id, e.target.value)}
+                            className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
+                          />
+                          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
                         </div>
-                      )}
-                      
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor={`marks-${student.id}`} className="sr-only">
-                          Marks for {student.name}
-                        </Label>
-                        <Input
-                          id={`marks-${student.id}`}
-                          type="number"
-                          inputMode="decimal"
-                          min="0"
-                          max={test.maxMarks}
-                          step="0.5"
-                          placeholder={hasResult ? existingMark.toString() : "0"}
-                          value={currentMark ?? ''}
-                          onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                          className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
-                        />
-                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
+                        
+                        {currentMark !== undefined && (
+                          <div className="flex items-center gap-1">
+                            {(currentMark / test.maxMarks) * 100 >= 80 && (
+                              <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
+                            )}
+                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+                          </div>
+                        )}
                       </div>
-                      
-                      {currentMark !== undefined && (
-                        <div className="flex items-center gap-1">
-                          {(currentMark / test.maxMarks) * 100 >= 80 && (
-                            <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
-                          )}
-                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                    );
+                  })
+                )}
               </div>
             </div>
 
