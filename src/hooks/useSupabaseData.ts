@@ -373,7 +373,7 @@ export function useSupabaseData() {
       test_id: result.testId,
       student_id: result.studentId,
       marks: result.marks,
-    });
+    }, { onConflict: 'test_id,student_id' });
 
     if (error) {
       console.error('Error adding test result:', error);
@@ -381,6 +381,29 @@ export function useSupabaseData() {
       return;
     }
     invalidateTests();
+  };
+
+  const addTestResultsBatch = async (results: StudentTestResult[]) => {
+    if (results.length === 0) return;
+
+    const records = results.map(result => ({
+      test_id: result.testId,
+      student_id: result.studentId,
+      marks: result.marks,
+    }));
+
+    const { error } = await supabase
+      .from('student_test_results')
+      .upsert(records, { onConflict: 'test_id,student_id' });
+
+    if (error) {
+      console.error('Error adding test results:', error);
+      toast.error('Failed to save test results');
+      return;
+    }
+    
+    invalidateTests();
+    toast.success(`Marks saved for ${results.length} students!`);
   };
 
   // Attendance operations - using optimistic mutations for instant UI
@@ -864,6 +887,7 @@ export function useSupabaseData() {
     addWeeklyTest,
     deleteWeeklyTest,
     addTestResult,
+    addTestResultsBatch,
     addXp,
     reduceXp,
     awardXP,

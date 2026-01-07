@@ -29,6 +29,7 @@ const TestsPage = () => {
     addWeeklyTest,
     deleteWeeklyTest,
     addTestResult,
+    addTestResultsBatch,
     awardXP,
   } = useSupabaseData();
 
@@ -201,6 +202,7 @@ const TestsPage = () => {
                           existingResults={testResults.filter(r => r.testId === test.id)}
                           divisions={divisions}
                           onAddResult={addTestResult}
+                          onAddResultsBatch={addTestResultsBatch}
                           onAwardXP={awardXP}
                         />
                       </div>

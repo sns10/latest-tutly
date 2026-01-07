@@ -11,6 +11,7 @@ interface RecentTestsProps {
   students: Student[];
   divisions?: Division[];
   onAddTestResult: (result: StudentTestResult) => void;
+  onAddTestResultsBatch?: (results: StudentTestResult[]) => void;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
 
@@ -20,6 +21,7 @@ export function RecentTests({
   students,
   divisions = [],
   onAddTestResult,
+  onAddTestResultsBatch,
   onAwardXP 
 }: RecentTestsProps) {
   const recentTests = tests.slice(0, 3);
@@ -79,6 +81,7 @@ export function RecentTests({
                     existingResults={testResults.filter(r => r.testId === test.id)}
                     divisions={divisions}
                     onAddResult={onAddTestResult}
+                    onAddResultsBatch={onAddTestResultsBatch}
                     onAwardXP={onAwardXP}
                   />
                 </div>

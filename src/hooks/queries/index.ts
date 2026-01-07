@@ -11,4 +11,4 @@ export { useAttendanceQuery, useTodayAttendanceQuery, useHistoricalAttendanceQue
 export { useFeesQuery, useClassFeesQuery, useAddFeeMutation, useUpdateFeeStatusMutation, useDeleteFeeMutation, useUpdateClassFeeMutation } from './useFeesQuery';
 
 // Tests queries - loaded on-demand
-export { useWeeklyTestsQuery, useTestResultsQuery, useAddWeeklyTestMutation, useDeleteWeeklyTestMutation, useAddTestResultMutation } from './useTestsQuery';
+export { useWeeklyTestsQuery, useTestResultsQuery, useAddWeeklyTestMutation, useDeleteWeeklyTestMutation, useAddTestResultMutation, useAddTestResultsBatchMutation } from './useTestsQuery';
