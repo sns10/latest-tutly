@@ -1,4 +1,3 @@
-
 import { useState, useMemo } from "react";
 import { WeeklyTest, Student, StudentTestResult, Division } from "@/types";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -46,6 +55,9 @@ export function EnterMarksDialog({
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [pendingResults, setPendingResults] = useState<StudentTestResult[]>([]);
+  const [isBulkConfirm, setIsBulkConfirm] = useState(false);
 
   // Filter students by class if test has a specific class
   const classFilteredStudents = test.class && test.class !== "All" 
@@ -136,16 +148,25 @@ export function EnterMarksDialog({
 
     if (resultsToAdd.length === 0) return;
 
+    // Show confirmation dialog
+    setPendingResults(resultsToAdd);
+    setIsBulkConfirm(false);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmSaveMarks = () => {
+    if (pendingResults.length === 0) return;
+
     // Use batch function if available, otherwise fall back to individual calls
     if (onAddResultsBatch) {
-      onAddResultsBatch(resultsToAdd);
+      onAddResultsBatch(pendingResults);
     } else {
-      resultsToAdd.forEach(result => onAddResult(result));
-      toast.success(`Added marks for ${resultsToAdd.length} students!`);
+      pendingResults.forEach(result => onAddResult(result));
+      toast.success(`Added marks for ${pendingResults.length} students!`);
     }
 
     // Award XP based on performance
-    resultsToAdd.forEach(result => {
+    pendingResults.forEach(result => {
       const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
       if (xpAmount > 0) {
         onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
@@ -154,6 +175,8 @@ export function EnterMarksDialog({
 
     setMarks({});
     setSearchQuery('');
+    setPendingResults([]);
+    setShowConfirmDialog(false);
     setIsOpen(false);
   };
 
@@ -313,16 +336,25 @@ export function EnterMarksDialog({
       return;
     }
 
+    // Show confirmation dialog
+    setPendingResults(resultsToAdd);
+    setIsBulkConfirm(true);
+    setShowConfirmDialog(true);
+  };
+
+  const confirmBulkSaveMarks = () => {
+    if (pendingResults.length === 0) return;
+
     // Use batch function if available
     if (onAddResultsBatch) {
-      onAddResultsBatch(resultsToAdd);
+      onAddResultsBatch(pendingResults);
     } else {
-      resultsToAdd.forEach(result => onAddResult(result));
-      toast.success(`Successfully imported marks for ${resultsToAdd.length} students!`);
+      pendingResults.forEach(result => onAddResult(result));
+      toast.success(`Successfully imported marks for ${pendingResults.length} students!`);
     }
 
     // Award XP based on performance
-    resultsToAdd.forEach(result => {
+    pendingResults.forEach(result => {
       const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
       if (xpAmount > 0) {
         onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
@@ -334,6 +366,8 @@ export function EnterMarksDialog({
     setBulkPreviewData([]);
     setBulkErrors([]);
     setSearchQuery('');
+    setPendingResults([]);
+    setShowConfirmDialog(false);
     setIsOpen(false);
   };
 
@@ -611,6 +645,30 @@ export function EnterMarksDialog({
           </TabsContent>
         </Tabs>
       </DialogContent>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Save Marks</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <p>You are about to save marks for <strong>{pendingResults.length} students</strong> in test "{test.name}".</p>
+              <p className="text-sm">This action will update existing marks if any.</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setShowConfirmDialog(false);
+              setPendingResults([]);
+            }}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={isBulkConfirm ? confirmBulkSaveMarks : confirmSaveMarks}>
+              Save {pendingResults.length} Marks
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
