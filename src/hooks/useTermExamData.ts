@@ -92,27 +92,42 @@ export function useTermExamData() {
   };
 
   const fetchTermExamResults = async () => {
-    const { data, error } = await supabase
-      .from('term_exam_results')
-      .select('*');
+    if (!tuitionId) return;
+    
+    // Paginate to avoid row limits, filter by tuition via term_exams join
+    const PAGE_SIZE = 1000;
+    const allResults: TermExamResult[] = [];
+    
+    for (let page = 0; page < 50; page++) {
+      const { data, error } = await supabase
+        .from('term_exam_results')
+        .select('*, term_exams!inner(tuition_id)')
+        .eq('term_exams.tuition_id', tuitionId)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
 
-    if (error) {
-      console.error('Error fetching term exam results:', error);
-      return;
+      if (error) {
+        console.error('Error fetching term exam results:', error);
+        return;
+      }
+
+      const rows = (data ?? []) as any[];
+      allResults.push(
+        ...rows.map(result => ({
+          id: result.id,
+          termExamId: result.term_exam_id,
+          studentId: result.student_id,
+          subjectId: result.subject_id,
+          marks: result.marks,
+          grade: result.grade,
+          createdAt: result.created_at,
+          updatedAt: result.updated_at,
+        }))
+      );
+
+      if (rows.length < PAGE_SIZE) break;
     }
 
-    const formatted: TermExamResult[] = data.map(result => ({
-      id: result.id,
-      termExamId: result.term_exam_id,
-      studentId: result.student_id,
-      subjectId: result.subject_id,
-      marks: result.marks,
-      grade: result.grade,
-      createdAt: result.created_at,
-      updatedAt: result.updated_at,
-    }));
-
-    setTermExamResults(formatted);
+    setTermExamResults(allResults);
   };
 
   const addTermExam = async (exam: {

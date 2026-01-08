@@ -33,8 +33,8 @@ interface WeeklyTestManagerProps {
   termExamResults?: TermExamResult[];
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onDeleteTest: (testId: string) => void;
-  onAddTestResult: (result: StudentTestResult) => void;
-  onAddTestResultsBatch?: (results: StudentTestResult[]) => void;
+  onAddTestResult: (result: StudentTestResult) => Promise<boolean>;
+  onAddTestResultsBatch?: (results: StudentTestResult[]) => Promise<boolean>;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
   onAddChallenge: (challenge: Omit<Challenge, 'id' | 'createdAt'>) => void;
   onCompleteChallenge: (studentId: string, challengeId: string) => void;

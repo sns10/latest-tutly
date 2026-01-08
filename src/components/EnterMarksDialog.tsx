@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { WeeklyTest, Student, StudentTestResult, Division } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,17 +25,19 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Edit, Trophy, TrendingUp, Upload, Download, Search } from "lucide-react";
+import { Edit, Trophy, TrendingUp, Upload, Download, Search, Loader2, WifiOff, FileWarning } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
+import { useWeeklyTestMarksDraft } from "@/hooks/useMarksDraft";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 interface EnterMarksDialogProps {
   test: WeeklyTest;
   students: Student[];
   existingResults: StudentTestResult[];
   divisions?: Division[];
-  onAddResult: (result: StudentTestResult) => void;
-  onAddResultsBatch?: (results: StudentTestResult[]) => void;
+  onAddResult: (result: StudentTestResult) => Promise<boolean>;
+  onAddResultsBatch?: (results: StudentTestResult[]) => Promise<boolean>;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
 
@@ -58,6 +60,41 @@ export function EnterMarksDialog({
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const [pendingResults, setPendingResults] = useState<StudentTestResult[]>([]);
   const [isBulkConfirm, setIsBulkConfirm] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>('manual');
+
+  // Draft and network status
+  const { getDraft, saveDraft, clearDraft, hasDraft } = useWeeklyTestMarksDraft(test.id);
+  const { isOnline } = useNetworkStatus();
+
+  // Check for draft when dialog opens
+  useEffect(() => {
+    if (isOpen && hasDraft()) {
+      setShowDraftBanner(true);
+    }
+  }, [isOpen, hasDraft]);
+
+  // Auto-save marks to draft when they change
+  useEffect(() => {
+    if (Object.keys(marks).length > 0) {
+      saveDraft(marks);
+    }
+  }, [marks, saveDraft]);
+
+  const restoreDraft = useCallback(() => {
+    const draft = getDraft();
+    if (draft) {
+      setMarks(draft.marks);
+      setShowDraftBanner(false);
+      toast.success(`Restored ${Object.keys(draft.marks).length} marks from draft`);
+    }
+  }, [getDraft]);
+
+  const discardDraft = useCallback(() => {
+    clearDraft();
+    setShowDraftBanner(false);
+  }, [clearDraft]);
 
   // Filter students by class if test has a specific class
   const classFilteredStudents = test.class && test.class !== "All" 
@@ -154,30 +191,60 @@ export function EnterMarksDialog({
     setShowConfirmDialog(true);
   };
 
-  const confirmSaveMarks = () => {
+  const confirmSaveMarks = async () => {
     if (pendingResults.length === 0) return;
 
-    // Use batch function if available, otherwise fall back to individual calls
-    if (onAddResultsBatch) {
-      onAddResultsBatch(pendingResults);
-    } else {
-      pendingResults.forEach(result => onAddResult(result));
-      toast.success(`Added marks for ${pendingResults.length} students!`);
-    }
-
-    // Award XP based on performance
-    pendingResults.forEach(result => {
-      const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
-      if (xpAmount > 0) {
-        onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
+    setIsSaving(true);
+    
+    try {
+      let success = false;
+      
+      // Use batch function if available, otherwise fall back to individual calls
+      if (onAddResultsBatch) {
+        success = await onAddResultsBatch(pendingResults);
+      } else {
+        // Sequential save with early exit on failure
+        for (const result of pendingResults) {
+          const resultSuccess = await onAddResult(result);
+          if (!resultSuccess) {
+            success = false;
+            break;
+          }
+          success = true;
+        }
+        if (success) {
+          toast.success(`Added marks for ${pendingResults.length} students!`);
+        }
       }
-    });
 
-    setMarks({});
-    setSearchQuery('');
-    setPendingResults([]);
-    setShowConfirmDialog(false);
-    setIsOpen(false);
+      if (success) {
+        // Award XP based on performance
+        pendingResults.forEach(result => {
+          const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
+          if (xpAmount > 0) {
+            onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
+          }
+        });
+
+        // Clear state and close only after confirmed success
+        clearDraft();
+        setMarks({});
+        setSearchQuery('');
+        setPendingResults([]);
+        setShowConfirmDialog(false);
+        setIsOpen(false);
+      } else {
+        // Keep dialog open, keep marks - show error
+        toast.error("Failed to save marks. Your data is preserved. Please try again.");
+        setShowConfirmDialog(false);
+      }
+    } catch (error) {
+      console.error('Error saving marks:', error);
+      toast.error("Failed to save marks. Your data is preserved. Please try again.");
+      setShowConfirmDialog(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Bulk upload functions
@@ -342,33 +409,60 @@ export function EnterMarksDialog({
     setShowConfirmDialog(true);
   };
 
-  const confirmBulkSaveMarks = () => {
+  const confirmBulkSaveMarks = async () => {
     if (pendingResults.length === 0) return;
 
-    // Use batch function if available
-    if (onAddResultsBatch) {
-      onAddResultsBatch(pendingResults);
-    } else {
-      pendingResults.forEach(result => onAddResult(result));
-      toast.success(`Successfully imported marks for ${pendingResults.length} students!`);
-    }
+    setIsSaving(true);
 
-    // Award XP based on performance
-    pendingResults.forEach(result => {
-      const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
-      if (xpAmount > 0) {
-        onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
+    try {
+      let success = false;
+
+      // Use batch function if available
+      if (onAddResultsBatch) {
+        success = await onAddResultsBatch(pendingResults);
+      } else {
+        for (const result of pendingResults) {
+          const resultSuccess = await onAddResult(result);
+          if (!resultSuccess) {
+            success = false;
+            break;
+          }
+          success = true;
+        }
+        if (success) {
+          toast.success(`Successfully imported marks for ${pendingResults.length} students!`);
+        }
       }
-    });
 
-    // Reset bulk upload state
-    setBulkFile(null);
-    setBulkPreviewData([]);
-    setBulkErrors([]);
-    setSearchQuery('');
-    setPendingResults([]);
-    setShowConfirmDialog(false);
-    setIsOpen(false);
+      if (success) {
+        // Award XP based on performance
+        pendingResults.forEach(result => {
+          const { xpAmount, reasons } = calculateXPRewards(result.studentId, result.marks);
+          if (xpAmount > 0) {
+            onAwardXP(result.studentId, xpAmount, `Test: ${test.name} (${reasons.join(', ')})`);
+          }
+        });
+
+        // Reset bulk upload state and close only after success
+        clearDraft();
+        setBulkFile(null);
+        setBulkPreviewData([]);
+        setBulkErrors([]);
+        setSearchQuery('');
+        setPendingResults([]);
+        setShowConfirmDialog(false);
+        setIsOpen(false);
+      } else {
+        toast.error("Failed to import marks. Please try again.");
+        setShowConfirmDialog(false);
+      }
+    } catch (error) {
+      console.error('Error saving bulk marks:', error);
+      toast.error("Failed to import marks. Please try again.");
+      setShowConfirmDialog(false);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getExistingMark = (studentId: string) => {
@@ -381,10 +475,21 @@ export function EnterMarksDialog({
   ).length;
   const totalCount = filteredStudents.length;
 
-  const [activeTab, setActiveTab] = useState<string>('manual');
+  const hasUnsavedChanges = Object.keys(marks).length > 0;
+
+  const handleDialogClose = (open: boolean) => {
+    if (!open && hasUnsavedChanges) {
+      // Marks will be preserved in draft automatically
+      toast.info("Your marks have been saved as a draft");
+    }
+    setIsOpen(open);
+    if (!open) {
+      setShowDraftBanner(false);
+    }
+  };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    <Dialog open={isOpen} onOpenChange={handleDialogClose}>
       <DialogTrigger asChild>
         <Button size="sm" className="flex items-center gap-2 text-xs sm:text-sm w-full sm:w-auto justify-center">
           <Edit className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -410,6 +515,36 @@ export function EnterMarksDialog({
             )}
           </div>
         </DialogHeader>
+
+        {/* Offline Banner */}
+        {!isOnline && (
+          <Alert variant="destructive" className="flex-shrink-0">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You're offline. Marks will be saved locally as a draft. Save to server when back online.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Draft Restore Banner */}
+        {showDraftBanner && (
+          <Alert className="flex-shrink-0 bg-amber-50 border-amber-200">
+            <FileWarning className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-2 text-amber-800">
+              <span>
+                Draft found: {Object.keys(getDraft()?.marks || {}).length} marks saved locally
+              </span>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" onClick={restoreDraft} className="h-7 text-xs">
+                  Restore Draft
+                </Button>
+                <Button size="sm" variant="ghost" onClick={discardDraft} className="h-7 text-xs">
+                  Discard
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
@@ -616,10 +751,14 @@ export function EnterMarksDialog({
                 {Object.keys(marks).length} students will receive marks
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
-                <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
+                <Button variant="outline" onClick={() => handleDialogClose(false)} className="flex-1 sm:flex-none text-sm">
                   Cancel
                 </Button>
-                <Button onClick={handleSubmit} disabled={Object.keys(marks).length === 0} className="flex-1 sm:flex-none text-sm">
+                <Button 
+                  onClick={handleSubmit} 
+                  disabled={Object.keys(marks).length === 0 || !isOnline} 
+                  className="flex-1 sm:flex-none text-sm"
+                >
                   Save Marks
                 </Button>
               </div>
@@ -630,12 +769,12 @@ export function EnterMarksDialog({
                 {bulkPreviewData.length} marks will be imported
               </div>
               <div className="flex gap-2 w-full sm:w-auto">
-                <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
+                <Button variant="outline" onClick={() => handleDialogClose(false)} className="flex-1 sm:flex-none text-sm">
                   Cancel
                 </Button>
                 <Button 
                   onClick={handleBulkSubmit}
-                  disabled={!bulkFile || bulkPreviewData.length === 0 || bulkErrors.length > 0}
+                  disabled={!bulkFile || bulkPreviewData.length === 0 || bulkErrors.length > 0 || !isOnline}
                   className="flex items-center gap-2 flex-1 sm:flex-none text-sm"
                 >
                   <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
@@ -648,7 +787,7 @@ export function EnterMarksDialog({
       </DialogContent>
 
       {/* Confirmation Dialog */}
-      <AlertDialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
+      <AlertDialog open={showConfirmDialog} onOpenChange={(open) => !isSaving && setShowConfirmDialog(open)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Save Marks</AlertDialogTitle>
@@ -658,14 +797,30 @@ export function EnterMarksDialog({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowConfirmDialog(false);
-              setPendingResults([]);
-            }}>
+            <AlertDialogCancel 
+              disabled={isSaving}
+              onClick={() => {
+                if (!isSaving) {
+                  setShowConfirmDialog(false);
+                  setPendingResults([]);
+                }
+              }}
+            >
               Cancel
             </AlertDialogCancel>
-            <AlertDialogAction onClick={isBulkConfirm ? confirmBulkSaveMarks : confirmSaveMarks}>
-              Save {pendingResults.length} Marks
+            <AlertDialogAction 
+              onClick={isBulkConfirm ? confirmBulkSaveMarks : confirmSaveMarks}
+              disabled={isSaving}
+              className="min-w-[120px]"
+            >
+              {isSaving ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                `Save ${pendingResults.length} Marks`
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
