@@ -10,8 +10,8 @@ interface RecentTestsProps {
   testResults: StudentTestResult[];
   students: Student[];
   divisions?: Division[];
-  onAddTestResult: (result: StudentTestResult) => void;
-  onAddTestResultsBatch?: (results: StudentTestResult[]) => void;
+  onAddTestResult: (result: StudentTestResult) => Promise<boolean>;
+  onAddTestResultsBatch?: (results: StudentTestResult[]) => Promise<boolean>;
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
 

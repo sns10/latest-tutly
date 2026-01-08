@@ -368,7 +368,7 @@ export function useSupabaseData() {
     toast.success('Test deleted successfully!');
   };
 
-  const addTestResult = async (result: StudentTestResult) => {
+  const addTestResult = async (result: StudentTestResult): Promise<boolean> => {
     const { error } = await supabase.from('student_test_results').upsert({
       test_id: result.testId,
       student_id: result.studentId,
@@ -378,13 +378,14 @@ export function useSupabaseData() {
     if (error) {
       console.error('Error adding test result:', error);
       toast.error('Failed to save test result');
-      return;
+      return false;
     }
     invalidateTests();
+    return true;
   };
 
-  const addTestResultsBatch = async (results: StudentTestResult[]) => {
-    if (results.length === 0) return;
+  const addTestResultsBatch = async (results: StudentTestResult[]): Promise<boolean> => {
+    if (results.length === 0) return true;
 
     const records = results.map(result => ({
       test_id: result.testId,
@@ -392,18 +393,24 @@ export function useSupabaseData() {
       marks: result.marks,
     }));
 
-    const { error } = await supabase
-      .from('student_test_results')
-      .upsert(records, { onConflict: 'test_id,student_id' });
+    // Chunk large batches to avoid timeouts (max 300 per request)
+    const CHUNK_SIZE = 300;
+    for (let i = 0; i < records.length; i += CHUNK_SIZE) {
+      const chunk = records.slice(i, i + CHUNK_SIZE);
+      const { error } = await supabase
+        .from('student_test_results')
+        .upsert(chunk, { onConflict: 'test_id,student_id' });
 
-    if (error) {
-      console.error('Error adding test results:', error);
-      toast.error('Failed to save test results');
-      return;
+      if (error) {
+        console.error('Error adding test results:', error);
+        toast.error('Failed to save test results. Please try again.');
+        return false;
+      }
     }
     
     invalidateTests();
     toast.success(`Marks saved for ${results.length} students!`);
+    return true;
   };
 
   // Attendance operations - using optimistic mutations for instant UI
