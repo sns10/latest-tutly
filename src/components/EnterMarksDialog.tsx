@@ -381,6 +381,8 @@ export function EnterMarksDialog({
   ).length;
   const totalCount = filteredStudents.length;
 
+  const [activeTab, setActiveTab] = useState<string>('manual');
+
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
@@ -393,11 +395,11 @@ export function EnterMarksDialog({
         </Button>
       </DialogTrigger>
       <DialogContent 
-        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] overflow-y-auto"
+        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] flex flex-col"
         style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-base sm:text-lg pr-6">Enter Marks - {test.name}</DialogTitle>
           <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
             <span>{test.subject}</span>
@@ -409,14 +411,14 @@ export function EnterMarksDialog({
           </div>
         </DialogHeader>
         
-        <Tabs defaultValue="manual" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
             <TabsTrigger value="manual">Manual Entry</TabsTrigger>
             <TabsTrigger value="bulk">Bulk Upload</TabsTrigger>
           </TabsList>
 
           {/* Search and Division Filter */}
-          <div className="py-3 space-y-3">
+          <div className="py-3 space-y-3 flex-shrink-0">
             {/* Search Input */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -452,90 +454,72 @@ export function EnterMarksDialog({
             )}
           </div>
           
-          <TabsContent value="manual" className="space-y-4">
-            <div className="max-h-[50vh] sm:max-h-[400px] overflow-y-auto overscroll-contain touch-pan-y pr-2 sm:pr-4">
-              <div className="space-y-3 sm:space-y-4">
-                {filteredStudents.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No students found matching "{searchQuery}"
-                  </div>
-                ) : (
-                  filteredStudents.map((student) => {
-                    const existingMark = getExistingMark(student.id);
-                    const currentMark = marks[student.id];
-                    const hasResult = existingMark !== undefined;
-                    
-                    return (
-                      <div key={student.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
-                        <div className="flex-1 min-w-0">
-                          <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
-                          <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
-                        </div>
-                        
-                        {hasResult && (
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="bg-green-50 text-xs">
-                              {existingMark}/{test.maxMarks}
-                            </Badge>
-                            <span className="text-xs sm:text-sm text-green-600">
-                              {Math.round((existingMark / test.maxMarks) * 100)}%
-                            </span>
-                          </div>
-                        )}
-                        
-                        <div className="flex items-center gap-2">
-                          <Label htmlFor={`marks-${student.id}`} className="sr-only">
-                            Marks for {student.name}
-                          </Label>
-                          <Input
-                            id={`marks-${student.id}`}
-                            type="number"
-                            inputMode="decimal"
-                            min="0"
-                            max={test.maxMarks}
-                            step="0.5"
-                            placeholder={hasResult ? existingMark.toString() : "0"}
-                            value={currentMark ?? ''}
-                            onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                            className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
-                          />
-                          <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
-                        </div>
-                        
-                        {currentMark !== undefined && (
-                          <div className="flex items-center gap-1">
-                            {(currentMark / test.maxMarks) * 100 >= 80 && (
-                              <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
-                            )}
-                            <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
-                          </div>
-                        )}
+          <TabsContent value="manual" className="flex-1 min-h-0 overflow-y-auto mt-0">
+            <div className="space-y-3 sm:space-y-4 pr-2 sm:pr-4">
+              {filteredStudents.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No students found matching "{searchQuery}"
+                </div>
+              ) : (
+                filteredStudents.map((student) => {
+                  const existingMark = getExistingMark(student.id);
+                  const currentMark = marks[student.id];
+                  const hasResult = existingMark !== undefined;
+                  
+                  return (
+                    <div key={student.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm sm:text-base truncate">{student.name}</div>
+                        <div className="text-xs sm:text-sm text-muted-foreground">{student.class} Grade</div>
                       </div>
-                    );
-                  })
-                )}
-              </div>
+                      
+                      {hasResult && (
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="bg-green-50 text-xs">
+                            {existingMark}/{test.maxMarks}
+                          </Badge>
+                          <span className="text-xs sm:text-sm text-green-600">
+                            {Math.round((existingMark / test.maxMarks) * 100)}%
+                          </span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`marks-${student.id}`} className="sr-only">
+                          Marks for {student.name}
+                        </Label>
+                        <Input
+                          id={`marks-${student.id}`}
+                          type="number"
+                          inputMode="decimal"
+                          min="0"
+                          max={test.maxMarks}
+                          step="0.5"
+                          placeholder={hasResult ? existingMark.toString() : "0"}
+                          value={currentMark ?? ''}
+                          onChange={(e) => handleMarkChange(student.id, e.target.value)}
+                          className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
+                        />
+                        <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
+                      </div>
+                      
+                      {currentMark !== undefined && (
+                        <div className="flex items-center gap-1">
+                          {(currentMark / test.maxMarks) * 100 >= 80 && (
+                            <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
+                          )}
+                          <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-green-500" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
-
-            <DialogFooter>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 w-full">
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  {Object.keys(marks).length} students will receive marks
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSubmit} disabled={Object.keys(marks).length === 0} className="flex-1 sm:flex-none text-sm">
-                    Save Marks
-                  </Button>
-                </div>
-              </div>
-            </DialogFooter>
           </TabsContent>
 
-          <TabsContent value="bulk" className="space-y-4">
-            <div className="space-y-4 sm:space-y-6">
+          <TabsContent value="bulk" className="flex-1 min-h-0 overflow-y-auto mt-0">
+            <div className="space-y-4 sm:space-y-6 pr-2 sm:pr-4">
               {/* Template Download */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-2">
                 <Button
@@ -621,29 +605,46 @@ export function EnterMarksDialog({
                 </div>
               )}
             </div>
-
-            <DialogFooter>
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 w-full">
-                <div className="text-xs sm:text-sm text-muted-foreground">
-                  {bulkPreviewData.length} marks will be imported
-                </div>
-                <div className="flex gap-2 w-full sm:w-auto">
-                  <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleBulkSubmit}
-                    disabled={!bulkFile || bulkPreviewData.length === 0 || bulkErrors.length > 0}
-                    className="flex items-center gap-2 flex-1 sm:flex-none text-sm"
-                  >
-                    <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
-                    Import
-                  </Button>
-                </div>
-              </div>
-            </DialogFooter>
           </TabsContent>
         </Tabs>
+
+        {/* Fixed Footer - Always visible at bottom */}
+        <div className="flex-shrink-0 border-t pt-4 mt-4 bg-background">
+          {activeTab === 'manual' ? (
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                {Object.keys(marks).length} students will receive marks
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
+                  Cancel
+                </Button>
+                <Button onClick={handleSubmit} disabled={Object.keys(marks).length === 0} className="flex-1 sm:flex-none text-sm">
+                  Save Marks
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
+              <div className="text-xs sm:text-sm text-muted-foreground">
+                {bulkPreviewData.length} marks will be imported
+              </div>
+              <div className="flex gap-2 w-full sm:w-auto">
+                <Button variant="outline" onClick={() => setIsOpen(false)} className="flex-1 sm:flex-none text-sm">
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleBulkSubmit}
+                  disabled={!bulkFile || bulkPreviewData.length === 0 || bulkErrors.length > 0}
+                  className="flex items-center gap-2 flex-1 sm:flex-none text-sm"
+                >
+                  <Upload className="h-3 w-3 sm:h-4 sm:w-4" />
+                  Import
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
       </DialogContent>
 
       {/* Confirmation Dialog */}
