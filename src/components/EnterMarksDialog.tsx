@@ -395,8 +395,8 @@ export function EnterMarksDialog({
         </Button>
       </DialogTrigger>
       <DialogContent 
-        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85vh] flex flex-col"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 16px)' }}
+        className="w-[calc(100%-1rem)] sm:max-w-4xl max-h-[85dvh] sm:max-h-[85vh] flex flex-col"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
         onOpenAutoFocus={(e) => e.preventDefault()}
       >
         <DialogHeader className="flex-shrink-0">
@@ -609,7 +609,7 @@ export function EnterMarksDialog({
         </Tabs>
 
         {/* Fixed Footer - Always visible at bottom */}
-        <div className="flex-shrink-0 border-t pt-4 mt-4 bg-background">
+        <div className="flex-shrink-0 border-t bg-background pt-3 pb-[calc(env(safe-area-inset-bottom)+12px)]">
           {activeTab === 'manual' ? (
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 w-full">
               <div className="text-xs sm:text-sm text-muted-foreground">

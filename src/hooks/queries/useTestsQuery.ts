@@ -15,6 +15,7 @@ export function useWeeklyTestsQuery(tuitionId: string | null) {
       const { data, error } = await supabase
         .from('weekly_tests')
         .select('*')
+        .eq('tuition_id', tuitionId)
         .order('test_date', { ascending: false })
         .limit(100); // Limit to recent tests
 
@@ -44,20 +45,43 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      let query = supabase.from('student_test_results').select('*');
+      // PostgREST has a per-request row limit (commonly 1000).
+      // We page to avoid “missing marks” in UI when results grow.
+      const PAGE_SIZE = 1000;
+      const allRows: Array<{ test_id: string; student_id: string; marks: number }> = [];
 
-      if (testId) {
-        query = query.eq('test_id', testId);
+      for (let page = 0; page < 50; page++) {
+        let query = supabase
+          .from('student_test_results')
+          .select('test_id,student_id,marks, weekly_tests!inner(tuition_id)')
+          .eq('weekly_tests.tuition_id', tuitionId)
+          .order('created_at', { ascending: false })
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        if (testId) {
+          query = query.eq('test_id', testId);
+        }
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error fetching test results:', error);
+          throw error;
+        }
+
+        const rows = (data ?? []) as any[];
+        allRows.push(
+          ...rows.map((r) => ({
+            test_id: r.test_id,
+            student_id: r.student_id,
+            marks: r.marks,
+          }))
+        );
+
+        if (rows.length < PAGE_SIZE) break;
       }
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching test results:', error);
-        throw error;
-      }
-
-      return data.map(result => ({
+      return allRows.map(result => ({
         testId: result.test_id,
         studentId: result.student_id,
         marks: Number(result.marks),
