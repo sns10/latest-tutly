@@ -87,6 +87,7 @@ export function EnterTermExamMarksDialog({
     const draft = getDraft();
     if (draft) {
       setMarks(draft.marks);
+      setRawInputs({}); // Clear raw inputs so they use marks values
       if (draft.selectedSubjectId) setSelectedSubjectId(draft.selectedSubjectId);
       if (draft.selectedDivision) setSelectedDivision(draft.selectedDivision);
       setShowDraftBanner(false);
@@ -97,6 +98,7 @@ export function EnterTermExamMarksDialog({
   const discardDraft = useCallback(() => {
     clearDraft();
     setShowDraftBanner(false);
+    setRawInputs({}); // Clear raw inputs
   }, [clearDraft]);
 
   // Filter students by exam class
@@ -115,8 +117,14 @@ export function EnterTermExamMarksDialog({
   const selectedExamSubject = examSubjects.find(es => es.subjectId === selectedSubjectId);
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
 
+  // Store raw input values for controlled inputs (allows typing freely)
+  const [rawInputs, setRawInputs] = useState<{ [studentId: string]: string }>({});
+
   const handleMarkChange = (studentId: string, value: string) => {
-    // Allow empty string to clear the input
+    // Always update raw input to allow free typing
+    setRawInputs(prev => ({ ...prev, [studentId]: value }));
+    
+    // Allow empty string to clear the mark
     if (value === '' || value === undefined) {
       setMarks(prev => {
         const { [studentId]: removed, ...rest } = prev;
@@ -130,6 +138,15 @@ export function EnterTermExamMarksDialog({
     if (!isNaN(numValue) && numValue >= 0 && numValue <= maxMarks) {
       setMarks(prev => ({ ...prev, [studentId]: numValue }));
     }
+  };
+
+  // Get display value for input - prefer raw input for typing, fall back to marks
+  const getInputValue = (studentId: string): string => {
+    if (rawInputs[studentId] !== undefined) {
+      return rawInputs[studentId];
+    }
+    const mark = marks[studentId];
+    return mark !== undefined ? mark.toString() : '';
   };
 
   const getExistingMark = (studentId: string) => {
@@ -177,6 +194,7 @@ export function EnterTermExamMarksDialog({
         toast.success(`Added marks for ${pendingResults.length} students!`);
         clearDraft();
         setMarks({});
+        setRawInputs({}); // Clear raw inputs after successful save
         setPendingResults([]);
         setShowConfirmDialog(false);
       } else {
@@ -358,6 +376,7 @@ export function EnterTermExamMarksDialog({
     setIsOpen(open);
     if (!open) {
       setShowDraftBanner(false);
+      setRawInputs({}); // Clear raw inputs when dialog closes
     }
   };
 
@@ -427,7 +446,13 @@ export function EnterTermExamMarksDialog({
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Select Subject</Label>
-                <Select value={selectedSubjectId} onValueChange={setSelectedSubjectId}>
+                <Select 
+                  value={selectedSubjectId} 
+                  onValueChange={(value) => {
+                    setSelectedSubjectId(value);
+                    setRawInputs({}); // Clear raw inputs when subject changes
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select subject" />
                   </SelectTrigger>
@@ -489,13 +514,11 @@ export function EnterTermExamMarksDialog({
 
                         <div className="flex items-center gap-1 shrink-0">
                           <Input
-                            type="number"
+                            type="text"
                             inputMode="decimal"
-                            min="0"
-                            max={maxMarks}
-                            step="0.5"
+                            pattern="[0-9]*\.?[0-9]*"
                             placeholder={existingMark?.toString() || "0"}
-                            value={currentMark ?? ''}
+                            value={getInputValue(student.id)}
                             onChange={(e) => handleMarkChange(student.id, e.target.value)}
                             className="w-16 h-10 text-base text-center"
                           />
