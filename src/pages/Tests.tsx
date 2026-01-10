@@ -9,6 +9,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useTermExamData } from "@/hooks/useTermExamData";
 import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
+import { useTuitionInfo } from "@/hooks/useTuitionInfo";
 import { CreateTestDialog } from "@/components/CreateTestDialog";
 import { EnterMarksDialog } from "@/components/EnterMarksDialog";
 import { TermExamManager } from "@/components/term-exams/TermExamManager";
@@ -16,6 +17,7 @@ import { ClipboardList, GraduationCap, Trash2, Search, Filter, Loader2 } from "l
 
 const TestsPage = () => {
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
+  const { tuition } = useTuitionInfo();
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState<string>('all');
 
@@ -223,6 +225,7 @@ const TestsPage = () => {
               students={students}
               subjects={subjects}
               divisions={divisions}
+              tuitionName={tuition?.name}
               onCreateExam={addTermExam}
               onDeleteExam={deleteTermExam}
               onAddResult={addTermExamResult}
