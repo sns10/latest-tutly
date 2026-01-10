@@ -359,23 +359,35 @@ export function WeeklyTestManager({
           />
         </TabsContent>
 
-        <TabsContent value="term-exams">
-          {onCreateTermExam && onDeleteTermExam && onAddTermExamResult && onBulkAddTermExamResults && (
-            <TermExamManager
-              termExams={termExams}
-              termExamSubjects={termExamSubjects}
-              termExamResults={termExamResults}
-              students={students}
-              subjects={subjects}
-              divisions={divisions}
-              tuitionName={tuitionName}
-              onCreateExam={onCreateTermExam}
-              onDeleteExam={onDeleteTermExam}
-              onAddResult={onAddTermExamResult}
-              onBulkAddResults={onBulkAddTermExamResults}
-            />
-          )}
-        </TabsContent>
+        {(isFeatureEnabled('term_exams') || (onCreateTermExam && onDeleteTermExam && onAddTermExamResult && onBulkAddTermExamResults)) && (
+          <TabsContent value="term-exams">
+            {onCreateTermExam && onDeleteTermExam && onAddTermExamResult && onBulkAddTermExamResults ? (
+              <TermExamManager
+                termExams={termExams}
+                termExamSubjects={termExamSubjects}
+                termExamResults={termExamResults}
+                students={students}
+                subjects={subjects}
+                divisions={divisions}
+                tuitionName={tuitionName}
+                onCreateExam={onCreateTermExam}
+                onDeleteExam={onDeleteTermExam}
+                onAddResult={onAddTermExamResult}
+                onBulkAddResults={onBulkAddTermExamResults}
+              />
+            ) : (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <BookOpen className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-semibold mb-2">Term Exams Not Available</h3>
+                  <p className="text-muted-foreground">
+                    Term exams feature is not configured for this view.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+          </TabsContent>
+        )}
       </Tabs>
 
       {selectedTest && (
