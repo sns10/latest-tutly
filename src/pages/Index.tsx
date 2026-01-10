@@ -232,6 +232,7 @@ const Index = () => {
                 termExams={termExams}
                 termExamSubjects={termExamSubjects}
                 termExamResults={termExamResults}
+                tuitionName={tuition?.name}
                 onAddTest={addWeeklyTest}
                 onDeleteTest={deleteWeeklyTest}
                 onAddTestResult={addTestResult}
