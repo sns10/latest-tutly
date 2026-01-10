@@ -4,6 +4,8 @@ import { TermExam, TermExamSubject, TermExamResult, ClassName, Subject } from '@
 import { toast } from 'sonner';
 import { useUserTuition } from './useUserTuition';
 
+const CHUNK_SIZE = 300; // Upsert in chunks to prevent timeouts
+
 export function useTermExamData() {
   const { tuitionId } = useUserTuition();
   const [termExams, setTermExams] = useState<TermExam[]>([]);
@@ -34,9 +36,12 @@ export function useTermExamData() {
   };
 
   const fetchTermExams = async () => {
+    if (!tuitionId) return;
+    
     const { data, error } = await supabase
       .from('term_exams')
       .select('*')
+      .eq('tuition_id', tuitionId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -60,12 +65,17 @@ export function useTermExamData() {
   };
 
   const fetchTermExamSubjects = async () => {
+    if (!tuitionId) return;
+    
+    // Join with term_exams to filter by tuition
     const { data, error } = await supabase
       .from('term_exam_subjects')
       .select(`
         *,
-        subject:subjects (id, name, class)
+        subject:subjects (id, name, class),
+        term_exams!inner(tuition_id)
       `)
+      .eq('term_exams.tuition_id', tuitionId)
       .order('created_at', { ascending: true });
 
     if (error) {
@@ -257,19 +267,25 @@ export function useTermExamData() {
       grade: r.grade,
     }));
 
-    const { error } = await supabase
-      .from('term_exam_results')
-      .upsert(toInsert, {
-        onConflict: 'term_exam_id,student_id,subject_id'
-      });
+    // Chunk the upserts to prevent timeouts for large classes
+    for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
+      const chunk = toInsert.slice(i, i + CHUNK_SIZE);
+      
+      const { error } = await supabase
+        .from('term_exam_results')
+        .upsert(chunk, {
+          onConflict: 'term_exam_id,student_id,subject_id'
+        });
 
-    if (error) {
-      console.error('Error bulk adding term exam results:', error);
-      toast.error('Failed to save results');
-      return false;
+      if (error) {
+        console.error('Error bulk adding term exam results:', error);
+        toast.error(`Failed to save results (chunk ${Math.floor(i / CHUNK_SIZE) + 1})`);
+        return false;
+      }
     }
 
     await fetchTermExamResults();
+    toast.success(`Successfully saved ${results.length} marks!`);
     return true;
   };
 

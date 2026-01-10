@@ -52,6 +52,7 @@ export function EnterMarksDialog({
 }: EnterMarksDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [marks, setMarks] = useState<{ [studentId: string]: number }>({});
+  const [rawInputs, setRawInputs] = useState<{ [studentId: string]: string }>({});
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreviewData, setBulkPreviewData] = useState<any[]>([]);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
@@ -79,13 +80,17 @@ export function EnterMarksDialog({
   useEffect(() => {
     if (Object.keys(marks).length > 0) {
       saveDraft(marks);
+    } else {
+      // Clear draft when marks become empty
+      clearDraft();
     }
-  }, [marks, saveDraft]);
+  }, [marks, saveDraft, clearDraft]);
 
   const restoreDraft = useCallback(() => {
     const draft = getDraft();
     if (draft) {
       setMarks(draft.marks);
+      setRawInputs({}); // Clear raw inputs so they use marks values
       setShowDraftBanner(false);
       toast.success(`Restored ${Object.keys(draft.marks).length} marks from draft`);
     }
@@ -94,6 +99,7 @@ export function EnterMarksDialog({
   const discardDraft = useCallback(() => {
     clearDraft();
     setShowDraftBanner(false);
+    setRawInputs({});
   }, [clearDraft]);
 
   // Filter students by class if test has a specific class
@@ -127,7 +133,10 @@ export function EnterMarksDialog({
   }, [classFilteredStudents, selectedDivision, searchQuery]);
 
   const handleMarkChange = (studentId: string, value: string) => {
-    // Allow empty string to clear the input
+    // Always update raw input to allow free typing
+    setRawInputs(prev => ({ ...prev, [studentId]: value }));
+    
+    // Allow empty string to clear the mark
     if (value === '' || value === undefined) {
       setMarks(prev => {
         const { [studentId]: removed, ...rest } = prev;
@@ -142,6 +151,15 @@ export function EnterMarksDialog({
     }
   };
 
+  // Get display value for input - prefer raw input for typing, fall back to marks
+  const getInputValue = (studentId: string): string => {
+    if (rawInputs[studentId] !== undefined) {
+      return rawInputs[studentId];
+    }
+    const mark = marks[studentId];
+    return mark !== undefined ? mark.toString() : '';
+  };
+
   const calculateXPRewards = (studentId: string, currentMarks: number) => {
     const percentage = (currentMarks / test.maxMarks) * 100;
     let xpAmount = 0;
@@ -153,13 +171,13 @@ export function EnterMarksDialog({
       reasons.push("80%+ score");
     }
 
-    // Improvement bonus - check previous test results
+    // Improvement bonus - check previous test results for this student
     const studentPreviousResults = existingResults
-      .filter(r => r.studentId === studentId)
-      .sort((a, b) => new Date(test.date).getTime() - new Date(test.date).getTime());
+      .filter(r => r.studentId === studentId && r.testId !== test.id);
     
     if (studentPreviousResults.length > 0) {
-      const lastResult = studentPreviousResults[studentPreviousResults.length - 1];
+      // Use the first available previous result for comparison
+      const lastResult = studentPreviousResults[0];
       const lastPercentage = (lastResult.marks / test.maxMarks) * 100;
       if (percentage > lastPercentage) {
         xpAmount += 3;
@@ -229,6 +247,7 @@ export function EnterMarksDialog({
         // Clear state and close only after confirmed success
         clearDraft();
         setMarks({});
+        setRawInputs({});
         setSearchQuery('');
         setPendingResults([]);
         setShowConfirmDialog(false);
@@ -449,6 +468,7 @@ export function EnterMarksDialog({
         setBulkPreviewData([]);
         setBulkErrors([]);
         setSearchQuery('');
+        setRawInputs({});
         setPendingResults([]);
         setShowConfirmDialog(false);
         setIsOpen(false);
@@ -466,12 +486,12 @@ export function EnterMarksDialog({
   };
 
   const getExistingMark = (studentId: string) => {
-    const existing = existingResults.find(r => r.studentId === studentId);
+    const existing = existingResults.find(r => r.studentId === studentId && r.testId === test.id);
     return existing ? existing.marks : undefined;
   };
 
   const completedCount = existingResults.filter(r => 
-    filteredStudents.some(s => s.id === r.studentId)
+    r.testId === test.id && filteredStudents.some(s => s.id === r.studentId)
   ).length;
   const totalCount = filteredStudents.length;
 
@@ -625,13 +645,11 @@ export function EnterMarksDialog({
                         </Label>
                         <Input
                           id={`marks-${student.id}`}
-                          type="number"
+                          type="text"
                           inputMode="decimal"
-                          min="0"
-                          max={test.maxMarks}
-                          step="0.5"
+                          pattern="[0-9]*\.?[0-9]*"
                           placeholder={hasResult ? existingMark.toString() : "0"}
-                          value={currentMark ?? ''}
+                          value={getInputValue(student.id)}
                           onChange={(e) => handleMarkChange(student.id, e.target.value)}
                           className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
                         />

@@ -55,7 +55,11 @@ export function EnterTermExamMarksDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedDivision, setSelectedDivision] = useState<string>("");
-  const [marks, setMarks] = useState<{ [studentId: string]: number }>({});
+  
+  // Subject-scoped marks and raw inputs to prevent wrong-subject save bug
+  const [marksBySubject, setMarksBySubject] = useState<{ [subjectId: string]: { [studentId: string]: number } }>({});
+  const [rawInputsBySubject, setRawInputsBySubject] = useState<{ [subjectId: string]: { [studentId: string]: string } }>({});
+  
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreviewData, setBulkPreviewData] = useState<any[]>([]);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
@@ -65,41 +69,60 @@ export function EnterTermExamMarksDialog({
   const [isSaving, setIsSaving] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
 
-  // Draft and network status
-  const { getDraft, saveDraft, clearDraft, hasDraft } = useTermExamMarksDraft(exam.id);
+  // Draft and network status - now per-subject
+  const { getDraft, saveDraft, clearDraft, hasDraft } = useTermExamMarksDraft(exam.id, selectedSubjectId, selectedDivision);
   const { isOnline } = useNetworkStatus();
 
-  // Check for draft when dialog opens
-  useEffect(() => {
-    if (isOpen && hasDraft()) {
-      setShowDraftBanner(true);
-    }
-  }, [isOpen, hasDraft]);
+  // Get current marks and raw inputs for the selected subject
+  const marks = marksBySubject[selectedSubjectId] || {};
+  const rawInputs = rawInputsBySubject[selectedSubjectId] || {};
 
-  // Auto-save marks to draft when they change
+  // Check for draft when dialog opens or subject changes
   useEffect(() => {
-    if (Object.keys(marks).length > 0) {
-      saveDraft(marks, selectedSubjectId, selectedDivision);
+    if (isOpen && selectedSubjectId && hasDraft()) {
+      setShowDraftBanner(true);
+    } else {
+      setShowDraftBanner(false);
     }
-  }, [marks, selectedSubjectId, selectedDivision, saveDraft]);
+  }, [isOpen, selectedSubjectId, hasDraft]);
+
+  // Auto-save marks to draft when they change (per-subject)
+  useEffect(() => {
+    if (selectedSubjectId && Object.keys(marks).length > 0) {
+      saveDraft(marks, selectedSubjectId, selectedDivision);
+    } else if (selectedSubjectId && Object.keys(marks).length === 0) {
+      // Clear draft when marks become empty
+      clearDraft();
+    }
+  }, [marks, selectedSubjectId, selectedDivision, saveDraft, clearDraft]);
 
   const restoreDraft = useCallback(() => {
     const draft = getDraft();
-    if (draft) {
-      setMarks(draft.marks);
-      setRawInputs({}); // Clear raw inputs so they use marks values
-      if (draft.selectedSubjectId) setSelectedSubjectId(draft.selectedSubjectId);
+    if (draft && selectedSubjectId) {
+      setMarksBySubject(prev => ({
+        ...prev,
+        [selectedSubjectId]: draft.marks
+      }));
+      setRawInputsBySubject(prev => ({
+        ...prev,
+        [selectedSubjectId]: {}
+      }));
       if (draft.selectedDivision) setSelectedDivision(draft.selectedDivision);
       setShowDraftBanner(false);
       toast.success(`Restored ${Object.keys(draft.marks).length} marks from draft`);
     }
-  }, [getDraft]);
+  }, [getDraft, selectedSubjectId]);
 
   const discardDraft = useCallback(() => {
     clearDraft();
     setShowDraftBanner(false);
-    setRawInputs({}); // Clear raw inputs
-  }, [clearDraft]);
+    if (selectedSubjectId) {
+      setRawInputsBySubject(prev => ({
+        ...prev,
+        [selectedSubjectId]: {}
+      }));
+    }
+  }, [clearDraft, selectedSubjectId]);
 
   // Filter students by exam class
   const classStudents = students.filter(s => s.class === exam.class);
@@ -117,18 +140,27 @@ export function EnterTermExamMarksDialog({
   const selectedExamSubject = examSubjects.find(es => es.subjectId === selectedSubjectId);
   const selectedSubject = subjects.find(s => s.id === selectedSubjectId);
 
-  // Store raw input values for controlled inputs (allows typing freely)
-  const [rawInputs, setRawInputs] = useState<{ [studentId: string]: string }>({});
-
   const handleMarkChange = (studentId: string, value: string) => {
+    if (!selectedSubjectId) return;
+    
     // Always update raw input to allow free typing
-    setRawInputs(prev => ({ ...prev, [studentId]: value }));
+    setRawInputsBySubject(prev => ({
+      ...prev,
+      [selectedSubjectId]: {
+        ...(prev[selectedSubjectId] || {}),
+        [studentId]: value
+      }
+    }));
     
     // Allow empty string to clear the mark
     if (value === '' || value === undefined) {
-      setMarks(prev => {
-        const { [studentId]: removed, ...rest } = prev;
-        return rest;
+      setMarksBySubject(prev => {
+        const subjectMarks = { ...(prev[selectedSubjectId] || {}) };
+        delete subjectMarks[studentId];
+        return {
+          ...prev,
+          [selectedSubjectId]: subjectMarks
+        };
       });
       return;
     }
@@ -136,7 +168,13 @@ export function EnterTermExamMarksDialog({
     const numValue = parseFloat(value);
     const maxMarks = selectedExamSubject?.maxMarks || 100;
     if (!isNaN(numValue) && numValue >= 0 && numValue <= maxMarks) {
-      setMarks(prev => ({ ...prev, [studentId]: numValue }));
+      setMarksBySubject(prev => ({
+        ...prev,
+        [selectedSubjectId]: {
+          ...(prev[selectedSubjectId] || {}),
+          [studentId]: numValue
+        }
+      }));
     }
   };
 
@@ -163,13 +201,15 @@ export function EnterTermExamMarksDialog({
     }
 
     const resultsToAdd: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string }[] = [];
-    Object.entries(marks).forEach(([studentId, markValue]) => {
+    const currentMarks = marksBySubject[selectedSubjectId] || {};
+    
+    Object.entries(currentMarks).forEach(([studentId, markValue]) => {
       const maxMarks = selectedExamSubject?.maxMarks || 100;
       if (markValue >= 0 && markValue <= maxMarks) {
         resultsToAdd.push({
           termExamId: exam.id,
           studentId,
-          subjectId: selectedSubjectId,
+          subjectId: selectedSubjectId, // Always use the subject ID that was selected when marks were entered
           marks: markValue,
         });
       }
@@ -193,8 +233,17 @@ export function EnterTermExamMarksDialog({
       if (success) {
         toast.success(`Added marks for ${pendingResults.length} students!`);
         clearDraft();
-        setMarks({});
-        setRawInputs({}); // Clear raw inputs after successful save
+        // Clear only the current subject's marks
+        if (selectedSubjectId) {
+          setMarksBySubject(prev => ({
+            ...prev,
+            [selectedSubjectId]: {}
+          }));
+          setRawInputsBySubject(prev => ({
+            ...prev,
+            [selectedSubjectId]: {}
+          }));
+        }
         setPendingResults([]);
         setShowConfirmDialog(false);
       } else {
@@ -376,8 +425,16 @@ export function EnterTermExamMarksDialog({
     setIsOpen(open);
     if (!open) {
       setShowDraftBanner(false);
-      setRawInputs({}); // Clear raw inputs when dialog closes
     }
+  };
+
+  const handleSubjectChange = (value: string) => {
+    // Check for unsaved marks in current subject before switching
+    if (selectedSubjectId && Object.keys(marks).length > 0) {
+      // Marks are auto-saved to draft, just show info
+      toast.info(`Draft saved for ${selectedSubject?.name || 'previous subject'}`);
+    }
+    setSelectedSubjectId(value);
   };
 
   return (
@@ -421,7 +478,7 @@ export function EnterTermExamMarksDialog({
             <FileWarning className="h-4 w-4 text-amber-600" />
             <AlertDescription className="flex flex-col sm:flex-row sm:items-center gap-2 text-amber-800">
               <span>
-                Draft found: {Object.keys(getDraft()?.marks || {}).length} marks saved locally
+                Draft found for {selectedSubject?.name}: {Object.keys(getDraft()?.marks || {}).length} marks saved locally
               </span>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={restoreDraft} className="h-7 text-xs">
@@ -448,10 +505,7 @@ export function EnterTermExamMarksDialog({
                 <Label>Select Subject</Label>
                 <Select 
                   value={selectedSubjectId} 
-                  onValueChange={(value) => {
-                    setSelectedSubjectId(value);
-                    setRawInputs({}); // Clear raw inputs when subject changes
-                  }}
+                  onValueChange={handleSubjectChange}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select subject" />
@@ -459,9 +513,12 @@ export function EnterTermExamMarksDialog({
                   <SelectContent>
                     {examSubjects.map(es => {
                       const subj = subjects.find(s => s.id === es.subjectId);
+                      const subjectMarks = marksBySubject[es.subjectId] || {};
+                      const hasUnsaved = Object.keys(subjectMarks).length > 0;
                       return (
                         <SelectItem key={es.subjectId} value={es.subjectId}>
                           {subj?.name} (Max: {es.maxMarks})
+                          {hasUnsaved && " •"}
                         </SelectItem>
                       );
                     })}
@@ -494,7 +551,6 @@ export function EnterTermExamMarksDialog({
                 <div className="space-y-3">
                   {filteredStudents.map(student => {
                     const existingMark = getExistingMark(student.id);
-                    const currentMark = marks[student.id];
                     const maxMarks = selectedExamSubject?.maxMarks || 100;
 
                     return (
