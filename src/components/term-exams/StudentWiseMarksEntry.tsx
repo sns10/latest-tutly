@@ -7,16 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserCheck, Search, ChevronRight, Save, X } from "lucide-react";
+import { UserCheck, Search, ChevronRight, Save, X, WifiOff } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 interface StudentWiseMarksEntryProps {
   exam: TermExam;
@@ -42,7 +42,10 @@ export function StudentWiseMarksEntry({
   const [searchQuery, setSearchQuery] = useState("");
   const [divisionFilter, setDivisionFilter] = useState<string>("");
   const [marks, setMarks] = useState<{ [subjectId: string]: number }>({});
+  const [rawInputs, setRawInputs] = useState<{ [subjectId: string]: string }>({});
   const [isSaving, setIsSaving] = useState(false);
+  
+  const { isOnline } = useNetworkStatus();
 
   // Filter students by exam class
   const classStudents = students.filter(s => s.class === exam.class);
@@ -84,6 +87,7 @@ export function StudentWiseMarksEntry({
     });
     
     setMarks(loadedMarks);
+    setRawInputs({}); // Clear raw inputs so they use marks values
     setSelectedStudentId(studentId);
   };
 
@@ -99,7 +103,10 @@ export function StudentWiseMarksEntry({
   };
 
   const handleMarkChange = (subjectId: string, value: string) => {
-    // Allow empty string to clear the input
+    // Always update raw input to allow free typing
+    setRawInputs(prev => ({ ...prev, [subjectId]: value }));
+    
+    // Allow empty string to clear the mark
     if (value === '' || value === undefined) {
       setMarks(prev => {
         const { [subjectId]: removed, ...rest } = prev;
@@ -117,9 +124,23 @@ export function StudentWiseMarksEntry({
     }
   };
 
+  // Get display value for input - prefer raw input for typing, fall back to marks
+  const getInputValue = (subjectId: string): string => {
+    if (rawInputs[subjectId] !== undefined) {
+      return rawInputs[subjectId];
+    }
+    const mark = marks[subjectId];
+    return mark !== undefined ? mark.toString() : '';
+  };
+
   const handleSave = async () => {
     if (!selectedStudentId) {
       toast.error("Please select a student");
+      return;
+    }
+
+    if (!isOnline) {
+      toast.error("You're offline. Please connect to the internet to save.");
       return;
     }
 
@@ -141,17 +162,22 @@ export function StudentWiseMarksEntry({
 
     if (success) {
       toast.success(`Saved marks for ${selectedStudent?.name}`);
+      // Clear raw inputs after successful save
+      setRawInputs({});
       // Move to next student
       const currentIndex = filteredStudents.findIndex(s => s.id === selectedStudentId);
       if (currentIndex < filteredStudents.length - 1) {
         loadStudentMarks(filteredStudents[currentIndex + 1].id);
       }
+    } else {
+      toast.error("Failed to save marks. Please try again.");
     }
   };
 
   const clearSelection = () => {
     setSelectedStudentId("");
     setMarks({});
+    setRawInputs({});
   };
 
   // Calculate total marks for selected student
@@ -185,6 +211,16 @@ export function StudentWiseMarksEntry({
             <span>{examSubjects.length} subjects</span>
           </div>
         </DialogHeader>
+
+        {/* Offline Banner */}
+        {!isOnline && (
+          <Alert variant="destructive" className="mx-3 mt-2">
+            <WifiOff className="h-4 w-4" />
+            <AlertDescription>
+              You're offline. Connect to the internet to save marks.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Mobile: Stacked layout, Desktop: Side by side */}
         <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0">
@@ -289,7 +325,6 @@ export function StudentWiseMarksEntry({
                   <div className="p-2 space-y-2">
                     {examSubjects.map(es => {
                       const subject = subjects.find(s => s.id === es.subjectId);
-                      const currentMark = marks[es.subjectId];
                       const existingMark = existingResults.find(
                         r => r.studentId === selectedStudentId && r.subjectId === es.subjectId
                       )?.marks;
@@ -307,13 +342,11 @@ export function StudentWiseMarksEntry({
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
                             <Input
-                              type="number"
+                              type="text"
                               inputMode="decimal"
-                              min="0"
-                              max={es.maxMarks}
-                              step="0.5"
+                              pattern="[0-9]*\.?[0-9]*"
                               placeholder="0"
-                              value={currentMark ?? ''}
+                              value={getInputValue(es.subjectId)}
                               onChange={(e) => handleMarkChange(es.subjectId, e.target.value)}
                               className="w-16 h-9 text-center text-base"
                             />
@@ -340,7 +373,12 @@ export function StudentWiseMarksEntry({
                         ({percentage}%)
                       </span>
                     </div>
-                    <Button onClick={handleSave} disabled={isSaving} size="sm" className="gap-1.5">
+                    <Button 
+                      onClick={handleSave} 
+                      disabled={isSaving || !isOnline} 
+                      size="sm" 
+                      className="gap-1.5"
+                    >
                       <Save className="h-3.5 w-3.5" />
                       {isSaving ? "Saving..." : "Save & Next"}
                     </Button>
