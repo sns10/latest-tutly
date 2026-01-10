@@ -31,6 +31,7 @@ interface WeeklyTestManagerProps {
   termExams?: TermExam[];
   termExamSubjects?: TermExamSubject[];
   termExamResults?: TermExamResult[];
+  tuitionName?: string;
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   onDeleteTest: (testId: string) => void;
   onAddTestResult: (result: StudentTestResult) => Promise<boolean>;
@@ -67,6 +68,7 @@ export function WeeklyTestManager({
   termExams = [],
   termExamSubjects = [],
   termExamResults = [],
+  tuitionName,
   onAddTest,
   onDeleteTest,
   onAddTestResult,
@@ -366,6 +368,7 @@ export function WeeklyTestManager({
               students={students}
               subjects={subjects}
               divisions={divisions}
+              tuitionName={tuitionName}
               onCreateExam={onCreateTermExam}
               onDeleteExam={onDeleteTermExam}
               onAddResult={onAddTermExamResult}

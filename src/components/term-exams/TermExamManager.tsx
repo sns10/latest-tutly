@@ -17,6 +17,7 @@ interface TermExamManagerProps {
   students: Student[];
   subjects: Subject[];
   divisions: Division[];
+  tuitionName?: string;
   onCreateExam: (exam: {
     name: string;
     term: "1st Term" | "2nd Term" | "3rd Term";
@@ -38,6 +39,7 @@ export function TermExamManager({
   students,
   subjects,
   divisions,
+  tuitionName,
   onCreateExam,
   onDeleteExam,
   onAddResult,
@@ -194,6 +196,7 @@ export function TermExamManager({
                         students={students}
                         subjects={subjects}
                         divisions={divisions}
+                        tuitionName={tuitionName}
                       />
                       <AlertDialog>
                         <AlertDialogTrigger asChild>
