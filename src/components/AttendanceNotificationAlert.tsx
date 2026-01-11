@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Bell, X, Clock, BookOpen, Users, User } from 'lucide-react';
+import { Bell, X, Clock, BookOpen, Users, User, Smartphone } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 interface PendingAttendanceClass {
   timetableId: string;
@@ -26,7 +27,8 @@ export function AttendanceNotificationAlert({
   onDismiss,
 }: AttendanceNotificationAlertProps) {
   const navigate = useNavigate();
-
+  const { isSupported, isSubscribed, subscribe, isLoading: pushLoading } = usePushNotifications();
+  const [showPushPrompt, setShowPushPrompt] = useState(false);
   // Request notification permission and show browser notification
   useEffect(() => {
     if (!pendingClass) return;
@@ -77,6 +79,28 @@ export function AttendanceNotificationAlert({
       };
     }
   }, [pendingClass, navigate, onDismiss]);
+
+  // Show push notification prompt after dismissing in-app alert a few times
+  useEffect(() => {
+    if (pendingClass && isSupported && !isSubscribed) {
+      // Check if user has dismissed the in-app alert multiple times
+      const dismissCount = parseInt(localStorage.getItem('attendanceAlertDismissCount') || '0');
+      if (dismissCount >= 2) {
+        setShowPushPrompt(true);
+      }
+    }
+  }, [pendingClass, isSupported, isSubscribed]);
+
+  const handleEnablePush = async () => {
+    await subscribe();
+    setShowPushPrompt(false);
+  };
+
+  const handleDismiss = () => {
+    const dismissCount = parseInt(localStorage.getItem('attendanceAlertDismissCount') || '0');
+    localStorage.setItem('attendanceAlertDismissCount', String(dismissCount + 1));
+    onDismiss();
+  };
 
   if (!pendingClass) return null;
 
@@ -140,7 +164,7 @@ export function AttendanceNotificationAlert({
                   Take Attendance
                 </Button>
                 <Button
-                  onClick={onDismiss}
+                  onClick={handleDismiss}
                   variant="outline"
                   size="sm"
                   className="border-orange-300 text-orange-700 hover:bg-orange-100"
@@ -148,6 +172,26 @@ export function AttendanceNotificationAlert({
                   <X className="h-4 w-4" />
                 </Button>
               </div>
+              
+              {/* Push notification prompt */}
+              {showPushPrompt && (
+                <div className="mt-3 p-2 bg-blue-50 rounded-md border border-blue-200">
+                  <p className="text-xs text-blue-800 mb-2">
+                    <Smartphone className="h-3 w-3 inline mr-1" />
+                    Get reminders even when the app is closed!
+                  </p>
+                  <Button
+                    onClick={handleEnablePush}
+                    size="sm"
+                    variant="outline"
+                    className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
+                    disabled={pushLoading}
+                  >
+                    <Bell className="h-3 w-3 mr-1" />
+                    {pushLoading ? 'Enabling...' : 'Enable Push Notifications'}
+                  </Button>
+                </div>
+              )}
             </AlertDescription>
           </div>
         </div>
