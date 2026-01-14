@@ -32,11 +32,17 @@ export function TermExamReport() {
   const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedDivision, setSelectedDivision] = useState<string>('all');
   const [selectedExam, setSelectedExam] = useState<string>('');
 
   const classes = useMemo(() => 
     [...new Set(students.map(s => s.class))].sort(),
     [students]
+  );
+
+  const filteredDivisions = useMemo(() => 
+    divisions.filter(d => selectedClass === 'all' || d.class === selectedClass),
+    [divisions, selectedClass]
   );
 
   const filteredExams = useMemo(() => 
@@ -68,7 +74,11 @@ export function TermExamReport() {
   const results = useMemo(() => {
     if (!selectedExamData || examSubjects.length === 0) return [];
 
-    const filteredStudents = students.filter(s => s.class === selectedExamData.class);
+    const filteredStudents = students.filter(s => {
+      if (s.class !== selectedExamData.class) return false;
+      if (selectedDivision !== 'all' && s.divisionId !== selectedDivision) return false;
+      return true;
+    });
 
     const studentResults: StudentTermResult[] = filteredStudents.map(student => {
       const division = divisions.find(d => d.id === student.divisionId);
@@ -114,7 +124,7 @@ export function TermExamReport() {
     });
 
     return rankedResults;
-  }, [students, divisions, subjects, selectedExamData, examSubjects, termExamResults, selectedExam]);
+  }, [students, divisions, subjects, selectedExamData, examSubjects, termExamResults, selectedExam, selectedDivision]);
 
   const summary = useMemo(() => {
     if (results.length === 0) return null;
@@ -276,10 +286,10 @@ export function TermExamReport() {
           <CardTitle className="text-base">Select Term Exam</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Class</Label>
-              <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedExam(''); }}>
+              <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedDivision('all'); setSelectedExam(''); }}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="All Classes" />
                 </SelectTrigger>
@@ -287,6 +297,20 @@ export function TermExamReport() {
                   <SelectItem value="all">All Classes</SelectItem>
                   {classes.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Division</Label>
+              <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Divisions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Divisions</SelectItem>
+                  {filteredDivisions.map(d => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
