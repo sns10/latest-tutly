@@ -28,11 +28,17 @@ export function ConsolidatedTestReport() {
   const { students, weeklyTests, testResults, divisions } = useSupabaseData();
   const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedDivision, setSelectedDivision] = useState<string>('all');
   const [selectedTest, setSelectedTest] = useState<string>('');
 
   const classes = useMemo(() => 
     [...new Set(students.map(s => s.class))].sort(),
     [students]
+  );
+
+  const filteredDivisions = useMemo(() => 
+    divisions.filter(d => selectedClass === 'all' || d.class === selectedClass),
+    [divisions, selectedClass]
   );
 
   const filteredTests = useMemo(() => 
@@ -50,6 +56,7 @@ export function ConsolidatedTestReport() {
 
     const filteredStudents = students.filter(s => {
       if (selectedTestData.class && s.class !== selectedTestData.class) return false;
+      if (selectedDivision !== 'all' && s.divisionId !== selectedDivision) return false;
       return true;
     });
 
@@ -88,7 +95,7 @@ export function ConsolidatedTestReport() {
       if (b.rank === 0) return -1;
       return a.rank - b.rank;
     });
-  }, [students, testResults, divisions, selectedTest, selectedTestData]);
+  }, [students, testResults, divisions, selectedTest, selectedTestData, selectedDivision]);
 
   const summary = useMemo(() => {
     const appeared = testStats.filter(s => typeof s.marks === 'number');
@@ -219,10 +226,10 @@ export function ConsolidatedTestReport() {
           <CardTitle className="text-base">Select Test</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label className="text-xs">Class</Label>
-              <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedTest(''); }}>
+              <Select value={selectedClass} onValueChange={(v) => { setSelectedClass(v); setSelectedDivision('all'); setSelectedTest(''); }}>
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="All Classes" />
                 </SelectTrigger>
@@ -230,6 +237,20 @@ export function ConsolidatedTestReport() {
                   <SelectItem value="all">All Classes</SelectItem>
                   {classes.map(c => (
                     <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Division</Label>
+              <Select value={selectedDivision} onValueChange={setSelectedDivision}>
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="All Divisions" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Divisions</SelectItem>
+                  {filteredDivisions.map(d => (
+                    <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
