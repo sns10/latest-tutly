@@ -45,6 +45,12 @@ export interface Student {
   avatar: string;
   email?: string;
   rollNo?: number;
+  phone?: string;
+  dateOfBirth?: string;
+  parentName?: string;
+  parentPhone?: string;
+  address?: string;
+  gender?: 'male' | 'female' | 'other';
   xp: {
     blackout: number;
     futureMe: number;

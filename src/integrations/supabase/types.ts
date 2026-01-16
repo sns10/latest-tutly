@@ -870,13 +870,19 @@ export type Database = {
       }
       students: {
         Row: {
+          address: string | null
           avatar: string | null
           class: string
           created_at: string
+          date_of_birth: string | null
           division_id: string | null
           email: string | null
+          gender: string | null
           id: string
           name: string
+          parent_name: string | null
+          parent_phone: string | null
+          phone: string | null
           roll_no: number | null
           team: string | null
           total_xp: number
@@ -884,13 +890,19 @@ export type Database = {
           user_id: string | null
         }
         Insert: {
+          address?: string | null
           avatar?: string | null
           class: string
           created_at?: string
+          date_of_birth?: string | null
           division_id?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           name: string
+          parent_name?: string | null
+          parent_phone?: string | null
+          phone?: string | null
           roll_no?: number | null
           team?: string | null
           total_xp?: number
@@ -898,13 +910,19 @@ export type Database = {
           user_id?: string | null
         }
         Update: {
+          address?: string | null
           avatar?: string | null
           class?: string
           created_at?: string
+          date_of_birth?: string | null
           division_id?: string | null
           email?: string | null
+          gender?: string | null
           id?: string
           name?: string
+          parent_name?: string | null
+          parent_phone?: string | null
+          phone?: string | null
           roll_no?: number | null
           team?: string | null
           total_xp?: number
@@ -1256,6 +1274,7 @@ export type Database = {
           name: string
           phone: string | null
           portal_email: string | null
+          slug: string | null
           subscription_end_date: string | null
           subscription_start_date: string | null
           subscription_status: string
@@ -1272,6 +1291,7 @@ export type Database = {
           name: string
           phone?: string | null
           portal_email?: string | null
+          slug?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string
@@ -1288,6 +1308,7 @@ export type Database = {
           name?: string
           phone?: string | null
           portal_email?: string | null
+          slug?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
           subscription_status?: string

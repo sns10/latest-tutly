@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,12 +40,62 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
 
   const downloadTemplate = () => {
     const templateData = [
-      { "Roll No": 1, Name: "John Doe", Class: "4th", Division: "A" },
-      { "Roll No": 2, Name: "Jane Smith", Class: "8th", Division: "B" },
-      { "Roll No": "", Name: "Bob Johnson", Class: "12th", Division: "A" },
+      { 
+        "Roll No": 1, 
+        Name: "John Doe", 
+        Class: "4th", 
+        Division: "A",
+        "Date of Birth": "2015-05-15",
+        Gender: "Male",
+        Phone: "9876543210",
+        Email: "john@email.com",
+        "Parent Name": "Mr. Doe",
+        "Parent Phone": "9876543211",
+        Address: "123 Main St"
+      },
+      { 
+        "Roll No": 2, 
+        Name: "Jane Smith", 
+        Class: "8th", 
+        Division: "B",
+        "Date of Birth": "2012-08-20",
+        Gender: "Female",
+        Phone: "",
+        Email: "",
+        "Parent Name": "Mrs. Smith",
+        "Parent Phone": "9876543212",
+        Address: ""
+      },
+      { 
+        "Roll No": "", 
+        Name: "Bob Johnson", 
+        Class: "12th", 
+        Division: "A",
+        "Date of Birth": "2008-01-10",
+        Gender: "",
+        Phone: "",
+        Email: "",
+        "Parent Name": "",
+        "Parent Phone": "9876543213",
+        Address: ""
+      },
     ];
 
     const ws = XLSX.utils.json_to_sheet(templateData);
+    // Set column widths
+    ws['!cols'] = [
+      { wch: 8 },  // Roll No
+      { wch: 20 }, // Name
+      { wch: 8 },  // Class
+      { wch: 10 }, // Division
+      { wch: 12 }, // DOB
+      { wch: 8 },  // Gender
+      { wch: 12 }, // Phone
+      { wch: 20 }, // Email
+      { wch: 15 }, // Parent Name
+      { wch: 12 }, // Parent Phone
+      { wch: 25 }, // Address
+    ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
     XLSX.writeFile(wb, "student_import_template.xlsx");
@@ -70,7 +119,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
     reader.onload = (e) => {
       try {
         const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet);
@@ -110,6 +159,25 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
     setErrors(newErrors);
   };
 
+  const formatDate = (dateValue: any): string | undefined => {
+    if (!dateValue) return undefined;
+    
+    // If it's already a Date object (from Excel)
+    if (dateValue instanceof Date) {
+      return dateValue.toISOString().split('T')[0];
+    }
+    
+    // If it's a string, try to parse it
+    if (typeof dateValue === 'string') {
+      const parsed = new Date(dateValue);
+      if (!isNaN(parsed.getTime())) {
+        return parsed.toISOString().split('T')[0];
+      }
+    }
+    
+    return undefined;
+  };
+
   const handleImport = () => {
     if (!file || previewData.length === 0 || errors.length > 0) {
       toast.error("Please fix all errors before importing");
@@ -141,11 +209,22 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
       // Parse roll number - can be empty
       const rollNo = row['Roll No'] ? parseInt(String(row['Roll No']), 10) : undefined;
       
+      // Parse gender
+      const genderValue = row.Gender?.toString().toLowerCase().trim();
+      const gender = ['male', 'female', 'other'].includes(genderValue) ? genderValue as 'male' | 'female' | 'other' : undefined;
+      
       return {
         name: row.Name.trim(),
         class: studentClass,
         divisionId: matchingDivision?.id,
         rollNo: !isNaN(rollNo as number) ? rollNo : undefined,
+        dateOfBirth: formatDate(row['Date of Birth']),
+        gender,
+        phone: row.Phone?.toString().trim() || undefined,
+        email: row.Email?.toString().trim() || undefined,
+        parentName: row['Parent Name']?.toString().trim() || undefined,
+        parentPhone: row['Parent Phone']?.toString().trim() || undefined,
+        address: row.Address?.toString().trim() || undefined,
         avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
       };
     });
@@ -181,11 +260,11 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
           Bulk Import
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Bulk Import Students</DialogTitle>
           <DialogDescription>
-            Upload an Excel file to import multiple students at once. Download the template below to get started.
+            Upload an Excel file to import multiple students at once. The template includes all fields (Name, Class, Division, DOB, Phone, Parent details, etc.).
           </DialogDescription>
         </DialogHeader>
         
@@ -237,14 +316,16 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
           {previewData.length > 0 && (
             <div className="space-y-2">
               <Label>Preview ({previewData.length} students)</Label>
-              <div className="border rounded-lg max-h-40 overflow-y-auto">
+              <div className="border rounded-lg max-h-40 overflow-auto">
                 <table className="w-full text-sm">
-                  <thead className="bg-muted">
+                  <thead className="bg-muted sticky top-0">
                     <tr>
-                      <th className="p-2 text-left">Roll No</th>
-                      <th className="p-2 text-left">Name</th>
-                      <th className="p-2 text-left">Class</th>
-                      <th className="p-2 text-left">Division</th>
+                      <th className="p-2 text-left whitespace-nowrap">Roll No</th>
+                      <th className="p-2 text-left whitespace-nowrap">Name</th>
+                      <th className="p-2 text-left whitespace-nowrap">Class</th>
+                      <th className="p-2 text-left whitespace-nowrap">Division</th>
+                      <th className="p-2 text-left whitespace-nowrap">DOB</th>
+                      <th className="p-2 text-left whitespace-nowrap">Parent Phone</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -254,11 +335,13 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                         <td className="p-2">{row.Name}</td>
                         <td className="p-2">{row.Class}</td>
                         <td className="p-2">{row.Division || '-'}</td>
+                        <td className="p-2">{row['Date of Birth'] ? formatDate(row['Date of Birth']) : '-'}</td>
+                        <td className="p-2">{row['Parent Phone'] || '-'}</td>
                       </tr>
                     ))}
                     {previewData.length > 10 && (
                       <tr className="border-t">
-                        <td colSpan={4} className="p-2 text-center text-muted-foreground">
+                        <td colSpan={6} className="p-2 text-center text-muted-foreground">
                           ... and {previewData.length - 10} more
                         </td>
                       </tr>

@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.send-attendance-reminders]
 verify_jwt = false
+
+[functions.register-student]
+verify_jwt = false

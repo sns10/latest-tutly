@@ -24,6 +24,12 @@ const formatStudents = (studentsData: any[]): Student[] => {
     avatar: student.avatar || '',
     email: student.email || undefined,
     rollNo: student.roll_no || undefined,
+    phone: student.phone || undefined,
+    dateOfBirth: student.date_of_birth || undefined,
+    parentName: student.parent_name || undefined,
+    parentPhone: student.parent_phone || undefined,
+    address: student.address || undefined,
+    gender: student.gender || undefined,
     team: student.team as TeamName | null,
     totalXp: student.total_xp,
     xp: {
@@ -98,7 +104,20 @@ export function useAddStudentMutation(tuitionId: string | null) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (newStudent: { name: string; class: ClassName; divisionId?: string; avatar?: string; rollNo?: number }) => {
+    mutationFn: async (newStudent: { 
+      name: string; 
+      class: ClassName; 
+      divisionId?: string; 
+      avatar?: string; 
+      rollNo?: number;
+      phone?: string;
+      dateOfBirth?: string;
+      parentName?: string;
+      parentPhone?: string;
+      address?: string;
+      gender?: string;
+      email?: string;
+    }) => {
       if (!tuitionId) throw new Error('No tuition ID');
 
       const { data, error } = await supabase
@@ -110,6 +129,13 @@ export function useAddStudentMutation(tuitionId: string | null) {
           avatar: newStudent.avatar,
           tuition_id: tuitionId,
           roll_no: newStudent.rollNo,
+          phone: newStudent.phone,
+          date_of_birth: newStudent.dateOfBirth,
+          parent_name: newStudent.parentName,
+          parent_phone: newStudent.parentPhone,
+          address: newStudent.address,
+          gender: newStudent.gender,
+          email: newStudent.email,
         })
         .select()
         .single();

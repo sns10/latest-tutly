@@ -58,6 +58,7 @@ const Timetable = lazyWithRetry(() => import("./pages/Timetable"));
 const Materials = lazyWithRetry(() => import("./pages/Materials"));
 const Classes = lazyWithRetry(() => import("./pages/Classes"));
 const Leaderboard = lazyWithRetry(() => import("./pages/Leaderboard"));
+const StudentRegistration = lazyWithRetry(() => import("./pages/StudentRegistration"));
 
 // Optimized Query Client with production-ready defaults
 const queryClient = new QueryClient({
@@ -93,12 +94,13 @@ function AppContent() {
   const isSuperAdminPage = location.pathname === '/super-admin';
   const isStudentPage = location.pathname.startsWith('/student');
   const isLegalPage = location.pathname === '/privacy' || location.pathname === '/terms';
+  const isPublicRegistration = location.pathname.startsWith('/register');
 
   // Monitor network status
   useNetworkStatus();
 
-  // Don't show sidebars on auth, super-admin, student, or legal pages
-  const showSidebars = !isAuthPage && !isSuperAdminPage && !isStudentPage && !isLegalPage;
+  // Don't show sidebars on auth, super-admin, student, legal, or public registration pages
+  const showSidebars = !isAuthPage && !isSuperAdminPage && !isStudentPage && !isLegalPage && !isPublicRegistration;
 
   return (
     <SidebarProvider>
@@ -120,6 +122,7 @@ function AppContent() {
                     <Route path="/auth" element={<AuthPage />} />
                     <Route path="/privacy" element={<PrivacyPolicy />} />
                     <Route path="/terms" element={<TermsOfService />} />
+                    <Route path="/register/:tuitionSlug" element={<StudentRegistration />} />
                     <Route 
                       path="/super-admin" 
                       element={
