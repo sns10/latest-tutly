@@ -14,6 +14,7 @@ import { Search, Users, GraduationCap, Flame } from 'lucide-react';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
 import { BulkImportStudentsDialog } from '@/components/BulkImportStudentsDialog';
 import { StudentDetailsDialog } from '@/components/StudentDetailsDialog';
+import { RegistrationLinkManager } from '@/components/RegistrationLinkManager';
 import { useAttendanceStreak } from '@/hooks/useAttendanceStreak';
 import { StudentsPageSkeleton } from '@/components/skeletons/PageSkeletons';
 
@@ -105,6 +106,7 @@ export default function StudentsPage() {
           <p className="text-xs sm:text-sm text-muted-foreground">Manage and view student details</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {tuitionId && <RegistrationLinkManager tuitionId={tuitionId} />}
           {showBulkImport && <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />}
           <AddStudentDialog divisions={divisions} onAddStudent={addStudent} />
         </div>
