@@ -10,7 +10,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Search, Users, GraduationCap, Flame } from 'lucide-react';
+import { Search, Users, GraduationCap, Flame, ArrowLeft } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
 import { BulkImportStudentsDialog } from '@/components/BulkImportStudentsDialog';
 import { StudentDetailsDialog } from '@/components/StudentDetailsDialog';
@@ -43,6 +45,7 @@ export default function StudentsPage() {
   const { termExams, termExamSubjects, termExamResults, loading: termExamLoading } = useTermExamData();
   const { tuitionId } = useUserTuition();
 
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('All');
   const [divisionFilter, setDivisionFilter] = useState('All');
@@ -101,9 +104,19 @@ export default function StudentsPage() {
     <div className="w-full px-3 py-4 sm:px-6 space-y-4">
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-        <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Student Management</h2>
-          <p className="text-xs sm:text-sm text-muted-foreground">Manage and view student details</p>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/')}
+            className="h-9 w-9 shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Student Management</h2>
+            <p className="text-xs sm:text-sm text-muted-foreground">Manage and view student details</p>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           {tuitionId && <RegistrationLinkManager tuitionId={tuitionId} />}
