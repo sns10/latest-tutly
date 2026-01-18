@@ -16,7 +16,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check, Mail, UserCheck, Flame, TrendingUp, ChevronLeft, ChevronRight, History, Banknote, Smartphone, Building, ChevronDown, ChevronUp } from 'lucide-react';
+import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check, Mail, UserCheck, Flame, TrendingUp, ChevronLeft, ChevronRight, History, Banknote, Smartphone, Building, ChevronDown, ChevronUp, User, Phone, MapPin, Cake } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getYear, getMonth, setMonth, setYear } from 'date-fns';
 import { AssignStudentEmailDialog } from './AssignStudentEmailDialog';
 
@@ -47,7 +48,19 @@ interface StudentDetailsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onRemoveStudent: (studentId: string) => void;
-  onUpdateStudent?: (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null }) => void;
+  onUpdateStudent?: (studentId: string, updates: { 
+    name?: string; 
+    class?: ClassName; 
+    divisionId?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    rollNo?: number | null;
+    dateOfBirth?: string | null;
+    parentName?: string | null;
+    parentPhone?: string | null;
+    address?: string | null;
+    gender?: 'male' | 'female' | 'other' | null;
+  }) => void;
   onStudentDataUpdated?: () => void;
 }
 
@@ -77,6 +90,14 @@ export function StudentDetailsDialog({
   const [editName, setEditName] = useState(student.name);
   const [editClass, setEditClass] = useState<ClassName>(student.class);
   const [editDivisionId, setEditDivisionId] = useState(student.divisionId || '');
+  const [editRollNo, setEditRollNo] = useState<number | undefined>(student.rollNo);
+  const [editEmail, setEditEmail] = useState(student.email || '');
+  const [editPhone, setEditPhone] = useState(student.phone || '');
+  const [editDateOfBirth, setEditDateOfBirth] = useState(student.dateOfBirth || '');
+  const [editParentName, setEditParentName] = useState(student.parentName || '');
+  const [editParentPhone, setEditParentPhone] = useState(student.parentPhone || '');
+  const [editAddress, setEditAddress] = useState(student.address || '');
+  const [editGender, setEditGender] = useState<'male' | 'female' | 'other' | ''>(student.gender || '');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
   const [expandedFeeId, setExpandedFeeId] = useState<string | null>(null);
@@ -390,6 +411,14 @@ export function StudentDetailsDialog({
     setEditName(student.name);
     setEditClass(student.class);
     setEditDivisionId(student.divisionId || '');
+    setEditRollNo(student.rollNo);
+    setEditEmail(student.email || '');
+    setEditPhone(student.phone || '');
+    setEditDateOfBirth(student.dateOfBirth || '');
+    setEditParentName(student.parentName || '');
+    setEditParentPhone(student.parentPhone || '');
+    setEditAddress(student.address || '');
+    setEditGender(student.gender || '');
     setIsEditing(true);
   };
 
@@ -398,6 +427,14 @@ export function StudentDetailsDialog({
     setEditName(student.name);
     setEditClass(student.class);
     setEditDivisionId(student.divisionId || '');
+    setEditRollNo(student.rollNo);
+    setEditEmail(student.email || '');
+    setEditPhone(student.phone || '');
+    setEditDateOfBirth(student.dateOfBirth || '');
+    setEditParentName(student.parentName || '');
+    setEditParentPhone(student.parentPhone || '');
+    setEditAddress(student.address || '');
+    setEditGender(student.gender || '');
   };
 
   const handleSaveEdit = () => {
@@ -407,6 +444,14 @@ export function StudentDetailsDialog({
       name: editName.trim(),
       class: editClass,
       divisionId: editDivisionId || null,
+      rollNo: editRollNo || null,
+      email: editEmail.trim() || null,
+      phone: editPhone.trim() || null,
+      dateOfBirth: editDateOfBirth || null,
+      parentName: editParentName.trim() || null,
+      parentPhone: editParentPhone.trim() || null,
+      address: editAddress.trim() || null,
+      gender: editGender || null,
     });
     setIsEditing(false);
   };
@@ -442,77 +487,29 @@ export function StudentDetailsDialog({
               <AvatarImage src={student.avatar} alt={student.name} />
               <AvatarFallback>{student.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            {isEditing ? (
-              <div className="flex-1 space-y-2">
-                <Input
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Student name"
-                  className="font-bold"
-                />
-                <div className="flex gap-2">
-                  <Select value={editClass} onValueChange={handleClassChange}>
-                    <SelectTrigger className="w-24 bg-white">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      {CLASSES.map((cls) => (
-                        <SelectItem key={cls} value={cls}>{cls}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={editDivisionId || "none"}
-                    onValueChange={(v) => setEditDivisionId(v === "none" ? "" : v)}
-                  >
-                    <SelectTrigger className="w-32 bg-white">
-                      <SelectValue placeholder="Division" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white">
-                      <SelectItem value="none">No Division</SelectItem>
-                      {availableDivisions.map((div) => (
-                        <SelectItem key={div.id} value={div.id}>{div.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button size="icon" variant="ghost" onClick={handleSaveEdit} className="h-9 w-9">
-                    <Check className="h-4 w-4 text-green-600" />
-                  </Button>
-                  <Button size="icon" variant="ghost" onClick={handleCancelEdit} className="h-9 w-9">
-                    <X className="h-4 w-4 text-red-600" />
-                  </Button>
-                </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <p className="text-lg font-bold">
+                  {student.rollNo && <span className="text-muted-foreground mr-1">#{student.rollNo}</span>}
+                  {student.name}
+                </p>
               </div>
-            ) : (
-              <div className="flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="text-lg font-bold">
-                    {student.rollNo && <span className="text-muted-foreground mr-1">#{student.rollNo}</span>}
-                    {student.name}
-                  </p>
-                  {onUpdateStudent && (
-                    <Button size="icon" variant="ghost" onClick={handleStartEdit} className="h-6 w-6">
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm text-muted-foreground">{student.class} Grade</span>
-                  {student.division && (
-                    <Badge variant="outline">{student.division.name}</Badge>
-                  )}
-                  {student.team && (
-                    <Badge variant="secondary">{student.team}</Badge>
-                  )}
-                  {streakStats.currentStreak > 0 && (
-                    <Badge variant="secondary" className="gap-1 bg-orange-100 text-orange-700 border-orange-300">
-                      <Flame className="h-3 w-3" />
-                      {streakStats.currentStreak} day streak
-                    </Badge>
-                  )}
-                </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">{student.class} Grade</span>
+                {student.division && (
+                  <Badge variant="outline">{student.division.name}</Badge>
+                )}
+                {student.team && (
+                  <Badge variant="secondary">{student.team}</Badge>
+                )}
+                {streakStats.currentStreak > 0 && (
+                  <Badge variant="secondary" className="gap-1 bg-orange-100 text-orange-700 border-orange-300">
+                    <Flame className="h-3 w-3" />
+                    {streakStats.currentStreak} day streak
+                  </Badge>
+                )}
               </div>
-            )}
+            </div>
           </DialogTitle>
           <DialogDescription>
             View and edit student details, attendance, test results, and fees
@@ -566,13 +563,263 @@ export function StudentDetailsDialog({
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="attendance" className="mt-4">
-          <TabsList className="grid w-full grid-cols-4">
+        <Tabs defaultValue="info" className="mt-4">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="info">Info</TabsTrigger>
             <TabsTrigger value="attendance">Attendance</TabsTrigger>
             <TabsTrigger value="tests">Tests</TabsTrigger>
             <TabsTrigger value="performance">Performance</TabsTrigger>
             <TabsTrigger value="fees">Fees</TabsTrigger>
           </TabsList>
+
+          {/* Info Tab */}
+          <TabsContent value="info" className="mt-3">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-sm flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    Student Information
+                  </CardTitle>
+                  {onUpdateStudent && !isEditing && (
+                    <Button size="sm" variant="outline" onClick={handleStartEdit} className="h-7 gap-1">
+                      <Pencil className="h-3 w-3" />
+                      Edit
+                    </Button>
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isEditing ? (
+                  <div className="space-y-4">
+                    {/* Basic Info */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Full Name *</label>
+                        <Input
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          placeholder="Student name"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Roll Number</label>
+                        <Input
+                          type="number"
+                          value={editRollNo || ''}
+                          onChange={(e) => setEditRollNo(e.target.value ? parseInt(e.target.value) : undefined)}
+                          placeholder="Roll number"
+                        />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Class</label>
+                        <Select value={editClass} onValueChange={handleClassChange}>
+                          <SelectTrigger className="bg-white">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            {CLASSES.map((cls) => (
+                              <SelectItem key={cls} value={cls}>{cls}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Division</label>
+                        <Select
+                          value={editDivisionId || "none"}
+                          onValueChange={(v) => setEditDivisionId(v === "none" ? "" : v)}
+                        >
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Division" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            <SelectItem value="none">No Division</SelectItem>
+                            {availableDivisions.map((div) => (
+                              <SelectItem key={div.id} value={div.id}>{div.name}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Gender</label>
+                        <Select
+                          value={editGender || "none"}
+                          onValueChange={(v) => setEditGender(v === "none" ? "" : v as 'male' | 'female' | 'other')}
+                        >
+                          <SelectTrigger className="bg-white">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent className="bg-white">
+                            <SelectItem value="none">Not specified</SelectItem>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Date of Birth</label>
+                        <Input
+                          type="date"
+                          value={editDateOfBirth}
+                          onChange={(e) => setEditDateOfBirth(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Contact Info */}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Contact Information</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Email</label>
+                          <Input
+                            type="email"
+                            value={editEmail}
+                            onChange={(e) => setEditEmail(e.target.value)}
+                            placeholder="student@email.com"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Phone</label>
+                          <Input
+                            type="tel"
+                            value={editPhone}
+                            onChange={(e) => setEditPhone(e.target.value)}
+                            placeholder="+91 98765 43210"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Parent Info */}
+                    <div className="pt-2 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Parent/Guardian Information</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Parent Name</label>
+                          <Input
+                            value={editParentName}
+                            onChange={(e) => setEditParentName(e.target.value)}
+                            placeholder="Parent/Guardian name"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Parent Phone</label>
+                          <Input
+                            type="tel"
+                            value={editParentPhone}
+                            onChange={(e) => setEditParentPhone(e.target.value)}
+                            placeholder="+91 98765 43210"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Address */}
+                    <div className="pt-2 border-t">
+                      <div className="space-y-1.5">
+                        <label className="text-xs font-medium text-muted-foreground">Address</label>
+                        <Textarea
+                          value={editAddress}
+                          onChange={(e) => setEditAddress(e.target.value)}
+                          placeholder="Full address"
+                          rows={2}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="flex justify-end gap-2 pt-2">
+                      <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button size="sm" onClick={handleSaveEdit}>
+                        Save Changes
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* Basic Info Display */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Roll No</p>
+                        <p className="text-sm font-medium">{student.rollNo || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Class</p>
+                        <p className="text-sm font-medium">{student.class}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Division</p>
+                        <p className="text-sm font-medium">{student.division?.name || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Gender</p>
+                        <p className="text-sm font-medium capitalize">{student.gender || '-'}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Cake className="h-3 w-3" /> Date of Birth
+                        </p>
+                        <p className="text-sm font-medium">
+                          {student.dateOfBirth 
+                            ? format(new Date(student.dateOfBirth), 'dd MMM yyyy')
+                            : '-'}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Team</p>
+                        <p className="text-sm font-medium">{student.team || '-'}</p>
+                      </div>
+                    </div>
+
+                    {/* Contact Info Display */}
+                    <div className="pt-3 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-2 flex items-center gap-1">
+                        <Phone className="h-3 w-3" /> Contact Information
+                      </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Email</p>
+                          <p className="text-sm font-medium">{student.email || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Phone</p>
+                          <p className="text-sm font-medium">{student.phone || '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Parent Info Display */}
+                    <div className="pt-3 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-2">Parent/Guardian</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Name</p>
+                          <p className="text-sm font-medium">{student.parentName || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Phone</p>
+                          <p className="text-sm font-medium">{student.parentPhone || '-'}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Address Display */}
+                    <div className="pt-3 border-t">
+                      <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                        <MapPin className="h-3 w-3" /> Address
+                      </p>
+                      <p className="text-sm">{student.address || '-'}</p>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
           {/* Attendance Tab */}
           <TabsContent value="attendance" className="mt-3 space-y-4">

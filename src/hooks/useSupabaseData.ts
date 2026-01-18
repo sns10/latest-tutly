@@ -169,12 +169,31 @@ export function useSupabaseData() {
     toast.success('Student removed successfully');
   };
 
-  const updateStudent = async (studentId: string, updates: { name?: string; class?: ClassName; divisionId?: string | null; email?: string | null }) => {
+  const updateStudent = async (studentId: string, updates: { 
+    name?: string; 
+    class?: ClassName; 
+    divisionId?: string | null; 
+    email?: string | null;
+    phone?: string | null;
+    rollNo?: number | null;
+    dateOfBirth?: string | null;
+    parentName?: string | null;
+    parentPhone?: string | null;
+    address?: string | null;
+    gender?: 'male' | 'female' | 'other' | null;
+  }) => {
     const updateData: any = {};
     if (updates.name !== undefined) updateData.name = updates.name;
     if (updates.class !== undefined) updateData.class = updates.class;
     if (updates.divisionId !== undefined) updateData.division_id = updates.divisionId;
     if (updates.email !== undefined) updateData.email = updates.email;
+    if (updates.phone !== undefined) updateData.phone = updates.phone;
+    if (updates.rollNo !== undefined) updateData.roll_no = updates.rollNo;
+    if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
+    if (updates.parentName !== undefined) updateData.parent_name = updates.parentName;
+    if (updates.parentPhone !== undefined) updateData.parent_phone = updates.parentPhone;
+    if (updates.address !== undefined) updateData.address = updates.address;
+    if (updates.gender !== undefined) updateData.gender = updates.gender;
 
     const { error } = await supabase.from('students').update(updateData).eq('id', studentId);
     if (error) {
