@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 import { useTermExamData } from '@/hooks/useTermExamData';
@@ -49,12 +49,18 @@ export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState('All');
   const [divisionFilter, setDivisionFilter] = useState('All');
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
+
+  // Get the selected student from the current students list (so it stays updated)
+  const selectedStudent = useMemo(() => {
+    if (!selectedStudentId) return null;
+    return students.find(s => s.id === selectedStudentId) || null;
+  }, [selectedStudentId, students]);
 
   // Fetch full attendance history for selected student (no 30-day limit)
   const { data: selectedStudentAttendance = [] } = useStudentAttendanceQuery(
     tuitionId, 
-    selectedStudent?.id || null
+    selectedStudentId
   );
 
   // Get divisions for selected class
@@ -221,7 +227,7 @@ export default function StudentsPage() {
                 <div
                   key={student.id}
                   className="flex items-center gap-3 p-3 rounded-lg bg-secondary/30 hover:bg-secondary/50 cursor-pointer transition-all border border-transparent hover:border-primary/30"
-                  onClick={() => setSelectedStudent(student)}
+                  onClick={() => setSelectedStudentId(student.id)}
                 >
                   <Avatar className="h-10 w-10 border-2 border-primary/30">
                     <AvatarImage src={student.avatar} alt={student.name} />
@@ -277,12 +283,12 @@ export default function StudentsPage() {
           termExamSubjects={termExamSubjects}
           termExamResults={termExamResults.filter(r => r.studentId === selectedStudent.id)}
           open={!!selectedStudent}
-          onOpenChange={(open) => !open && setSelectedStudent(null)}
+          onOpenChange={(open) => !open && setSelectedStudentId(null)}
           onRemoveStudent={removeStudent}
           onUpdateStudent={updateStudent}
           onStudentDataUpdated={() => {
             // Refresh student data after portal access is enabled
-            setSelectedStudent(null);
+            setSelectedStudentId(null);
           }}
         />
       )}
