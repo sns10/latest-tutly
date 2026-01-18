@@ -177,32 +177,10 @@ export function BirthdayCardGenerator({
                 </h1>
               </div>
 
-              {/* Photo placeholder */}
-              <div className="flex-1 flex items-center justify-center py-4">
-                <div className="relative">
-                  <div className="w-36 h-36 rounded-full bg-white/20 backdrop-blur border-4 border-white/50 flex items-center justify-center overflow-hidden shadow-xl">
-                    {student.avatar ? (
-                      <img 
-                        src={student.avatar} 
-                        alt={student.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="text-center p-2">
-                        <ImageIcon className="h-10 w-10 mx-auto mb-1 text-white/70" />
-                        <p className="text-xs text-white/70">Place Photo Here</p>
-                      </div>
-                    )}
-                  </div>
-                  {/* Decorative ring */}
-                  <div className="absolute -inset-2 rounded-full border-2 border-dashed border-yellow-300/50 animate-spin" style={{ animationDuration: '20s' }} />
-                </div>
-              </div>
-
-              {/* Student Info */}
-              <div className="space-y-3 w-full">
-                <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 space-y-1">
-                  <h2 className="text-xl font-bold drop-shadow">
+              {/* Student Name - Large and Centered */}
+              <div className="flex-1 flex items-center justify-center py-6">
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 space-y-2">
+                  <h2 className="text-3xl font-bold drop-shadow-lg tracking-wide">
                     {student.name}
                   </h2>
                   <p className="text-sm text-white/90">
@@ -268,7 +246,7 @@ export function BirthdayCardGenerator({
           </div>
 
           <p className="text-xs text-center text-muted-foreground">
-            Tip: If student has no photo, you can print the card and paste a physical photo in the placeholder area.
+            Tip: Print or download the card to share with the student.
           </p>
         </div>
       </DialogContent>

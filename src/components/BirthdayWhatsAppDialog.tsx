@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -25,8 +25,9 @@ export function BirthdayWhatsAppDialog({
   tuitionName,
   onClose,
 }: BirthdayWhatsAppDialogProps) {
-  const defaultMessage = student
-    ? `Dear Parent/Guardian,
+  const getDefaultMessage = () => {
+    if (!student) return '';
+    return `Dear Parent/Guardian,
 
 🎂 *Happy Birthday ${student.name}!* 🎉
 
@@ -37,11 +38,18 @@ ${student.age ? `Turning ${student.age} years old today is a special milestone!`
 On behalf of *${tuitionName}*, we wish ${student.name} a fantastic year ahead filled with success, good health, and amazing achievements!
 
 Best wishes,
-${tuitionName} 🎈`
-    : '';
+${tuitionName} 🎈`;
+  };
 
-  const [message, setMessage] = useState(defaultMessage);
+  const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
+
+  // Update message when student changes
+  useEffect(() => {
+    if (student) {
+      setMessage(getDefaultMessage());
+    }
+  }, [student, tuitionName]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message);
