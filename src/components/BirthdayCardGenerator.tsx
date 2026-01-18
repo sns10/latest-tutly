@@ -166,48 +166,48 @@ export function BirthdayCardGenerator({
             </div>
 
             {/* Card Content */}
-            <div className="relative z-10 h-full flex flex-col items-center justify-between text-white text-center">
+            <div className="relative z-10 h-full flex flex-col items-center justify-between text-white text-center px-4">
               {/* Header */}
-              <div className="space-y-2">
-                <div className="flex justify-center">
-                  <Cake className="h-10 w-10 text-yellow-300" />
-                </div>
-                <h1 className="text-2xl font-bold tracking-tight drop-shadow-lg">
+              <div className="space-y-1 pt-2">
+                <Cake className="h-12 w-12 text-yellow-300 mx-auto" />
+                <h1 className="text-3xl font-bold tracking-tight drop-shadow-lg">
                   Happy Birthday!
                 </h1>
               </div>
 
               {/* Student Name - Large and Centered */}
-              <div className="flex-1 flex items-center justify-center py-6">
-                <div className="bg-white/20 backdrop-blur-sm rounded-2xl p-6 space-y-2">
-                  <h2 className="text-3xl font-bold drop-shadow-lg tracking-wide">
+              <div className="flex-1 flex flex-col items-center justify-center w-full">
+                <div className="bg-white/20 backdrop-blur-sm rounded-2xl px-8 py-6 text-center">
+                  <h2 className="text-4xl font-bold drop-shadow-lg tracking-wide mb-2">
                     {student.name}
                   </h2>
-                  <p className="text-sm text-white/90">
+                  <p className="text-base text-white/90 mb-3">
                     Class {student.class}
                   </p>
                   {student.age && (
-                    <p className="text-lg font-semibold text-yellow-200">
+                    <p className="text-xl font-semibold text-yellow-200">
                       🎈 Turning {student.age} 🎈
                     </p>
                   )}
                 </div>
+              </div>
 
-                {/* Wishes */}
-                <p className="text-sm italic text-white/90 px-2">
+              {/* Wishes */}
+              <div className="space-y-4 pb-2">
+                <p className="text-sm italic text-white/90 px-4 leading-relaxed">
                   "May this special day bring you endless joy, happiness, and wonderful memories!"
                 </p>
 
                 {/* Tuition Branding */}
-                <div className="flex items-center justify-center gap-2 pt-2">
+                <div className="flex items-center justify-center gap-2">
                   {tuitionLogo && (
                     <img 
                       src={tuitionLogo} 
                       alt={tuitionName}
-                      className="h-6 w-6 rounded object-contain bg-white/20"
+                      className="h-8 w-8 rounded object-contain bg-white/20 p-1"
                     />
                   )}
-                  <p className="text-xs font-medium text-white/80">
+                  <p className="text-sm font-medium text-white/90">
                     With love from {tuitionName}
                   </p>
                 </div>
