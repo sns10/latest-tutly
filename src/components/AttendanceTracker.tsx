@@ -12,7 +12,8 @@ import { AttendanceStats } from './attendance/AttendanceStats';
 import { VirtualizedStudentList } from './attendance/VirtualizedStudentList';
 import { ReportExporter } from './ReportExporter';
 import { WhatsAppMessageDialog } from './attendance/WhatsAppMessageDialog';
-import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp, MessageCircle } from 'lucide-react';
+import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp, MessageCircle, Copy } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 
 interface AttendanceTrackerProps {
@@ -282,6 +283,63 @@ export function AttendanceTracker({
     });
   }, [filteredStudentsBase, getAttendanceForStudent]);
 
+  // Detect previous attendance sessions for the same class/date but different subject/faculty
+  const previousAttendanceSessions = useMemo(() => {
+    if (!selectedClass || !selectedDateStr) return [];
+    
+    // Get student IDs in the selected class (and optionally division)
+    const classStudentIds = students
+      .filter(s => s.class === selectedClass)
+      .filter(s => !selectedDivision || s.divisionId === selectedDivision)
+      .map(s => s.id);
+    
+    if (classStudentIds.length === 0) return [];
+    
+    // Find distinct attendance sessions for this date, excluding current subject/faculty selection
+    const sessionsMap = new Map<string, {
+      subjectId: string | null;
+      facultyId: string | null;
+      subjectName: string;
+      facultyName: string;
+      markedCount: number;
+    }>();
+    
+    attendance.forEach(a => {
+      if (a.date !== selectedDateStr) return;
+      if (!classStudentIds.includes(a.studentId)) return;
+      
+      // Skip current selection (only if both subject AND faculty match current)
+      const isSameSession = a.subjectId === (selectedSubject || null) && 
+                            a.facultyId === (selectedFaculty || null);
+      if (isSameSession) return;
+      
+      // Create unique key for this session (subject + faculty combination)
+      const key = `${a.subjectId || 'null'}-${a.facultyId || 'null'}`;
+      
+      if (!sessionsMap.has(key)) {
+        const subjectName = a.subjectId 
+          ? subjects.find(s => s.id === a.subjectId)?.name || 'Unknown Subject'
+          : 'General';
+        const facultyName = a.facultyId
+          ? faculty.find(f => f.id === a.facultyId)?.name || 'Unknown Faculty'
+          : 'General';
+        
+        sessionsMap.set(key, {
+          subjectId: a.subjectId || null,
+          facultyId: a.facultyId || null,
+          subjectName,
+          facultyName,
+          markedCount: 0,
+        });
+      }
+      
+      const session = sessionsMap.get(key)!;
+      session.markedCount++;
+    });
+    
+    return Array.from(sessionsMap.values());
+  }, [attendance, students, selectedClass, selectedDivision, selectedDateStr, selectedSubject, selectedFaculty, subjects, faculty]);
+
   const handleMarkAttendance = useCallback((studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
     onMarkAttendance(studentId, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
@@ -323,6 +381,66 @@ export function AttendanceTracker({
       toast.success(`${studentsToMark.length} students marked as ${status}`);
     }
   }, [filteredStudentsBase, getAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
+
+  // Copy attendance from a previous class session
+  const handleCopyFromPreviousClass = useCallback((sourceSubjectId: string | null, sourceFacultyId: string | null) => {
+    // Get students who don't have attendance in current session but do have it in source session
+    const studentsToCopy = filteredStudentsBase.filter(student => {
+      // Skip if already has attendance in current session
+      const existingAttendance = getAttendanceForStudent(student.id);
+      if (existingAttendance) return false;
+      
+      // Check if student has attendance in source session
+      const sourceAttendance = attendance.find(a => 
+        a.studentId === student.id && 
+        a.date === selectedDateStr &&
+        a.subjectId === sourceSubjectId &&
+        a.facultyId === sourceFacultyId
+      );
+      return !!sourceAttendance;
+    });
+    
+    if (studentsToCopy.length === 0) {
+      toast.info('No students to copy - all already have attendance marked');
+      return;
+    }
+
+    // Build records with copied statuses
+    const records = studentsToCopy.map(student => {
+      const sourceAttendance = attendance.find(a => 
+        a.studentId === student.id && 
+        a.date === selectedDateStr &&
+        a.subjectId === sourceSubjectId &&
+        a.facultyId === sourceFacultyId
+      )!;
+      
+      return {
+        studentId: student.id,
+        date: selectedDateStr,
+        status: sourceAttendance.status as 'present' | 'absent' | 'late' | 'excused',
+        notes: sourceAttendance.notes,
+        subjectId: selectedSubject || undefined,
+        facultyId: selectedFaculty || undefined,
+      };
+    });
+
+    // Use bulk handler if available
+    if (onBulkMarkAttendance) {
+      onBulkMarkAttendance(records);
+    } else {
+      // Fallback to individual calls
+      records.forEach(record => {
+        onMarkAttendance(record.studentId, record.date, record.status, record.notes, record.subjectId, record.facultyId);
+      });
+    }
+
+    // Get source session name for toast
+    const sourceSubjectName = sourceSubjectId 
+      ? subjects.find(s => s.id === sourceSubjectId)?.name || 'Previous Class'
+      : 'Previous Class';
+    
+    toast.success(`Copied attendance from ${sourceSubjectName} for ${records.length} students`);
+  }, [filteredStudentsBase, getAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance, onMarkAttendance, subjects]);
 
   const handleSwitchToManual = () => {
     setIsManualMode(true);
@@ -581,6 +699,56 @@ export function AttendanceTracker({
             >
               Mark All Present ({filteredStudentsBase.length})
             </Button>
+
+            {/* Copy from Previous Class - Show when previous sessions exist */}
+            {previousAttendanceSessions.length > 0 && selectedClass && (
+              <>
+                <div className="flex items-center gap-2 py-1">
+                  <div className="flex-1 border-t border-dashed border-slate-200" />
+                  <span className="text-xs text-muted-foreground">or</span>
+                  <div className="flex-1 border-t border-dashed border-slate-200" />
+                </div>
+
+                {previousAttendanceSessions.length === 1 ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleCopyFromPreviousClass(
+                      previousAttendanceSessions[0].subjectId,
+                      previousAttendanceSessions[0].facultyId
+                    )}
+                    className="w-full gap-2 h-9 text-sm"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy from {previousAttendanceSessions[0].subjectName} ({previousAttendanceSessions[0].markedCount} students)
+                  </Button>
+                ) : (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" className="w-full gap-2 h-9 text-sm">
+                        <Copy className="h-4 w-4" />
+                        Copy from Previous Class
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="center" className="w-64 bg-white">
+                      {previousAttendanceSessions.map((session, idx) => (
+                        <DropdownMenuItem 
+                          key={`${session.subjectId}-${session.facultyId}-${idx}`}
+                          onClick={() => handleCopyFromPreviousClass(session.subjectId, session.facultyId)}
+                          className="cursor-pointer"
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{session.subjectName}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {session.facultyName} • {session.markedCount} students
+                            </span>
+                          </div>
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
