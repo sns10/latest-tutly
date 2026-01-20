@@ -240,9 +240,11 @@ export function AttendanceTracker({
     return faculty.filter(f => f.subjects?.some(s => s.id === selectedSubject));
   }, [faculty, selectedSubject]);
 
-  // Calculate attendance statistics - must match exact subject/faculty context (use base to count all)
+  // Calculate attendance statistics - count UNIQUE students, not records
   const stats = useMemo(() => {
     const totalStudents = filteredStudentsBase.length;
+    
+    // Get attendance records for the selected date and filtered students
     const dateAttendance = attendance.filter(a => {
       if (a.date !== selectedDateStr) return false;
       if (!filteredStudentsBase.some(s => s.id === a.studentId)) return false;
@@ -258,12 +260,39 @@ export function AttendanceTracker({
       return subjectMatches && facultyMatches;
     });
     
+    // When no subject/faculty filter is selected, a student might have multiple 
+    // attendance records (one per subject). We need to count unique students per status.
+    // Priority: If a student has any 'present' record, count as present. 
+    // Otherwise, use the most recent or first record found.
+    const studentStatusMap = new Map<string, string>();
+    
+    dateAttendance.forEach(a => {
+      const currentStatus = studentStatusMap.get(a.studentId);
+      if (!currentStatus) {
+        // First record for this student
+        studentStatusMap.set(a.studentId, a.status);
+      } else if (a.status === 'present' && currentStatus !== 'present') {
+        // If student is marked present in any class, count as present
+        studentStatusMap.set(a.studentId, 'present');
+      }
+      // Otherwise keep the first status found
+    });
+    
+    // Count unique students by status
+    let present = 0, absent = 0, late = 0, excused = 0;
+    studentStatusMap.forEach((status) => {
+      if (status === 'present') present++;
+      else if (status === 'absent') absent++;
+      else if (status === 'late') late++;
+      else if (status === 'excused') excused++;
+    });
+    
     return {
       totalStudents,
-      present: dateAttendance.filter(a => a.status === 'present').length,
-      absent: dateAttendance.filter(a => a.status === 'absent').length,
-      late: dateAttendance.filter(a => a.status === 'late').length,
-      excused: dateAttendance.filter(a => a.status === 'excused').length,
+      present,
+      absent,
+      late,
+      excused,
     };
   }, [filteredStudentsBase, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
