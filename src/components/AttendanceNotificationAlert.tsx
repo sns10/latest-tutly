@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Bell, X, Clock, BookOpen, Users, User, Smartphone } from 'lucide-react';
+import { Bell, X, Clock, BookOpen, Users, User, Smartphone, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 interface PendingAttendanceClass {
   timetableId: string;
@@ -20,15 +26,26 @@ interface PendingAttendanceClass {
 interface AttendanceNotificationAlertProps {
   pendingClass: PendingAttendanceClass | null;
   onDismiss: () => void;
+  onIgnore?: () => void; // New prop for "Already Taken" action
 }
 
 export function AttendanceNotificationAlert({
   pendingClass,
   onDismiss,
+  onIgnore,
 }: AttendanceNotificationAlertProps) {
   const navigate = useNavigate();
   const { isSupported, isSubscribed, subscribe, isLoading: pushLoading } = usePushNotifications();
   const [showPushPrompt, setShowPushPrompt] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Show dialog when pendingClass is set
+  useEffect(() => {
+    if (pendingClass) {
+      setDialogOpen(true);
+    }
+  }, [pendingClass]);
+
   // Request notification permission and show browser notification
   useEffect(() => {
     if (!pendingClass) return;
@@ -40,7 +57,7 @@ export function AttendanceNotificationAlert({
       });
     }
 
-    // Show browser notification
+    // Show browser notification (desktop only - mobile uses dialog)
     if ('Notification' in window && Notification.permission === 'granted') {
       const formatTime = (timeStr: string) => {
         try {
@@ -64,7 +81,7 @@ export function AttendanceNotificationAlert({
       notification.onclick = () => {
         window.focus();
         navigate('/attendance');
-        onDismiss();
+        handleClose();
         notification.close();
       };
 
@@ -78,7 +95,7 @@ export function AttendanceNotificationAlert({
         notification.close();
       };
     }
-  }, [pendingClass, navigate, onDismiss]);
+  }, [pendingClass, navigate]);
 
   // Show push notification prompt after dismissing in-app alert a few times
   useEffect(() => {
@@ -96,15 +113,26 @@ export function AttendanceNotificationAlert({
     setShowPushPrompt(false);
   };
 
-  const handleDismiss = () => {
+  const handleClose = () => {
+    setDialogOpen(false);
     const dismissCount = parseInt(localStorage.getItem('attendanceAlertDismissCount') || '0');
     localStorage.setItem('attendanceAlertDismissCount', String(dismissCount + 1));
     onDismiss();
   };
 
+  const handleIgnore = () => {
+    setDialogOpen(false);
+    if (onIgnore) {
+      onIgnore();
+    } else {
+      onDismiss();
+    }
+  };
+
   if (!pendingClass) return null;
 
   const handleTakeAttendance = () => {
+    setDialogOpen(false);
     navigate('/attendance');
     onDismiss();
   };
@@ -122,81 +150,99 @@ export function AttendanceNotificationAlert({
   };
 
   return (
-    <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] w-full max-w-md px-4 animate-in slide-in-from-top-5 duration-300">
-      <Alert className="border-orange-500 bg-orange-50 shadow-2xl ring-2 ring-orange-300 animate-pulse">
-        <div className="flex items-start gap-3">
-          <div className="flex-shrink-0 mt-0.5">
-            <Bell className="h-5 w-5 text-orange-600 animate-bounce" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <AlertTitle className="text-orange-900 font-bold text-base mb-2 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Attendance Reminder
-            </AlertTitle>
-            <AlertDescription className="text-orange-800 space-y-2">
-              <p className="font-semibold">
-                Class ending in 10 minutes - Attendance not marked!
-              </p>
-              <div className="space-y-1 text-sm">
-                <div className="flex items-center gap-2">
-                  <Users className="h-3.5 w-3.5" />
-                  <span className="font-medium">Class: {pendingClass.className}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <BookOpen className="h-3.5 w-3.5" />
-                  <span className="font-medium">Subject: {pendingClass.subjectName}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <User className="h-3.5 w-3.5" />
-                  <span className="font-medium">Faculty: {pendingClass.facultyName}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span className="font-medium">Ends at: {formatTime(pendingClass.endTime)}</span>
-                </div>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <Button
-                  onClick={handleTakeAttendance}
-                  className="bg-orange-600 hover:bg-orange-700 text-white flex-1"
-                  size="sm"
-                >
-                  Take Attendance
-                </Button>
-                <Button
-                  onClick={handleDismiss}
-                  variant="outline"
-                  size="sm"
-                  className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-              
-              {/* Push notification prompt */}
-              {showPushPrompt && (
-                <div className="mt-3 p-2 bg-blue-50 rounded-md border border-blue-200">
-                  <p className="text-xs text-blue-800 mb-2">
-                    <Smartphone className="h-3 w-3 inline mr-1" />
-                    Get reminders even when the app is closed!
-                  </p>
-                  <Button
-                    onClick={handleEnablePush}
-                    size="sm"
-                    variant="outline"
-                    className="w-full text-xs border-blue-300 text-blue-700 hover:bg-blue-100"
-                    disabled={pushLoading}
-                  >
-                    <Bell className="h-3 w-3 mr-1" />
-                    {pushLoading ? 'Enabling...' : 'Enable Push Notifications'}
-                  </Button>
-                </div>
-              )}
-            </AlertDescription>
-          </div>
+    <Dialog open={dialogOpen} onOpenChange={(open) => {
+      if (!open) handleClose();
+    }}>
+      <DialogContent className="max-w-[90vw] sm:max-w-md mx-auto bg-orange-50 border-orange-400 p-0 overflow-hidden">
+        <div className="bg-orange-500 px-4 py-3 flex items-center gap-3">
+          <Bell className="h-6 w-6 text-white animate-bounce" />
+          <DialogHeader className="flex-1 space-y-0">
+            <DialogTitle className="text-white font-bold text-lg">
+              ⏰ Attendance Reminder
+            </DialogTitle>
+            <DialogDescription className="text-orange-100 text-sm">
+              Class ending soon - Please mark attendance!
+            </DialogDescription>
+          </DialogHeader>
         </div>
-      </Alert>
-    </div>
+
+        <div className="p-4 space-y-4">
+          {/* Class Details */}
+          <div className="bg-white rounded-lg p-3 space-y-2 border border-orange-200">
+            <div className="flex items-center gap-2 text-orange-900">
+              <Users className="h-4 w-4 text-orange-600" />
+              <span className="font-semibold">Class:</span>
+              <span>{pendingClass.className}</span>
+            </div>
+            <div className="flex items-center gap-2 text-orange-900">
+              <BookOpen className="h-4 w-4 text-orange-600" />
+              <span className="font-semibold">Subject:</span>
+              <span>{pendingClass.subjectName}</span>
+            </div>
+            <div className="flex items-center gap-2 text-orange-900">
+              <User className="h-4 w-4 text-orange-600" />
+              <span className="font-semibold">Faculty:</span>
+              <span>{pendingClass.facultyName}</span>
+            </div>
+            <div className="flex items-center gap-2 text-orange-900">
+              <Clock className="h-4 w-4 text-orange-600" />
+              <span className="font-semibold">Ends at:</span>
+              <span className="font-bold text-orange-700">{formatTime(pendingClass.endTime)}</span>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex flex-col gap-2">
+            <Button
+              onClick={handleTakeAttendance}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white h-12 text-base font-semibold"
+            >
+              <Bell className="h-5 w-5 mr-2" />
+              Take Attendance Now
+            </Button>
+            
+            <div className="flex gap-2">
+              <Button
+                onClick={handleIgnore}
+                variant="outline"
+                className="flex-1 border-green-500 text-green-700 hover:bg-green-50 h-10"
+              >
+                <CheckCircle className="h-4 w-4 mr-1" />
+                Already Taken
+              </Button>
+              <Button
+                onClick={handleClose}
+                variant="outline"
+                className="flex-1 border-orange-300 text-orange-700 hover:bg-orange-100 h-10"
+              >
+                <X className="h-4 w-4 mr-1" />
+                Dismiss
+              </Button>
+            </div>
+          </div>
+
+          {/* Push notification prompt */}
+          {showPushPrompt && (
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <p className="text-sm text-blue-800 mb-2 flex items-center gap-2">
+                <Smartphone className="h-4 w-4" />
+                Get reminders even when the app is closed!
+              </p>
+              <Button
+                onClick={handleEnablePush}
+                size="sm"
+                variant="outline"
+                className="w-full border-blue-300 text-blue-700 hover:bg-blue-100"
+                disabled={pushLoading}
+              >
+                <Bell className="h-4 w-4 mr-2" />
+                {pushLoading ? 'Enabling...' : 'Enable Push Notifications'}
+              </Button>
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

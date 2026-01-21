@@ -87,11 +87,15 @@ export function useAttendanceNotification(
       });
 
       // Check if attendance is marked for any of these classes
+      // Also check localStorage for classes user marked as "already taken"
+      const ignoredClasses: string[] = JSON.parse(localStorage.getItem('ignoredAttendanceClasses') || '[]');
+      
       for (const entry of ongoingClasses) {
         const entryId = `${entry.id}-${todayStr}`;
 
         // Skip if we've already notified for this class (using ref to avoid stale closure)
-        if (notifiedClassesRef.current.has(entryId)) {
+        // Also skip if user has marked this class as "already taken"
+        if (notifiedClassesRef.current.has(entryId) || ignoredClasses.includes(entryId)) {
           continue;
         }
 
@@ -195,9 +199,31 @@ export function useAttendanceNotification(
     }
   };
 
+  // Ignore notification - marks as "already taken" and stores in localStorage to prevent re-showing
+  const ignoreNotification = () => {
+    if (pendingClass) {
+      const entryId = `${pendingClass.timetableId}-${pendingClass.date}`;
+      
+      // Store in localStorage to persist across page refreshes
+      const ignoredClasses = JSON.parse(localStorage.getItem('ignoredAttendanceClasses') || '[]');
+      if (!ignoredClasses.includes(entryId)) {
+        ignoredClasses.push(entryId);
+        localStorage.setItem('ignoredAttendanceClasses', JSON.stringify(ignoredClasses));
+      }
+      
+      setNotifiedClasses(prev => {
+        const updated = new Set(prev).add(entryId);
+        notifiedClassesRef.current = updated;
+        return updated;
+      });
+      setPendingClass(null);
+    }
+  };
+
   return {
     pendingClass,
     dismissNotification,
+    ignoreNotification,
   };
 }
 

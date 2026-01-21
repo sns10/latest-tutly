@@ -104,7 +104,7 @@ const Index = () => {
   } = useSupabaseData();
 
   // Attendance notification system
-  const { pendingClass, dismissNotification } = useAttendanceNotification(
+  const { pendingClass, dismissNotification, ignoreNotification } = useAttendanceNotification(
     timetable || [],
     attendance,
     subjects,
@@ -139,6 +139,7 @@ const Index = () => {
       <AttendanceNotificationAlert
         pendingClass={pendingClass}
         onDismiss={dismissNotification}
+        onIgnore={ignoreNotification}
       />
       <Routes>
         <Route path="/" element={
