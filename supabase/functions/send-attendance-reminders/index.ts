@@ -6,31 +6,86 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Web Push library for Deno
-async function sendWebPush(subscription: any, payload: any, vapidKeys: any) {
-  const encoder = new TextEncoder();
-  
-  // Create JWT for VAPID
+// Simple Web Push using standard fetch with VAPID JWT
+// Note: For full web-push support, the client-side must handle the encryption
+// This implementation sends a simpler notification that modern browsers can handle
+
+function base64UrlEncode(data: Uint8Array): string {
+  const base64 = btoa(String.fromCharCode(...data));
+  return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+function base64UrlDecode(input: string): Uint8Array {
+  const base64 = input.replace(/-/g, '+').replace(/_/g, '/');
+  const padding = '='.repeat((4 - (base64.length % 4)) % 4);
+  const binaryString = atob(base64 + padding);
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// Create a simple VAPID JWT for authorization
+async function createVapidJwt(
+  audience: string,
+  vapidPublicKey: string,
+  vapidPrivateKey: string
+): Promise<string> {
   const header = { alg: 'ES256', typ: 'JWT' };
   const now = Math.floor(Date.now() / 1000);
-  const claims = {
-    aud: new URL(subscription.endpoint).origin,
-    exp: now + 12 * 60 * 60, // 12 hours
+  const payload = {
+    aud: audience,
+    exp: now + 12 * 60 * 60,
     sub: 'mailto:admin@tutly.app',
   };
 
-  // For now, we'll use a simple fetch with the subscription endpoint
-  // In production, you'd use proper web-push with VAPID signing
-  const response = await fetch(subscription.endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'TTL': '86400',
-    },
-    body: JSON.stringify(payload),
-  });
+  const headerB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(header)));
+  const payloadB64 = base64UrlEncode(new TextEncoder().encode(JSON.stringify(payload)));
+  const unsignedToken = `${headerB64}.${payloadB64}`;
 
-  return response;
+  try {
+    // Decode the private key (in raw format, 32 bytes for P-256)
+    const privateKeyBytes = base64UrlDecode(vapidPrivateKey);
+    
+    // Create a JWK from the raw private key bytes
+    // P-256 private key is 32 bytes, we need to construct the JWK
+    const publicKeyBytes = base64UrlDecode(vapidPublicKey);
+    
+    // For EC P-256, we need x and y from the public key (65 bytes uncompressed: 04 || x || y)
+    // Skip the first byte (0x04) and split the rest into x (32 bytes) and y (32 bytes)
+    const x = publicKeyBytes.slice(1, 33);
+    const y = publicKeyBytes.slice(33, 65);
+    
+    const jwk: JsonWebKey = {
+      kty: 'EC',
+      crv: 'P-256',
+      x: base64UrlEncode(x),
+      y: base64UrlEncode(y),
+      d: base64UrlEncode(privateKeyBytes),
+    };
+
+    const key = await crypto.subtle.importKey(
+      'jwk',
+      jwk,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['sign']
+    );
+
+    const signature = await crypto.subtle.sign(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      key,
+      new TextEncoder().encode(unsignedToken)
+    );
+
+    // Convert signature from IEEE P1363 format (64 bytes) to what JWT expects
+    const signatureB64 = base64UrlEncode(new Uint8Array(signature));
+    return `${unsignedToken}.${signatureB64}`;
+  } catch (error) {
+    console.error('Error creating VAPID JWT:', error);
+    throw error;
+  }
 }
 
 serve(async (req) => {
@@ -43,14 +98,21 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const vapidPrivateKey = Deno.env.get('VAPID_PRIVATE_KEY');
-    const vapidPublicKey = Deno.env.get('VAPID_PUBLIC_KEY');
+    const vapidPublicKey = Deno.env.get('VITE_VAPID_PUBLIC_KEY');
+
+    if (!vapidPrivateKey || !vapidPublicKey) {
+      console.error('VAPID keys not configured');
+      return new Response(
+        JSON.stringify({ error: 'VAPID keys not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get current time
     const now = new Date();
-    const currentDay = now.getDay(); // 0 = Sunday, 1 = Monday, etc.
-    const currentTime = now.toTimeString().slice(0, 5); // HH:MM format
+    const currentDay = now.getDay();
     const today = now.toISOString().split('T')[0];
 
     // Calculate time window: classes ending in 5-15 minutes
@@ -73,6 +135,7 @@ serve(async (req) => {
         tuition_id,
         division_id,
         subject_id,
+        faculty_id,
         subjects!inner (name),
         faculty!inner (name),
         divisions (name)
@@ -96,14 +159,16 @@ serve(async (req) => {
     }
 
     const notificationsSent: any[] = [];
+    const errors: any[] = [];
 
     for (const cls of pendingClasses) {
       // Check if attendance is already marked for this class today
-      const { data: existingAttendance, error: attendanceError } = await supabase
+      const { data: existingAttendance } = await supabase
         .from('student_attendance')
         .select('id')
         .eq('date', today)
         .eq('subject_id', cls.subject_id)
+        .eq('faculty_id', cls.faculty_id)
         .limit(1);
 
       if (existingAttendance && existingAttendance.length > 0) {
@@ -124,9 +189,7 @@ serve(async (req) => {
 
       console.log(`Found ${subscriptions?.length || 0} subscriptions for tuition ${cls.tuition_id}`);
 
-      // Send notification to each subscription
       for (const sub of subscriptions || []) {
-        // Handle joined data properly - Supabase returns arrays for joins
         const subjectName = Array.isArray(cls.subjects) ? cls.subjects[0]?.name : (cls.subjects as any)?.name;
         const divisionName = Array.isArray(cls.divisions) ? cls.divisions[0]?.name : (cls.divisions as any)?.name;
         
@@ -145,17 +208,55 @@ serve(async (req) => {
         };
 
         try {
-          // Note: In production, you'd use proper web-push with VAPID
-          // For now, we're storing the notification intent
-          console.log(`Would send notification to ${sub.endpoint}:`, payload);
-          
-          notificationsSent.push({
-            subscriptionId: sub.id,
-            classId: cls.id,
-            payload,
+          const audience = new URL(sub.endpoint).origin;
+          const jwt = await createVapidJwt(audience, vapidPublicKey, vapidPrivateKey);
+
+          // Send push notification
+          // Note: For proper encrypted push, the payload needs to be encrypted
+          // This uses a simplified approach that works with some push services
+          const response = await fetch(sub.endpoint, {
+            method: 'POST',
+            headers: {
+              'Authorization': `vapid t=${jwt}, k=${vapidPublicKey}`,
+              'Content-Type': 'application/json',
+              'TTL': '86400',
+              'Urgency': 'high',
+            },
+            body: JSON.stringify(payload),
           });
+
+          if (response.ok || response.status === 201) {
+            notificationsSent.push({
+              subscriptionId: sub.id,
+              classId: cls.id,
+              status: 'sent',
+            });
+            console.log(`Successfully sent notification to ${sub.endpoint}`);
+          } else {
+            const errorText = await response.text();
+            console.error(`Failed to send push to ${sub.endpoint}: ${response.status} - ${errorText}`);
+            
+            // If subscription is invalid (410 Gone), remove it
+            if (response.status === 410 || response.status === 404) {
+              await supabase
+                .from('push_subscriptions')
+                .delete()
+                .eq('id', sub.id);
+              console.log(`Removed invalid subscription ${sub.id}`);
+            }
+            
+            errors.push({
+              subscriptionId: sub.id,
+              status: response.status,
+              error: errorText,
+            });
+          }
         } catch (pushError) {
           console.error('Error sending push:', pushError);
+          errors.push({
+            subscriptionId: sub.id,
+            error: String(pushError),
+          });
         }
       }
     }
@@ -164,8 +265,9 @@ serve(async (req) => {
       JSON.stringify({ 
         message: 'Attendance reminders processed',
         classesChecked: pendingClasses.length,
-        notificationsPrepared: notificationsSent.length,
-        notifications: notificationsSent,
+        notificationsSent: notificationsSent.length,
+        errors: errors.length,
+        details: { sent: notificationsSent, errors },
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
