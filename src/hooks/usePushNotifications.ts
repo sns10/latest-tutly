@@ -71,7 +71,7 @@ export function usePushNotifications() {
           .select('id')
           .eq('user_id', user.id)
           .eq('endpoint', subscription.endpoint)
-          .single();
+          .maybeSingle();
 
         return !error && !!data;
       }

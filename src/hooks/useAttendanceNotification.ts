@@ -88,7 +88,13 @@ export function useAttendanceNotification(
 
       // Check if attendance is marked for any of these classes
       // Also check localStorage for classes user marked as "already taken"
-      const ignoredClasses: string[] = JSON.parse(localStorage.getItem('ignoredAttendanceClasses') || '[]');
+      let ignoredClasses: string[] = [];
+      try {
+        ignoredClasses = JSON.parse(localStorage.getItem('ignoredAttendanceClasses') || '[]');
+      } catch {
+        // Handle localStorage access issues (e.g., private browsing mode)
+        ignoredClasses = [];
+      }
       
       for (const entry of ongoingClasses) {
         const entryId = `${entry.id}-${todayStr}`;
@@ -205,10 +211,14 @@ export function useAttendanceNotification(
       const entryId = `${pendingClass.timetableId}-${pendingClass.date}`;
       
       // Store in localStorage to persist across page refreshes
-      const ignoredClasses = JSON.parse(localStorage.getItem('ignoredAttendanceClasses') || '[]');
-      if (!ignoredClasses.includes(entryId)) {
-        ignoredClasses.push(entryId);
-        localStorage.setItem('ignoredAttendanceClasses', JSON.stringify(ignoredClasses));
+      try {
+        const ignoredClasses = JSON.parse(localStorage.getItem('ignoredAttendanceClasses') || '[]');
+        if (!ignoredClasses.includes(entryId)) {
+          ignoredClasses.push(entryId);
+          localStorage.setItem('ignoredAttendanceClasses', JSON.stringify(ignoredClasses));
+        }
+      } catch {
+        // Handle localStorage access issues (e.g., private browsing mode)
       }
       
       setNotifiedClasses(prev => {
