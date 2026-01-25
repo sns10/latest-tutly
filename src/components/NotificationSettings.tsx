@@ -36,7 +36,22 @@ export function NotificationSettings() {
     }
   };
 
+  // Check if VAPID key is configured
+  const hasVapidKey = Boolean(import.meta.env.VITE_VAPID_PUBLIC_KEY);
+  
+  // Check if browser has push APIs
+  const hasBrowserSupport = typeof window !== 'undefined' &&
+    'serviceWorker' in navigator && 
+    'PushManager' in window && 
+    'Notification' in window;
+
   if (!isSupported) {
+    const reason = !hasVapidKey 
+      ? 'Push notifications are not configured for this app. Please contact support.'
+      : !hasBrowserSupport
+        ? 'Push notifications are not supported on this browser/device. Please use Chrome, Firefox, Edge, or Safari 16.4+ for push notification support.'
+        : 'Push notifications are not available.';
+
     return (
       <Card>
         <CardHeader>
@@ -52,8 +67,7 @@ export function NotificationSettings() {
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Push notifications are not supported on this browser/device. 
-              Please use Chrome, Firefox, Edge, or Safari 16.4+ for push notification support.
+              {reason}
             </AlertDescription>
           </Alert>
         </CardContent>

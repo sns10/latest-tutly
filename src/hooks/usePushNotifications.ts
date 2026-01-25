@@ -3,9 +3,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import { toast } from 'sonner';
 
-// VAPID public key - this should be generated and stored securely
-// For now, we'll use a placeholder that will be replaced with actual key
+// VAPID public key - this is a publishable key that identifies the application server
+// It must be set in .env as VITE_VAPID_PUBLIC_KEY
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+const HAS_VAPID_KEY = VAPID_PUBLIC_KEY.length > 0;
 
 interface PushSubscriptionState {
   isSupported: boolean;
@@ -46,13 +47,15 @@ export function usePushNotifications() {
   // Check if push notifications are supported
   const checkSupport = useCallback(() => {
     try {
-      const isSupported = 
+      // Check browser APIs
+      const hasApis = 
         typeof window !== 'undefined' &&
         'serviceWorker' in navigator && 
         'PushManager' in window && 
         'Notification' in window;
       
-      return isSupported;
+      // Also require VAPID key to be configured
+      return hasApis && HAS_VAPID_KEY;
     } catch {
       return false;
     }
