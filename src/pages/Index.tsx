@@ -17,6 +17,7 @@ import { BackupDashboard } from "@/components/BackupDashboard";
 import { AttendanceNotificationAlert } from "@/components/AttendanceNotificationAlert";
 import { SubscriptionExpiryAlert } from "@/components/SubscriptionExpiryAlert";
 import { BirthdayWishesBanner } from "@/components/BirthdayWishesBanner";
+import { NotificationSettings } from "@/components/NotificationSettings";
 import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -187,10 +188,11 @@ const Index = () => {
                   <SheetHeader>
                     <SheetTitle>Settings</SheetTitle>
                     <SheetDescription>
-                      Manage your tuition center settings and backups
+                      Manage your tuition center settings, notifications, and backups
                     </SheetDescription>
                   </SheetHeader>
-                  <div className="mt-6">
+                  <div className="mt-6 space-y-4">
+                    <NotificationSettings />
                     <BackupDashboard />
                   </div>
                 </SheetContent>
