@@ -50,51 +50,77 @@ export function AttendanceNotificationAlert({
   useEffect(() => {
     if (!pendingClass) return;
 
-    // Request permission if not already granted
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission().catch(() => {
-        // User denied permission, continue with in-app notification
-      });
-    }
+    const formatTimeLocal = (timeStr: string) => {
+      try {
+        const [hours, minutes] = timeStr.split(':');
+        const date = new Date();
+        date.setHours(parseInt(hours), parseInt(minutes));
+        return format(date, 'h:mm a');
+      } catch {
+        return timeStr;
+      }
+    };
 
-    // Show browser notification (desktop only - mobile uses dialog)
-    if ('Notification' in window && Notification.permission === 'granted') {
-      const formatTime = (timeStr: string) => {
-        try {
-          const [hours, minutes] = timeStr.split(':');
-          const date = new Date();
-          date.setHours(parseInt(hours), parseInt(minutes));
-          return format(date, 'h:mm a');
-        } catch {
-          return timeStr;
+    const showBrowserNotification = async () => {
+      // Never allow notification logic to crash the app.
+      try {
+        if (!('Notification' in window)) return;
+
+        // Request permission if not already granted
+        if (Notification.permission === 'default') {
+          try {
+            await Notification.requestPermission();
+          } catch {
+            // ignore
+          }
         }
-      };
 
-      const notification = new Notification('⏰ Attendance Reminder', {
-        body: `${pendingClass.className} - ${pendingClass.subjectName}\nEnds at: ${formatTime(pendingClass.endTime)}\nPlease mark attendance now!`,
-        icon: '/favicon.ico',
-        tag: `attendance-${pendingClass.timetableId}-${pendingClass.date}`,
-        requireInteraction: true,
-        badge: '/favicon.ico',
-      });
+        if (Notification.permission !== 'granted') return;
 
-      notification.onclick = () => {
-        window.focus();
-        navigate('/attendance');
-        handleClose();
-        notification.close();
-      };
+        const title = '⏰ Attendance Reminder';
+        const options: NotificationOptions = {
+          body: `${pendingClass.className} - ${pendingClass.subjectName}\nEnds at: ${formatTimeLocal(pendingClass.endTime)}\nPlease mark attendance now!`,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: `attendance-${pendingClass.timetableId}-${pendingClass.date}`,
+          requireInteraction: true,
+          data: { url: '/attendance' },
+        };
 
-      // Close notification after 5 minutes or when dismissed
-      const timer = setTimeout(() => {
-        notification.close();
-      }, 5 * 60 * 1000);
+        // ✅ Preferred: show via Service Worker registration
+        try {
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.getRegistration();
+            if (registration?.showNotification) {
+              await registration.showNotification(title, options);
+              return;
+            }
+          }
+        } catch {
+          // fall back below
+        }
 
-      return () => {
-        clearTimeout(timer);
-        notification.close();
-      };
-    }
+        // Fallback: constructor (some environments throw "Illegal constructor")
+        try {
+          const notification = new Notification(title, options);
+          notification.onclick = () => {
+            try {
+              window.focus();
+              navigate('/attendance');
+              handleClose();
+            } finally {
+              notification.close();
+            }
+          };
+        } catch (err) {
+          console.warn('Browser notification unavailable:', err);
+        }
+      } catch (err) {
+        console.warn('Notification failed:', err);
+      }
+    };
+
+    void showBrowserNotification();
   }, [pendingClass, navigate]);
 
   // Show push notification prompt after dismissing in-app alert a few times
