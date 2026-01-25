@@ -59,10 +59,22 @@ export class ErrorBoundary extends Component<Props, State> {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {process.env.NODE_ENV === 'development' && this.state.error && (
-                <div className="rounded-md bg-muted p-3 text-xs font-mono overflow-auto max-h-32">
-                  {this.state.error.message}
-                </div>
+              {this.state.error && (
+                <details className="rounded-md bg-muted p-3 text-xs">
+                  <summary className="cursor-pointer font-medium">
+                    Technical details
+                  </summary>
+                  <div className="mt-2 font-mono overflow-auto max-h-32">
+                    <div className="whitespace-pre-wrap break-words">
+                      {this.state.error.message || 'Unknown error'}
+                    </div>
+                    {import.meta.env.DEV && this.state.errorInfo?.componentStack && (
+                      <pre className="mt-2 whitespace-pre-wrap break-words opacity-80">
+                        {this.state.errorInfo.componentStack}
+                      </pre>
+                    )}
+                  </div>
+                </details>
               )}
               <div className="flex flex-col sm:flex-row gap-2">
                 <Button onClick={this.handleRetry} className="flex-1">
