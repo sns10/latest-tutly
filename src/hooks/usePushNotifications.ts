@@ -15,18 +15,23 @@ interface PushSubscriptionState {
 }
 
 function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/-/g, '+')
-    .replace(/_/g, '/');
+  try {
+    const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, '+')
+      .replace(/_/g, '/');
 
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
 
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray.buffer;
+  } catch (error) {
+    console.error('Error converting base64:', error);
+    return new ArrayBuffer(0);
   }
-  return outputArray.buffer;
 }
 
 export function usePushNotifications() {
@@ -40,18 +45,27 @@ export function usePushNotifications() {
 
   // Check if push notifications are supported
   const checkSupport = useCallback(() => {
-    const isSupported = 
-      'serviceWorker' in navigator && 
-      'PushManager' in window && 
-      'Notification' in window;
-    
-    return isSupported;
+    try {
+      const isSupported = 
+        typeof window !== 'undefined' &&
+        'serviceWorker' in navigator && 
+        'PushManager' in window && 
+        'Notification' in window;
+      
+      return isSupported;
+    } catch {
+      return false;
+    }
   }, []);
 
   // Get current permission status
   const getPermission = useCallback((): NotificationPermission | null => {
-    if ('Notification' in window) {
-      return Notification.permission;
+    try {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        return Notification.permission;
+      }
+    } catch (error) {
+      console.error('Error getting permission:', error);
     }
     return null;
   }, []);
@@ -120,9 +134,16 @@ export function usePushNotifications() {
       }
 
       // Subscribe to push
+      const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      if (applicationServerKey.byteLength === 0) {
+        toast.error('Invalid VAPID key configuration');
+        setState(prev => ({ ...prev, isLoading: false }));
+        return false;
+      }
+
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey,
       });
 
       const subscriptionJson = subscription.toJSON();
@@ -132,7 +153,7 @@ export function usePushNotifications() {
         .from('profiles')
         .select('tuition_id')
         .eq('id', user.id)
-        .single();
+        .maybeSingle();
 
       // Save subscription to database
       const { error } = await supabase
@@ -198,19 +219,65 @@ export function usePushNotifications() {
     }
   }, [user]);
 
+  // Send a test notification
+  const sendTestNotification = useCallback(async (): Promise<boolean> => {
+    if (!user) {
+      toast.error('Please log in first');
+      return false;
+    }
+
+    if (!state.isSubscribed) {
+      toast.error('Please enable push notifications first');
+      return false;
+    }
+
+    try {
+      // Try browser notification first for immediate feedback
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const registration = await navigator.serviceWorker.ready;
+        await registration.showNotification('Test Notification', {
+          body: 'Push notifications are working! You will receive attendance reminders.',
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: 'test-notification',
+          requireInteraction: false,
+        });
+        toast.success('Test notification sent! Check your notifications.');
+        return true;
+      } else {
+        toast.error('Notification permission not granted');
+        return false;
+      }
+    } catch (error) {
+      console.error('Error sending test notification:', error);
+      toast.error('Failed to send test notification');
+      return false;
+    }
+  }, [user, state.isSubscribed]);
+
   // Initialize state
   useEffect(() => {
     const init = async () => {
-      const isSupported = checkSupport();
-      const permission = getPermission();
-      const isSubscribed = await checkSubscription();
+      try {
+        const isSupported = checkSupport();
+        const permission = getPermission();
+        const isSubscribed = await checkSubscription();
 
-      setState({
-        isSupported,
-        isSubscribed,
-        isLoading: false,
-        permission,
-      });
+        setState({
+          isSupported,
+          isSubscribed,
+          isLoading: false,
+          permission,
+        });
+      } catch (error) {
+        console.error('Error initializing push notifications:', error);
+        setState({
+          isSupported: false,
+          isSubscribed: false,
+          isLoading: false,
+          permission: null,
+        });
+      }
     };
 
     if (user) {
@@ -229,5 +296,6 @@ export function usePushNotifications() {
     ...state,
     subscribe,
     unsubscribe,
+    sendTestNotification,
   };
 }

@@ -1,4 +1,5 @@
-import { Bell, BellOff, Smartphone, AlertCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, BellOff, Smartphone, AlertCircle, Send, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -7,13 +8,15 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 
 export function NotificationSettings() {
+  const [isSendingTest, setIsSendingTest] = useState(false);
   const { 
     isSupported, 
     isSubscribed, 
     isLoading, 
     permission,
     subscribe, 
-    unsubscribe 
+    unsubscribe,
+    sendTestNotification,
   } = usePushNotifications();
 
   const handleToggle = async () => {
@@ -21,6 +24,15 @@ export function NotificationSettings() {
       await unsubscribe();
     } else {
       await subscribe();
+    }
+  };
+
+  const handleTestNotification = async () => {
+    setIsSendingTest(true);
+    try {
+      await sendTestNotification();
+    } finally {
+      setIsSendingTest(false);
     }
   };
 
@@ -88,10 +100,25 @@ export function NotificationSettings() {
         )}
 
         {isSubscribed && (
-          <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-            <Smartphone className="h-4 w-4" />
-            <span>You will receive push notifications for attendance reminders</span>
-          </div>
+          <>
+            <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+              <Smartphone className="h-4 w-4" />
+              <span>You will receive push notifications for attendance reminders</span>
+            </div>
+            <Button
+              onClick={handleTestNotification}
+              disabled={isSendingTest}
+              variant="outline"
+              className="w-full"
+            >
+              {isSendingTest ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4 mr-2" />
+              )}
+              {isSendingTest ? 'Sending...' : 'Send Test Notification'}
+            </Button>
+          </>
         )}
 
         {!isSubscribed && permission !== 'denied' && (
