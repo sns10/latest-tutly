@@ -28,16 +28,24 @@ export function useNetworkStatus(): NetworkStatus {
   });
 
   const getConnectionInfo = useCallback(() => {
-    if (typeof navigator !== 'undefined' && navigator.connection) {
-      return {
-        connectionType: navigator.connection.type || null,
-        effectiveType: navigator.connection.effectiveType || null,
-      };
+    try {
+      const connection = typeof navigator !== 'undefined' ? navigator.connection : undefined;
+      if (connection) {
+        return {
+          connectionType: connection.type || null,
+          effectiveType: connection.effectiveType || null,
+        };
+      }
+    } catch {
+      // Some browsers expose a partial/buggy navigator.connection implementation.
     }
     return { connectionType: null, effectiveType: null };
   }, []);
 
   useEffect(() => {
+    // Defensive: some mobile browsers can throw when touching Network Information API.
+    const connection = typeof navigator !== 'undefined' ? navigator.connection : undefined;
+
     const handleOnline = () => {
       setStatus(prev => {
         if (prev.wasOffline) {
@@ -76,9 +84,13 @@ export function useNetworkStatus(): NetworkStatus {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Listen for connection changes
-    if (navigator.connection) {
-      navigator.connection.addEventListener('change', handleConnectionChange);
+    // Listen for connection changes (only if the API is fully supported)
+    if (connection && typeof connection.addEventListener === 'function') {
+      try {
+        connection.addEventListener('change', handleConnectionChange);
+      } catch {
+        // ignore
+      }
     }
 
     // Set initial connection info
@@ -90,8 +102,12 @@ export function useNetworkStatus(): NetworkStatus {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
-      if (navigator.connection) {
-        navigator.connection.removeEventListener('change', handleConnectionChange);
+      if (connection && typeof connection.removeEventListener === 'function') {
+        try {
+          connection.removeEventListener('change', handleConnectionChange);
+        } catch {
+          // ignore
+        }
       }
     };
   }, [getConnectionInfo]);
