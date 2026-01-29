@@ -1,9 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Bell, X, Clock, BookOpen, Users, User, Smartphone, CheckCircle } from 'lucide-react';
+import { Bell, X, Clock, BookOpen, Users, User, CheckCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
-import { usePushNotifications } from '@/hooks/usePushNotifications';
 import {
   Dialog,
   DialogContent,
@@ -35,8 +34,6 @@ export function AttendanceNotificationAlert({
   onIgnore,
 }: AttendanceNotificationAlertProps) {
   const navigate = useNavigate();
-  const { isSupported, isSubscribed, subscribe, isLoading: pushLoading } = usePushNotifications();
-  const [showPushPrompt, setShowPushPrompt] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Show dialog when pendingClass is set
@@ -45,99 +42,6 @@ export function AttendanceNotificationAlert({
       setDialogOpen(true);
     }
   }, [pendingClass]);
-
-  // Request notification permission and show browser notification
-  useEffect(() => {
-    if (!pendingClass) return;
-
-    const formatTimeLocal = (timeStr: string) => {
-      try {
-        const [hours, minutes] = timeStr.split(':');
-        const date = new Date();
-        date.setHours(parseInt(hours), parseInt(minutes));
-        return format(date, 'h:mm a');
-      } catch {
-        return timeStr;
-      }
-    };
-
-    const showBrowserNotification = async () => {
-      // Never allow notification logic to crash the app.
-      try {
-        if (!('Notification' in window)) return;
-
-        // Request permission if not already granted
-        if (Notification.permission === 'default') {
-          try {
-            await Notification.requestPermission();
-          } catch {
-            // ignore
-          }
-        }
-
-        if (Notification.permission !== 'granted') return;
-
-        const title = '⏰ Attendance Reminder';
-        const options: NotificationOptions = {
-          body: `${pendingClass.className} - ${pendingClass.subjectName}\nEnds at: ${formatTimeLocal(pendingClass.endTime)}\nPlease mark attendance now!`,
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
-          tag: `attendance-${pendingClass.timetableId}-${pendingClass.date}`,
-          requireInteraction: true,
-          data: { url: '/attendance' },
-        };
-
-        // ✅ Preferred: show via Service Worker registration
-        try {
-          if ('serviceWorker' in navigator) {
-            const registration = await navigator.serviceWorker.getRegistration();
-            if (registration?.showNotification) {
-              await registration.showNotification(title, options);
-              return;
-            }
-          }
-        } catch {
-          // fall back below
-        }
-
-        // Fallback: constructor (some environments throw "Illegal constructor")
-        try {
-          const notification = new Notification(title, options);
-          notification.onclick = () => {
-            try {
-              window.focus();
-              navigate('/attendance');
-              handleClose();
-            } finally {
-              notification.close();
-            }
-          };
-        } catch (err) {
-          console.warn('Browser notification unavailable:', err);
-        }
-      } catch (err) {
-        console.warn('Notification failed:', err);
-      }
-    };
-
-    void showBrowserNotification();
-  }, [pendingClass, navigate]);
-
-  // Show push notification prompt after dismissing in-app alert a few times
-  useEffect(() => {
-    if (pendingClass && isSupported && !isSubscribed) {
-      // Check if user has dismissed the in-app alert multiple times
-      const dismissCount = parseInt(localStorage.getItem('attendanceAlertDismissCount') || '0');
-      if (dismissCount >= 2) {
-        setShowPushPrompt(true);
-      }
-    }
-  }, [pendingClass, isSupported, isSubscribed]);
-
-  const handleEnablePush = async () => {
-    await subscribe();
-    setShowPushPrompt(false);
-  };
 
   const handleClose = () => {
     setDialogOpen(false);
@@ -179,7 +83,7 @@ export function AttendanceNotificationAlert({
     <Dialog open={dialogOpen} onOpenChange={(open) => {
       if (!open) handleClose();
     }}>
-      <DialogContent className="max-w-[90vw] sm:max-w-md mx-auto bg-orange-50 border-orange-400 p-0 overflow-hidden">
+      <DialogContent className="max-w-[90vw] sm:max-w-md mx-auto bg-orange-50 border-orange-400 p-0 max-h-[90vh] overflow-y-auto">
         <div className="bg-orange-500 px-4 py-3 flex items-center gap-3">
           <Bell className="h-6 w-6 text-white animate-bounce" />
           <DialogHeader className="flex-1 space-y-0">
@@ -246,26 +150,6 @@ export function AttendanceNotificationAlert({
               </Button>
             </div>
           </div>
-
-          {/* Push notification prompt */}
-          {showPushPrompt && (
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800 mb-2 flex items-center gap-2">
-                <Smartphone className="h-4 w-4" />
-                Get reminders even when the app is closed!
-              </p>
-              <Button
-                onClick={handleEnablePush}
-                size="sm"
-                variant="outline"
-                className="w-full border-blue-300 text-blue-700 hover:bg-blue-100"
-                disabled={pushLoading}
-              >
-                <Bell className="h-4 w-4 mr-2" />
-                {pushLoading ? 'Enabling...' : 'Enable Push Notifications'}
-              </Button>
-            </div>
-          )}
         </div>
       </DialogContent>
     </Dialog>

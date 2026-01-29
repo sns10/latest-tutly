@@ -14,6 +14,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function clearStoredAuthSession() {
+  try {
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
+    if (!projectId) return;
+    localStorage.removeItem(`sb-${projectId}-auth-token`);
+  } catch {
+    // ignore
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
@@ -23,9 +33,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        // Some environments emit TOKEN_REFRESH_FAILED (string union differs by lib version)
+        if ((event as unknown as string) === 'TOKEN_REFRESH_FAILED') {
+          clearStoredAuthSession();
+          setSession(null);
+          setUser(null);
+          setLoading(false);
+          return;
+        }
+
         // Handle token refresh errors by clearing the session
         if (event === 'TOKEN_REFRESHED' && !session) {
           console.log('Token refresh failed, clearing session');
+          clearStoredAuthSession();
           setSession(null);
           setUser(null);
           setLoading(false);
@@ -44,6 +64,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.error('Session error:', error.message);
         // If refresh token is invalid, clear the session gracefully
         if (error.message?.includes('Refresh Token') || error.code === 'refresh_token_not_found') {
+          clearStoredAuthSession();
           setSession(null);
           setUser(null);
           // Clear any stale tokens from storage
@@ -89,6 +110,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Clear local state first to ensure UI updates even if API fails
     setSession(null);
     setUser(null);
+    clearStoredAuthSession();
     // Then try to sign out from Supabase (ignore errors for stale sessions)
     try {
       await supabase.auth.signOut();
