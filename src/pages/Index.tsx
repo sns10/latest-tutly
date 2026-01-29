@@ -8,6 +8,7 @@ import { useUserTuition } from "@/hooks/useUserTuition";
 import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
+import { DailySummaryCard } from "@/components/DailySummaryCard";
 import { QuickActions } from "@/components/QuickActions";
 import { RecentTests } from "@/components/RecentTests";
 import { FeatureGate } from "@/components/FeatureGate";
@@ -18,6 +19,8 @@ import { AttendanceNotificationAlert } from "@/components/AttendanceNotification
 import { SubscriptionExpiryAlert } from "@/components/SubscriptionExpiryAlert";
 import { BirthdayWishesBanner } from "@/components/BirthdayWishesBanner";
 import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
+import { useDailySummary } from "@/hooks/useDailySummary";
+import { useTodayPaymentsQuery } from "@/hooks/queries/useFeesQuery";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TuitionBranding } from "@/components/TuitionBranding";
@@ -111,6 +114,21 @@ const Index = () => {
     faculty
   );
 
+  // Today's payments query
+  const { data: todayPayments = 0 } = useTodayPaymentsQuery(tuitionId);
+
+  // Daily summary computation
+  const dailySummary = useDailySummary({
+    students,
+    weeklyTests,
+    attendance,
+    fees,
+    timetable: timetable || [],
+    subjects,
+    faculty,
+    todayPayments,
+  });
+
   const handleSharePortalLink = () => {
     const portalUrl = `${window.location.origin}/student`;
     navigator.clipboard.writeText(portalUrl);
@@ -201,6 +219,12 @@ const Index = () => {
               </Button>
             </div>
           </div>
+          
+          {/* Daily Summary Dashboard */}
+          <DailySummaryCard 
+            summary={dailySummary} 
+            isFeatureEnabled={isFeatureEnabled} 
+          />
           
           <ManagementCards 
             testsCount={weeklyTests.length}
