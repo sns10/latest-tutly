@@ -1,34 +1,31 @@
 
-# Quick Daily Summary Dashboard
+# Proactive Student Alerts System
 
 ## Overview
-Create a comprehensive "Today at a Glance" dashboard card that gives tuition admins an immediate snapshot of what's happening today and what needs attention, placed prominently at the top of the Index page.
+Build an automated alerts system that continuously monitors student data and surfaces actionable warnings when students show concerning patterns -- specifically 3+ consecutive absences or a 20%+ drop in test scores. These alerts will appear on the admin dashboard and link directly to the student's details for follow-up.
 
 ## What You'll See
 
-The dashboard will show 4 key sections in a compact, mobile-friendly card:
+### Alerts Banner on Dashboard
+A new "Student Alerts" section will appear on the Index page (below the Daily Summary card) showing:
+- A collapsible card with a count badge (e.g., "3 alerts need attention")
+- Each alert shows the student name, class, alert type, and severity
+- Color-coded by severity: red for critical (5+ absences or 30%+ drop), amber for warning
+- Click any alert to open the student details dialog
+- Dismiss individual alerts (remembered for the session)
 
-### 1. Today's Classes Status
-- Total classes scheduled for today
-- Classes where attendance is marked vs pending
-- Visual progress indicator
-- Quick link to Attendance page
+### Alert Types
 
-### 2. Attendance Snapshot
-- Students marked present today (across all classes)
-- Absent count with alert styling if high
-- Overall attendance rate for the day
+**Consecutive Absence Alert**
+- Triggers when a student has 3 or more consecutive absent days (based on days they had scheduled classes)
+- Shows: "Ravi Kumar (10th) - Absent for 5 consecutive days"
+- Red severity for 5+ days, amber for 3-4 days
 
-### 3. Fee Collection Today
-- Amount collected today (payments made today)
-- Fees due this week (next 7 days)
-- Count of overdue fees requiring attention
-
-### 4. Upcoming Tests This Week
-- Tests scheduled in the next 7 days
-- Quick preview showing subject and class
-
----
+**Score Drop Alert**
+- Compares a student's average score from their last 3 tests against their previous 3 tests
+- Triggers when the drop is 20% or more
+- Shows: "Priya Sharma (8th) - Test scores dropped by 25% (72% to 47%)"
+- Red severity for 30%+ drop, amber for 20-29% drop
 
 ## Technical Implementation
 
@@ -36,157 +33,125 @@ The dashboard will show 4 key sections in a compact, mobile-friendly card:
 
 | File | Purpose |
 |------|---------|
-| `src/components/DailySummaryCard.tsx` | Main summary card component with 4 sections |
-| `src/hooks/useDailySummary.ts` | Hook to compute today's statistics efficiently |
+| `src/hooks/useStudentAlerts.ts` | Core hook that analyzes attendance and test data to generate alerts |
+| `src/components/StudentAlertsCard.tsx` | Dashboard card component displaying all active alerts |
 
 ### Files to Modify
 
 | File | Changes |
 |------|---------|
-| `src/pages/Index.tsx` | Import and render DailySummaryCard above ManagementCards |
-| `src/hooks/queries/useFeesQuery.ts` | Add `useTodayPaymentsQuery` for today's collections |
+| `src/pages/Index.tsx` | Import and render StudentAlertsCard below DailySummaryCard |
+
+### No Database Changes Required
+All alert detection runs client-side using already-fetched data (students, attendance, test results, weekly tests). No new tables, no new queries, no new API calls.
 
 ---
 
-## Component Design
+## Hook: useStudentAlerts
 
-### DailySummaryCard Layout
+### Data Sources (all already available in Index.tsx)
+- `students` -- student list with names and classes
+- `attendance` -- last 30 days of attendance records (already fetched)
+- `weeklyTests` -- test definitions with dates, subjects, max marks
+- `testResults` -- student marks for each test
+
+### Consecutive Absence Detection Logic
 ```text
-+------------------------------------------+
-|  Today at a Glance         Jan 29, 2026  |
-+------------------------------------------+
-|  [Classes]    |  [Attendance]            |
-|  3/5 marked   |  42 present | 8 absent   |
-|  ████░░ 60%   |  84% attendance          |
-+------------------------------------------+
-|  [Fees]       |  [Tests This Week]       |
-|  ₹12,500 today|  3 tests upcoming        |
-|  5 due soon   |  • Math 10th (Jan 30)    |
-+------------------------------------------+
+For each student:
+  1. Get all their attendance records, sorted by date (most recent first)
+  2. Walk backward from the most recent record
+  3. Count consecutive "absent" statuses (per unique date)
+  4. If count >= 3, generate an alert
+  5. Skip dates where the student had no attendance record
+     (they might not have had class that day)
 ```
 
-### Mobile Optimization
-- 2x2 grid on mobile (each section ~50% width)
-- Compact text sizes with clear icons
-- Tappable sections navigate to respective pages
-
----
-
-## Data Sources
-
-### Today's Classes (from existing timetable data)
-```typescript
-// Filter timetable for today's day of week + special classes for today
-const todayClasses = timetable.filter(entry => 
-  (entry.type === 'regular' && entry.dayOfWeek === today.getDay()) ||
-  (entry.type === 'special' && entry.specificDate === todayStr)
-);
+### Score Drop Detection Logic
+```text
+For each student:
+  1. Get all their test results, joined with test info
+  2. Sort tests by date (newest first)
+  3. Take the last 3 tests as "recent" and the 3 before that as "previous"
+  4. Calculate average percentage for each group
+  5. If recent average is 20%+ lower than previous average, generate alert
+  6. Only trigger if student has at least 4 tests total (enough data)
 ```
 
-### Attendance Status (from existing attendance data)
+### Alert Interface
 ```typescript
-// Get unique student attendance for today
-const todayAttendance = attendance.filter(a => a.date === todayStr);
-const presentCount = new Set(todayAttendance.filter(a => a.status === 'present').map(a => a.studentId)).size;
-const absentCount = new Set(todayAttendance.filter(a => a.status === 'absent').map(a => a.studentId)).size;
-
-// Classes with attendance marked
-const classesWithAttendance = new Set(todayAttendance.map(a => `${a.subjectId}-${a.facultyId}`));
-```
-
-### Fee Collections (new optimized query)
-```typescript
-// Payments made today (from fee_payments table)
-const todayPayments = await supabase
-  .from('fee_payments')
-  .select('amount')
-  .eq('payment_date', todayStr);
-
-// Fees due in next 7 days
-const feesDueSoon = fees.filter(f => 
-  f.status !== 'paid' && 
-  new Date(f.dueDate) <= sevenDaysFromNow
-);
-```
-
-### Upcoming Tests (from existing weeklyTests data)
-```typescript
-const upcomingTests = weeklyTests.filter(t => {
-  const testDate = new Date(t.date);
-  return testDate >= today && testDate <= sevenDaysFromNow;
-}).slice(0, 3);
-```
-
----
-
-## Hook: useDailySummary
-
-```typescript
-interface DailySummary {
-  // Classes
-  totalClassesToday: number;
-  classesWithAttendance: number;
-  attendanceProgress: number;
-  
-  // Attendance
-  presentCount: number;
-  absentCount: number;
-  attendanceRate: number;
-  
-  // Fees
-  collectedToday: number;
-  feesDueSoon: number;
-  overdueCount: number;
-  
-  // Tests
-  upcomingTests: Array<{ name: string; subject: string; class: string; date: string }>;
+interface StudentAlert {
+  id: string;             // unique key for dismissal tracking
+  studentId: string;
+  studentName: string;
+  studentClass: string;
+  type: 'consecutive_absence' | 'score_drop';
+  severity: 'warning' | 'critical';
+  message: string;
+  detail: string;         // e.g., "Last present: Jan 22"
+  value: number;          // consecutive days or drop percentage
 }
 ```
 
----
+### Dismissal Tracking
+- Uses `sessionStorage` to track dismissed alert IDs
+- Alerts reset each new browser session so they aren't permanently hidden
+- Individual dismiss button per alert
 
-## Feature Gating
-
-The summary card will respect existing feature flags:
-- Attendance section: Only shown if `attendance` feature enabled
-- Fees section: Only shown if `fees` feature enabled
-- Tests section: Always shown (core feature)
-- Classes section: Only shown if `timetable` feature enabled
-
----
-
-## Performance Considerations
-
-1. **No New API Calls for Core Data**
-   - Reuses existing `useSupabaseData` hook data
-   - Only adds one small query for today's payments
-
-2. **Memoized Computations**
-   - All statistics computed with `useMemo`
-   - Only recalculates when underlying data changes
-
-3. **Efficient Date Filtering**
-   - Uses simple string comparison for date matching
-   - Filters client-side from already-cached data
+### Performance
+- All computations wrapped in `useMemo` with proper dependencies
+- No additional API calls -- reuses existing cached data
+- Filters efficiently using Map/Set data structures
 
 ---
 
-## Navigation Integration
+## Component: StudentAlertsCard
 
-Each section is clickable and navigates to the relevant page:
-- Classes section: `/attendance` (to mark pending attendance)
-- Attendance section: `/attendance`
-- Fees section: `/fees`
-- Tests section: `/tests`
+### Layout
+```text
++--------------------------------------------------+
+| [!] Student Alerts                    3 alerts    |
++--------------------------------------------------+
+| [RED]  Ravi Kumar (10th)                          |
+|        Absent for 5 consecutive days        [x]   |
+|        Last present: Feb 3                        |
++--------------------------------------------------+
+| [AMBER] Priya Sharma (8th)                        |
+|         Test scores dropped by 25%          [x]   |
+|         Recent avg: 47% | Previous avg: 72%       |
++--------------------------------------------------+
+| [AMBER] Amit Patel (9th)                          |
+|         Absent for 3 consecutive days       [x]   |
+|         Last present: Feb 5                        |
++--------------------------------------------------+
+```
+
+### Behavior
+- Card is collapsible (default expanded if there are alerts)
+- Hidden entirely when there are zero alerts
+- Each alert row is clickable and opens the StudentDetailsDialog for that student
+- Dismiss button (X) removes the alert for the current session
+- Sorted by severity (critical first), then by value (highest first)
+- Maximum 10 alerts shown, with a "View all" link if more exist
+- Respects feature flags: absence alerts need `attendance` enabled, score alerts always shown
+
+### Mobile Optimization
+- Full-width card with compact padding
+- Touch-friendly dismiss buttons
+- Scrollable if many alerts
 
 ---
 
-## Visual Design
+## Integration with Index.tsx
 
-- Clean white card matching existing design system
-- Color-coded indicators:
-  - Green: Good (high attendance, fees paid)
-  - Yellow: Attention needed (pending items)
-  - Red: Urgent (overdue fees, high absence)
-- Consistent with existing `ManagementCards` styling
-- Icons from lucide-react for visual recognition
+The alerts card will be placed between the DailySummaryCard and ManagementCards, giving it prominent visibility without overwhelming the dashboard:
+
+```text
+[Subscription Expiry Alert]
+[Birthday Banner]
+[Tuition Branding + Actions]
+[Daily Summary Card]       <-- existing
+[Student Alerts Card]      <-- NEW
+[Management Cards]         <-- existing
+```
+
+The hook will consume the same data already loaded by `useSupabaseData()`, so there is zero additional network overhead.
