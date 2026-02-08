@@ -16,6 +16,8 @@ import { PortalEmailConfig } from "@/components/PortalEmailConfig";
 import { HomeworkManager } from "@/components/HomeworkManager";
 import { BackupDashboard } from "@/components/BackupDashboard";
 import { AttendanceNotificationAlert } from "@/components/AttendanceNotificationAlert";
+import { StudentAlertsCard } from "@/components/StudentAlertsCard";
+import { useStudentAlerts } from "@/hooks/useStudentAlerts";
 import { SubscriptionExpiryAlert } from "@/components/SubscriptionExpiryAlert";
 import { BirthdayWishesBanner } from "@/components/BirthdayWishesBanner";
 import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
@@ -129,6 +131,15 @@ const Index = () => {
     todayPayments,
   });
 
+  // Student alerts system
+  const { alerts: studentAlerts, totalCount: alertsTotalCount, dismissAlert } = useStudentAlerts({
+    students,
+    attendance,
+    weeklyTests,
+    testResults,
+    isAttendanceEnabled: isFeatureEnabled('attendance'),
+  });
+
   const handleSharePortalLink = () => {
     const portalUrl = `${window.location.origin}/student`;
     navigator.clipboard.writeText(portalUrl);
@@ -226,6 +237,24 @@ const Index = () => {
             isFeatureEnabled={isFeatureEnabled} 
           />
           
+          {/* Student Alerts */}
+          <StudentAlertsCard
+            alerts={studentAlerts}
+            totalCount={alertsTotalCount}
+            onDismiss={dismissAlert}
+            students={students}
+            weeklyTests={weeklyTests}
+            testResults={testResults}
+            attendance={attendance}
+            fees={fees}
+            termExams={termExams}
+            termExamSubjects={termExamSubjects}
+            termExamResults={termExamResults}
+            subjects={subjects}
+            faculty={faculty}
+            onRemoveStudent={removeStudent}
+          />
+
           <ManagementCards 
             testsCount={weeklyTests.length}
             studentsCount={students.length}
