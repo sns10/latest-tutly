@@ -34,6 +34,7 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
+      // RLS policies scope fees to the tuition's students automatically
       let query = supabase
         .from('student_fees')
         .select('*')
@@ -99,6 +100,28 @@ export function useClassFeesQuery(tuitionId: string | null) {
   });
 }
 
+// Helper to chunk arrays for .in() queries (prevents URL-too-long / Bad Request errors)
+const CHUNK_SIZE = 200;
+
+async function chunkedIn<T>(
+  tableName: string,
+  column: string,
+  ids: string[],
+  selectColumns: string,
+  extraFilters?: (q: any) => any
+): Promise<T[]> {
+  const results: T[] = [];
+  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
+    const chunk = ids.slice(i, i + CHUNK_SIZE);
+    let query = (supabase.from(tableName as any) as any).select(selectColumns).in(column, chunk);
+    if (extraFilters) query = extraFilters(query);
+    const { data, error } = await query;
+    if (error) throw error;
+    if (data) results.push(...(data as T[]));
+  }
+  return results;
+}
+
 export function useTodayPaymentsQuery(tuitionId: string | null) {
   const today = format(new Date(), 'yyyy-MM-dd');
   
@@ -107,51 +130,38 @@ export function useTodayPaymentsQuery(tuitionId: string | null) {
     queryFn: async () => {
       if (!tuitionId) return 0;
 
-      // Get all fee IDs for this tuition's students first
-      const { data: students, error: studentsError } = await supabase
-        .from('students')
-        .select('id')
-        .eq('tuition_id', tuitionId);
+      try {
+        // Step 1: Get student IDs for this tuition
+        const { data: students, error: studentsError } = await supabase
+          .from('students')
+          .select('id')
+          .eq('tuition_id', tuitionId);
 
-      if (studentsError) {
-        console.error('Error fetching students for payments:', studentsError);
+        if (studentsError) throw studentsError;
+        if (!students || students.length === 0) return 0;
+
+        const studentIds = students.map(s => s.id);
+
+        // Step 2: Get fee IDs using chunked queries to prevent Bad Request
+        const fees = await chunkedIn<{ id: string }>(
+          'student_fees', 'student_id', studentIds, 'id'
+        );
+
+        if (fees.length === 0) return 0;
+
+        const feeIds = fees.map(f => f.id);
+
+        // Step 3: Get today's payments using chunked queries
+        const payments = await chunkedIn<{ amount: number }>(
+          'fee_payments', 'fee_id', feeIds, 'amount',
+          (q) => q.eq('payment_date', today)
+        );
+
+        return payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      } catch (error) {
+        console.error('Error fetching today payments:', error);
         return 0;
       }
-
-      if (!students || students.length === 0) return 0;
-
-      const studentIds = students.map(s => s.id);
-
-      // Get fees for these students
-      const { data: fees, error: feesError } = await supabase
-        .from('student_fees')
-        .select('id')
-        .in('student_id', studentIds);
-
-      if (feesError) {
-        console.error('Error fetching fees:', feesError);
-        return 0;
-      }
-
-      if (!fees || fees.length === 0) return 0;
-
-      const feeIds = fees.map(f => f.id);
-
-      // Get today's payments for these fees
-      const { data: payments, error: paymentsError } = await supabase
-        .from('fee_payments')
-        .select('amount')
-        .in('fee_id', feeIds)
-        .eq('payment_date', today);
-
-      if (paymentsError) {
-        console.error('Error fetching today payments:', paymentsError);
-        return 0;
-      }
-
-      // Sum up all payments
-      const total = (payments || []).reduce((sum, p) => sum + Number(p.amount), 0);
-      return total;
     },
     enabled: !!tuitionId,
     staleTime: STALE_TIME,
