@@ -85,7 +85,8 @@ export function useStudentsQuery(tuitionId: string | null) {
           student_badges (badge_id, earned_at),
           student_rewards (reward_id, purchased_at),
           division:divisions (id, class, name)
-        `);
+        `)
+        .eq('tuition_id', tuitionId);
 
       if (error) {
         console.error('Error fetching students:', error);

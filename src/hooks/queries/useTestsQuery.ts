@@ -50,7 +50,8 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
       const PAGE_SIZE = 1000;
       const allRows: Array<{ test_id: string; student_id: string; marks: number }> = [];
 
-      for (let page = 0; page < 50; page++) {
+      // Cap at 10 pages (10,000 results) to prevent runaway loops on mobile
+      for (let page = 0; page < 10; page++) {
         let query = supabase
           .from('student_test_results')
           .select('test_id,student_id,marks, weekly_tests!inner(tuition_id)')
