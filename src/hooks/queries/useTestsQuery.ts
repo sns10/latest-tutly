@@ -17,7 +17,7 @@ export function useWeeklyTestsQuery(tuitionId: string | null) {
         .select('*')
         .eq('tuition_id', tuitionId)
         .order('test_date', { ascending: false })
-        .limit(100); // Limit to recent tests
+        .limit(100);
 
       if (error) {
         console.error('Error fetching weekly tests:', error);
@@ -45,47 +45,29 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      // PostgREST has a per-request row limit (commonly 1000).
-      // We page to avoid “missing marks” in UI when results grow.
-      const PAGE_SIZE = 1000;
-      const allRows: Array<{ test_id: string; student_id: string; marks: number }> = [];
+      // Single query with inner join — no pagination loop needed
+      // Tests are limited to 100 most recent, so results are naturally bounded
+      let query = supabase
+        .from('student_test_results')
+        .select('test_id, student_id, marks, weekly_tests!inner(tuition_id)')
+        .eq('weekly_tests.tuition_id', tuitionId)
+        .limit(5000);
 
-      // Cap at 10 pages (10,000 results) to prevent runaway loops on mobile
-      for (let page = 0; page < 10; page++) {
-        let query = supabase
-          .from('student_test_results')
-          .select('test_id,student_id,marks, weekly_tests!inner(tuition_id)')
-          .eq('weekly_tests.tuition_id', tuitionId)
-          .order('created_at', { ascending: false })
-          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
-
-        if (testId) {
-          query = query.eq('test_id', testId);
-        }
-
-        const { data, error } = await query;
-
-        if (error) {
-          console.error('Error fetching test results:', error);
-          throw error;
-        }
-
-        const rows = (data ?? []) as any[];
-        allRows.push(
-          ...rows.map((r) => ({
-            test_id: r.test_id,
-            student_id: r.student_id,
-            marks: r.marks,
-          }))
-        );
-
-        if (rows.length < PAGE_SIZE) break;
+      if (testId) {
+        query = query.eq('test_id', testId);
       }
 
-      return allRows.map(result => ({
-        testId: result.test_id,
-        studentId: result.student_id,
-        marks: Number(result.marks),
+      const { data, error } = await query;
+
+      if (error) {
+        console.error('Error fetching test results:', error);
+        throw error;
+      }
+
+      return (data ?? []).map((r: any) => ({
+        testId: r.test_id,
+        studentId: r.student_id,
+        marks: Number(r.marks),
       })) as StudentTestResult[];
     },
     enabled: !!tuitionId,
@@ -130,11 +112,8 @@ export function useDeleteWeeklyTestMutation(tuitionId: string | null) {
 
   return useMutation({
     mutationFn: async (testId: string) => {
-      // Delete results first
       await supabase.from('student_test_results').delete().eq('test_id', testId);
-
       const { error } = await supabase.from('weekly_tests').delete().eq('id', testId);
-
       if (error) throw error;
     },
     onSuccess: () => {
@@ -174,7 +153,6 @@ export function useAddTestResultMutation(tuitionId: string | null) {
   });
 }
 
-// Batch mutation for adding multiple test results at once
 export function useAddTestResultsBatchMutation(tuitionId: string | null) {
   const queryClient = useQueryClient();
 

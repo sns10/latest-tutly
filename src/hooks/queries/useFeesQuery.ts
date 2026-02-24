@@ -100,27 +100,6 @@ export function useClassFeesQuery(tuitionId: string | null) {
   });
 }
 
-// Helper to chunk arrays for .in() queries (prevents URL-too-long / Bad Request errors)
-const CHUNK_SIZE = 200;
-
-async function chunkedIn<T>(
-  tableName: string,
-  column: string,
-  ids: string[],
-  selectColumns: string,
-  extraFilters?: (q: any) => any
-): Promise<T[]> {
-  const results: T[] = [];
-  for (let i = 0; i < ids.length; i += CHUNK_SIZE) {
-    const chunk = ids.slice(i, i + CHUNK_SIZE);
-    let query = (supabase.from(tableName as any) as any).select(selectColumns).in(column, chunk);
-    if (extraFilters) query = extraFilters(query);
-    const { data, error } = await query;
-    if (error) throw error;
-    if (data) results.push(...(data as T[]));
-  }
-  return results;
-}
 
 export function useTodayPaymentsQuery(tuitionId: string | null) {
   const today = format(new Date(), 'yyyy-MM-dd');
@@ -131,33 +110,16 @@ export function useTodayPaymentsQuery(tuitionId: string | null) {
       if (!tuitionId) return 0;
 
       try {
-        // Step 1: Get student IDs for this tuition
-        const { data: students, error: studentsError } = await supabase
-          .from('students')
-          .select('id')
-          .eq('tuition_id', tuitionId);
+        // Single query using joins instead of 3 sequential calls
+        const { data, error } = await supabase
+          .from('fee_payments')
+          .select('amount, student_fees!inner(student_id, students!inner(tuition_id))')
+          .eq('student_fees.students.tuition_id', tuitionId)
+          .eq('payment_date', today);
 
-        if (studentsError) throw studentsError;
-        if (!students || students.length === 0) return 0;
+        if (error) throw error;
 
-        const studentIds = students.map(s => s.id);
-
-        // Step 2: Get fee IDs using chunked queries to prevent Bad Request
-        const fees = await chunkedIn<{ id: string }>(
-          'student_fees', 'student_id', studentIds, 'id'
-        );
-
-        if (fees.length === 0) return 0;
-
-        const feeIds = fees.map(f => f.id);
-
-        // Step 3: Get today's payments using chunked queries
-        const payments = await chunkedIn<{ amount: number }>(
-          'fee_payments', 'fee_id', feeIds, 'amount',
-          (q) => q.eq('payment_date', today)
-        );
-
-        return payments.reduce((sum, p) => sum + Number(p.amount), 0);
+        return (data || []).reduce((sum, p) => sum + Number(p.amount), 0);
       } catch (error) {
         console.error('Error fetching today payments:', error);
         return 0;
