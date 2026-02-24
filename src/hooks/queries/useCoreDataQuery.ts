@@ -16,6 +16,7 @@ export function useDivisionsQuery(tuitionId: string | null) {
       const { data, error } = await supabase
         .from('divisions')
         .select('*')
+        .eq('tuition_id', tuitionId)
         .order('class', { ascending: true })
         .order('name', { ascending: true });
 
@@ -44,6 +45,7 @@ export function useSubjectsQuery(tuitionId: string | null) {
       const { data, error } = await supabase
         .from('subjects')
         .select('*')
+        .eq('tuition_id', tuitionId)
         .order('class', { ascending: true })
         .order('name', { ascending: true });
 
@@ -78,6 +80,7 @@ export function useFacultyQuery(tuitionId: string | null) {
             subjects (*)
           )
         `)
+        .eq('tuition_id', tuitionId)
         .order('name');
 
       if (error) throw error;
@@ -113,6 +116,7 @@ export function useRoomsQuery(tuitionId: string | null) {
       const { data, error } = await supabase
         .from('rooms')
         .select('*')
+        .eq('tuition_id', tuitionId)
         .order('name');
 
       if (error) throw error;
@@ -148,6 +152,7 @@ export function useTimetableQuery(tuitionId: string | null) {
           faculty (*),
           divisions (*)
         `)
+        .eq('tuition_id', tuitionId)
         .order('day_of_week', { ascending: true })
         .order('start_time', { ascending: true });
 
@@ -210,6 +215,7 @@ export function useChallengesQuery(tuitionId: string | null) {
       const { data, error } = await supabase
         .from('challenges')
         .select('*')
+        .eq('tuition_id', tuitionId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -242,8 +248,9 @@ export function useAnnouncementsQuery(tuitionId: string | null) {
       const { data, error } = await supabase
         .from('announcements')
         .select('*')
+        .eq('tuition_id', tuitionId)
         .order('published_at', { ascending: false })
-        .limit(50); // Only recent announcements
+        .limit(50);
 
       if (error) throw error;
 
@@ -270,9 +277,11 @@ export function useStudentChallengesQuery(tuitionId: string | null) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
+      // Filter via student's tuition — use inner join
       const { data, error } = await supabase
         .from('student_challenges')
-        .select('*');
+        .select('*, students!inner(tuition_id)')
+        .eq('students.tuition_id', tuitionId);
 
       if (error) throw error;
 
