@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useUserTuition } from './useUserTuition';
+import { useCallback } from 'react';
 
 interface TuitionInfo {
   id: string;
@@ -15,38 +16,33 @@ interface TuitionInfo {
 
 export function useTuitionInfo() {
   const { tuitionId, loading: tuitionIdLoading } = useUserTuition();
-  const [tuition, setTuition] = useState<TuitionInfo | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
 
-  const fetchTuition = useCallback(async () => {
-    if (!tuitionId) {
-      setTuition(null);
-      setLoading(false);
-      return;
-    }
+  const { data: tuition = null, isLoading } = useQuery({
+    queryKey: ['tuitionInfo', tuitionId],
+    queryFn: async () => {
+      if (!tuitionId) return null;
 
-    try {
       const { data, error } = await supabase
         .from('tuitions')
         .select('id, name, email, phone, address, logo_url, portal_email, subscription_end_date')
         .eq('id', tuitionId)
         .maybeSingle();
 
-      if (error) throw error;
-      setTuition(data);
-    } catch (error) {
-      console.error('Error fetching tuition info:', error);
-      setTuition(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [tuitionId]);
+      if (error) {
+        console.error('Error fetching tuition info:', error);
+        return null;
+      }
+      return data as TuitionInfo | null;
+    },
+    enabled: !!tuitionId,
+    staleTime: 10 * 60 * 1000, // 10 min
+    gcTime: 30 * 60 * 1000,
+  });
 
-  useEffect(() => {
-    if (!tuitionIdLoading) {
-      fetchTuition();
-    }
-  }, [tuitionId, tuitionIdLoading, fetchTuition]);
+  const refetch = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['tuitionInfo', tuitionId] });
+  }, [queryClient, tuitionId]);
 
-  return { tuition, loading: loading || tuitionIdLoading, refetch: fetchTuition };
+  return { tuition, loading: isLoading || tuitionIdLoading, refetch };
 }
