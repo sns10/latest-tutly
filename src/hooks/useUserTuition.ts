@@ -1,31 +1,40 @@
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 
 export function useUserTuition() {
   const { user } = useAuth();
+  const [tuitionId, setTuitionId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { data: tuitionId = null, isLoading: loading } = useQuery({
-    queryKey: ['userTuitionId', user?.id],
-    queryFn: async () => {
-      if (!user) return null;
+  useEffect(() => {
+    if (!user) {
+      setTuitionId(null);
+      setLoading(false);
+      return;
+    }
 
+    let cancelled = false;
+
+    const fetchTuitionId = async () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('tuition_id')
         .eq('id', user.id)
         .maybeSingle();
 
+      if (cancelled) return;
+
       if (error) {
         console.error('Error fetching tuition_id:', error);
-        return null;
       }
-      return data?.tuition_id || null;
-    },
-    enabled: !!user,
-    staleTime: 30 * 60 * 1000, // 30 min - rarely changes
-    gcTime: 60 * 60 * 1000, // 1 hour
-  });
+      setTuitionId(data?.tuition_id || null);
+      setLoading(false);
+    };
+
+    fetchTuitionId();
+    return () => { cancelled = true; };
+  }, [user]);
 
   return { tuitionId, loading };
 }
