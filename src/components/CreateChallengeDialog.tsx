@@ -18,6 +18,7 @@ export function CreateChallengeDialog({ onAddChallenge }: CreateChallengeDialogP
   const [formData, setFormData] = useState({
     title: "",
     description: "",
+    difficulty: "medium",
     type: "daily",
     xpReward: 10,
     startDate: new Date().toISOString().split('T')[0],
@@ -31,6 +32,7 @@ export function CreateChallengeDialog({ onAddChallenge }: CreateChallengeDialogP
     onAddChallenge({
       title: formData.title,
       description: formData.description,
+      difficulty: formData.difficulty,
       type: formData.type,
       xpReward: formData.xpReward,
       startDate: formData.startDate,
@@ -41,6 +43,7 @@ export function CreateChallengeDialog({ onAddChallenge }: CreateChallengeDialogP
     setFormData({
       title: "",
       description: "",
+      difficulty: "medium",
       type: "daily",
       xpReward: 10,
       startDate: new Date().toISOString().split('T')[0],

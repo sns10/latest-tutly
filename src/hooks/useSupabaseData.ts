@@ -565,7 +565,7 @@ export function useSupabaseData() {
       description: newChallenge.description,
       type: newChallenge.type,
       xp_reward: newChallenge.xpReward,
-      difficulty: 'medium',
+      difficulty: newChallenge.difficulty || 'medium',
       start_date: newChallenge.startDate,
       end_date: newChallenge.endDate,
       is_active: newChallenge.isActive,
