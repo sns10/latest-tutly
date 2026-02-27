@@ -104,9 +104,9 @@ function AppContent() {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full overflow-x-hidden bg-[#f8f9fa]">
-        {showSidebars && <AppSidebar />}
-        <main className="flex-1 flex flex-col bg-[#f8f9fa] w-full min-w-0">
+        <div className="min-h-screen flex w-full overflow-x-hidden bg-background">
+          {showSidebars && <AppSidebar />}
+          <main className="flex-1 flex flex-col bg-background w-full min-w-0">
           {showSidebars && (
             <div className="border-b bg-white sticky top-0 z-40 shadow-sm">
               <div className="flex h-14 items-center px-3 sm:px-4">
@@ -114,7 +114,7 @@ function AppContent() {
               </div>
             </div>
           )}
-          <div className={`flex-1 ${showSidebars ? 'pb-20 md:pb-0' : ''} bg-[#f8f9fa] w-full overflow-x-hidden flex flex-col`}>
+          <div className={`flex-1 ${showSidebars ? 'pb-20 md:pb-0' : ''} bg-background w-full overflow-x-hidden flex flex-col`}>
             <div className="flex-1">
               <ErrorBoundary>
                 <Suspense fallback={<PageLoader />}>

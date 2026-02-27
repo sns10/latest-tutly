@@ -224,6 +224,7 @@ export function useChallengesQuery(tuitionId: string | null) {
         id: challenge.id,
         title: challenge.title,
         description: challenge.description,
+        difficulty: challenge.difficulty,
         type: challenge.type,
         xpReward: challenge.xp_reward,
         startDate: challenge.start_date,

@@ -83,6 +83,7 @@ export interface Challenge {
   id: string;
   title: string;
   description: string;
+  difficulty: string;
   type: string;
   xpReward: number;
   startDate: string;

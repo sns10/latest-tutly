@@ -172,7 +172,7 @@ const Index = () => {
       />
       <Routes>
         <Route path="/" element={
-        <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-[#f8f9fa]">
+        <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-background">
           {/* Subscription Expiry Alert */}
           <SubscriptionExpiryAlert subscriptionEndDate={tuition?.subscription_end_date} />
           
