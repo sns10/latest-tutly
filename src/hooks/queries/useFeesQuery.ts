@@ -34,10 +34,11 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      // RLS policies scope fees to the tuition's students automatically
+      // Explicit tuition_id filter via student join to optimize DB scan
       let query = supabase
         .from('student_fees')
-        .select('*')
+        .select('*, students!inner(tuition_id)')
+        .eq('students.tuition_id', tuitionId)
         .order('due_date', { ascending: false });
 
       if (filters?.status) {
