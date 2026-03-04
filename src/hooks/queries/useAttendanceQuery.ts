@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { StudentAttendance } from '@/types';
 import { toast } from 'sonner';
 
-const STALE_TIME = 2 * 60 * 1000; // 2 minutes for attendance (more volatile)
-const GC_TIME = 15 * 60 * 1000; // 15 minutes
+const STALE_TIME = 5 * 60 * 1000; // 5 minutes - balanced cache to reduce cloud calls
+const GC_TIME = 30 * 60 * 1000; // 30 minutes
 
 interface AttendanceFilters {
   date?: string;
@@ -41,9 +41,11 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
+      // Explicit tuition_id filter via student join to reduce DB scan
       let query = supabase
         .from('student_attendance')
-        .select('*')
+        .select('*, students!inner(tuition_id)')
+        .eq('students.tuition_id', tuitionId)
         .order('date', { ascending: false })
         .order('created_at', { ascending: false });
 
@@ -100,7 +102,8 @@ export function useHistoricalAttendanceQuery(tuitionId: string | null, startDate
       while (hasMore && allRecords.length < MAX_RECORDS) {
         let query = supabase
           .from('student_attendance')
-          .select('*')
+          .select('*, students!inner(tuition_id)')
+          .eq('students.tuition_id', tuitionId)
           .order('date', { ascending: false })
           .order('created_at', { ascending: false })
           .range(offset, offset + pageSize - 1);
@@ -148,7 +151,8 @@ export function useStudentAttendanceQuery(tuitionId: string | null, studentId: s
 
       const { data, error } = await supabase
         .from('student_attendance')
-        .select('*')
+        .select('*, students!inner(tuition_id)')
+        .eq('students.tuition_id', tuitionId)
         .eq('student_id', studentId)
         .order('date', { ascending: false });
 
