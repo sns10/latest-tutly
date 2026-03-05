@@ -74,12 +74,13 @@ export function useTermExamData() {
         createdAt: result.created_at, updatedAt: result.updated_at,
       })) as TermExamResult[];
     },
-    enabled: !!tuitionId,
+    // Only fetch results when there are actual term exams — saves a query on dashboard load
+    enabled: !!tuitionId && termExams.length > 0,
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
   });
 
-  const loading = examsLoading || subjectsLoading || resultsLoading;
+  const loading = examsLoading || subjectsLoading || (termExams.length > 0 && resultsLoading);
 
   const invalidateAll = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['termExams', tuitionId] });

@@ -47,7 +47,8 @@ export function useSupabaseData() {
   const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
   const { data: testResults = [] } = useTestResultsQuery(tuitionId);
 
-  const loading = studentsLoading || divisionsLoading || subjectsLoading || facultyLoading || roomsLoading;
+  // Rooms not needed for dashboard initial render — exclude from loading gate
+  const loading = studentsLoading || divisionsLoading || subjectsLoading || facultyLoading;
 
   // Invalidation helpers
   const invalidateStudents = useCallback(() => {

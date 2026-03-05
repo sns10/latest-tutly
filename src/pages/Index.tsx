@@ -148,7 +148,7 @@ const Index = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (authLoading || loading || termExamLoading || featuresLoading) {
+  if (authLoading || loading || featuresLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-2">

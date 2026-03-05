@@ -5,8 +5,8 @@ import { BADGE_DEFINITIONS } from '@/config/badges';
 import { XP_STORE_ITEMS } from '@/config/rewards';
 import { toast } from 'sonner';
 
-const STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const GC_TIME = 30 * 60 * 1000; // 30 minutes
+const STALE_TIME = 10 * 60 * 1000; // 10 minutes - students rarely change mid-session
+const GC_TIME = 45 * 60 * 1000; // 45 minutes
 
 const formatStudents = (studentsData: any[]): Student[] => {
   const formattedStudents: Student[] = studentsData.map(student => ({
