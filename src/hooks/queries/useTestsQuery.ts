@@ -3,8 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { WeeklyTest, StudentTestResult, ClassName } from '@/types';
 import { toast } from 'sonner';
 
-const STALE_TIME = 5 * 60 * 1000; // 5 minutes
-const GC_TIME = 30 * 60 * 1000; // 30 minutes
+const STALE_TIME = 10 * 60 * 1000; // 10 minutes
+const GC_TIME = 45 * 60 * 1000; // 45 minutes
 
 export function useWeeklyTestsQuery(tuitionId: string | null) {
   return useQuery({
@@ -51,7 +51,7 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
         .from('student_test_results')
         .select('test_id, student_id, marks, weekly_tests!inner(tuition_id)')
         .eq('weekly_tests.tuition_id', tuitionId)
-        .limit(5000);
+        .limit(2000);
 
       if (testId) {
         query = query.eq('test_id', testId);

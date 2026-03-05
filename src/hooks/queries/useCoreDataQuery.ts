@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Division, Subject, Faculty, Room, Timetable, Challenge, Announcement, ClassName } from '@/types';
 import { toast } from 'sonner';
 
-const STALE_TIME = 10 * 60 * 1000; // 10 minutes for less volatile data
+const STALE_TIME = 15 * 60 * 1000; // 15 minutes for less volatile data
 const GC_TIME = 60 * 60 * 1000; // 1 hour
 
 // Divisions - rarely changes
