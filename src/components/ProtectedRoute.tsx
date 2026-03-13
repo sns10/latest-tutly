@@ -1,10 +1,11 @@
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './AuthProvider';
 import { useUserRole, UserRole } from '@/hooks/useUserRole';
 import { useTuitionStatus } from '@/hooks/useTuitionStatus';
 import { TuitionInactiveScreen } from './TuitionInactiveScreen';
 import { Loader2 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ProtectedRouteProps {
@@ -18,39 +19,23 @@ export function ProtectedRoute({ children, allowedRoles, allowPortalUsers = fals
   const { role, loading: roleLoading } = useUserRole();
   const { status, loading: statusLoading } = useTuitionStatus();
   const location = useLocation();
-  const [isPortalUser, setIsPortalUser] = useState<boolean | null>(null);
-  const [checkingPortal, setCheckingPortal] = useState(true);
 
-  // Check if user is a portal user
-  useEffect(() => {
-    const checkPortalUser = async () => {
-      if (!user?.email) {
-        setIsPortalUser(false);
-        setCheckingPortal(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('tuitions')
-          .select('id')
-          .eq('portal_email', user.email.toLowerCase())
-          .limit(1);
-
-        if (!error && data && data.length > 0) {
-          setIsPortalUser(true);
-        } else {
-          setIsPortalUser(false);
-        }
-      } catch (err) {
-        setIsPortalUser(false);
-      } finally {
-        setCheckingPortal(false);
-      }
-    };
-
-    checkPortalUser();
-  }, [user?.email]);
+  // Cached portal user check — won't re-fetch on every navigation
+  const { data: isPortalUser = false, isLoading: checkingPortal } = useQuery({
+    queryKey: ['portalUser', user?.email],
+    queryFn: async () => {
+      if (!user?.email) return false;
+      const { data, error } = await supabase
+        .from('tuitions')
+        .select('id')
+        .eq('portal_email', user.email.toLowerCase())
+        .limit(1);
+      return !error && !!data && data.length > 0;
+    },
+    enabled: !!user?.email,
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+  });
 
   if (authLoading || roleLoading || statusLoading || checkingPortal) {
     return (
@@ -64,17 +49,14 @@ export function ProtectedRoute({ children, allowedRoles, allowPortalUsers = fals
     return <Navigate to="/auth" replace />;
   }
 
-  // If user is a portal user and this route allows portal users, grant access
   if (isPortalUser && allowPortalUsers) {
     return <>{children}</>;
   }
 
-  // If no role and not a portal user, redirect to auth
   if (!role && !isPortalUser) {
     return <Navigate to="/auth" replace />;
   }
 
-  // Portal users without a role should go to student page
   if (!role && isPortalUser) {
     if (location.pathname !== '/student') {
       return <Navigate to="/student" replace />;
@@ -83,14 +65,12 @@ export function ProtectedRoute({ children, allowedRoles, allowPortalUsers = fals
   }
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    // Redirect to appropriate dashboard based on role
     if (role === 'super_admin') return <Navigate to="/super-admin" replace />;
     if (role === 'tuition_admin') return <Navigate to="/" replace />;
     if (role === 'student' || role === 'parent') return <Navigate to="/student" replace />;
     return <Navigate to="/auth" replace />;
   }
 
-  // Check tuition status for non-super-admin users
   if (role !== 'super_admin' && status) {
     if (!status.isActive) {
       return <TuitionInactiveScreen reason="inactive" tuitionName={status.tuitionName} />;

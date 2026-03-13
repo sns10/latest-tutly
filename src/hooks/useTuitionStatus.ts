@@ -1,63 +1,28 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useUserTuition } from './useUserTuition';
+import { useTuitionData } from './useTuitionData';
+import { useMemo } from 'react';
 
-interface TuitionStatus {
-  isActive: boolean;
-  subscriptionStatus: string;
-  tuitionName: string | null;
-}
-
+/**
+ * Derives tuition status from the shared useTuitionData hook.
+ * No additional API call — reads from the same cached query.
+ */
 export function useTuitionStatus() {
-  const { tuitionId, loading: tuitionLoading } = useUserTuition();
-  const [status, setStatus] = useState<TuitionStatus | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { tuition, loading, tuitionId } = useTuitionData();
 
-  useEffect(() => {
-    const fetchTuitionStatus = async () => {
-      if (!tuitionId) {
-        setStatus(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('tuitions')
-          .select('is_active, subscription_status, name')
-          .eq('id', tuitionId)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (data) {
-          setStatus({
-            isActive: data.is_active,
-            subscriptionStatus: data.subscription_status,
-            tuitionName: data.name,
-          });
-        } else {
-          setStatus(null);
-        }
-      } catch (error) {
-        console.error('Error fetching tuition status:', error);
-        setStatus(null);
-      } finally {
-        setLoading(false);
-      }
+  const status = useMemo(() => {
+    if (!tuition) return null;
+    return {
+      isActive: tuition.is_active,
+      subscriptionStatus: tuition.subscription_status,
+      tuitionName: tuition.name,
     };
-
-    if (!tuitionLoading) {
-      fetchTuitionStatus();
-    }
-  }, [tuitionId, tuitionLoading]);
+  }, [tuition]);
 
   const isOperational = status?.isActive && 
     (status?.subscriptionStatus === 'active' || status?.subscriptionStatus === 'trial');
 
   return { 
     status, 
-    loading: loading || tuitionLoading, 
+    loading, 
     isOperational,
     tuitionId 
   };
