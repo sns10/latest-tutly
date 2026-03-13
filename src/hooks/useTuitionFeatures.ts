@@ -1,6 +1,5 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useUserTuition } from './useUserTuition';
+import { useTuitionData } from './useTuitionData';
+import { useMemo } from 'react';
 
 export type FeatureKey = 
   | 'leaderboard' 
@@ -51,47 +50,17 @@ export const ALL_FEATURES: FeatureConfig[] = [
   { key: 'challenges', label: 'Challenges', tier: 'premium', description: 'Student challenges & rewards' },
 ];
 
+/**
+ * Derives features from the shared useTuitionData hook.
+ * No additional API call — reads from the same cached query.
+ */
 export function useTuitionFeatures() {
-  const { tuitionId, loading: tuitionLoading } = useUserTuition();
-  const [features, setFeatures] = useState<FeatureKey[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { tuition, loading } = useTuitionData();
 
-  useEffect(() => {
-    const fetchFeatures = async () => {
-      if (!tuitionId) {
-        // Default all features enabled if no tuition
-        setFeatures(ALL_FEATURES.map(f => f.key));
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const { data, error } = await supabase
-          .from('tuitions')
-          .select('features')
-          .eq('id', tuitionId)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        if (data?.features && Array.isArray(data.features) && data.features.length > 0) {
-          setFeatures(data.features as FeatureKey[]);
-        } else {
-          // Default all features enabled if no features configured
-          setFeatures(ALL_FEATURES.map(f => f.key));
-        }
-      } catch (error) {
-        console.error('Error fetching tuition features:', error);
-        setFeatures(ALL_FEATURES.map(f => f.key));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (!tuitionLoading) {
-      fetchFeatures();
-    }
-  }, [tuitionId, tuitionLoading]);
+  const features = useMemo(() => {
+    if (!tuition?.features) return ALL_FEATURES.map(f => f.key);
+    return tuition.features;
+  }, [tuition?.features]);
 
   const isFeatureEnabled = (featureKey: FeatureKey): boolean => {
     return features.includes(featureKey);
@@ -99,7 +68,7 @@ export function useTuitionFeatures() {
 
   return { 
     features, 
-    loading: loading || tuitionLoading, 
+    loading, 
     isFeatureEnabled 
   };
 }

@@ -34,14 +34,15 @@ export function useSupabaseData() {
   const { data: faculty = [], isLoading: facultyLoading } = useFacultyQuery(tuitionId);
   const { data: rooms = [], isLoading: roomsLoading } = useRoomsQuery(tuitionId);
   
-  // Less essential data - still loaded but with longer stale times
+  // Deferred data - only fetched when accessed via their respective pages
+  // These still use the shared tuitionId but won't block dashboard render
   const { data: timetable = [] } = useTimetableQuery(tuitionId);
   const { data: challenges = [] } = useChallengesQuery(tuitionId);
   const { data: announcements = [] } = useAnnouncementsQuery(tuitionId);
   const { data: studentChallenges = [] } = useStudentChallengesQuery(tuitionId);
   
   // On-demand data - loaded with filters, shorter cache
-  const { data: attendance = [] } = useAttendanceQuery(tuitionId); // Uses 30-day default
+  const { data: attendance = [] } = useAttendanceQuery(tuitionId);
   const { data: fees = [] } = useFeesQuery(tuitionId);
   const { data: classFees = [] } = useClassFeesQuery(tuitionId);
   const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
