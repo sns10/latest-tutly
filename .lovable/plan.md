@@ -1,157 +1,96 @@
 
-# Proactive Student Alerts System
 
-## Overview
-Build an automated alerts system that continuously monitors student data and surfaces actionable warnings when students show concerning patterns -- specifically 3+ consecutive absences or a 20%+ drop in test scores. These alerts will appear on the admin dashboard and link directly to the student's details for follow-up.
+# Stripe Subscription Integration Plan
 
-## What You'll See
-
-### Alerts Banner on Dashboard
-A new "Student Alerts" section will appear on the Index page (below the Daily Summary card) showing:
-- A collapsible card with a count badge (e.g., "3 alerts need attention")
-- Each alert shows the student name, class, alert type, and severity
-- Color-coded by severity: red for critical (5+ absences or 30%+ drop), amber for warning
-- Click any alert to open the student details dialog
-- Dismiss individual alerts (remembered for the session)
-
-### Alert Types
-
-**Consecutive Absence Alert**
-- Triggers when a student has 3 or more consecutive absent days (based on days they had scheduled classes)
-- Shows: "Ravi Kumar (10th) - Absent for 5 consecutive days"
-- Red severity for 5+ days, amber for 3-4 days
-
-**Score Drop Alert**
-- Compares a student's average score from their last 3 tests against their previous 3 tests
-- Triggers when the drop is 20% or more
-- Shows: "Priya Sharma (8th) - Test scores dropped by 25% (72% to 47%)"
-- Red severity for 30%+ drop, amber for 20-29% drop
-
-## Technical Implementation
-
-### Files to Create
-
-| File | Purpose |
-|------|---------|
-| `src/hooks/useStudentAlerts.ts` | Core hook that analyzes attendance and test data to generate alerts |
-| `src/components/StudentAlertsCard.tsx` | Dashboard card component displaying all active alerts |
-
-### Files to Modify
-
-| File | Changes |
-|------|---------|
-| `src/pages/Index.tsx` | Import and render StudentAlertsCard below DailySummaryCard |
-
-### No Database Changes Required
-All alert detection runs client-side using already-fetched data (students, attendance, test results, weekly tests). No new tables, no new queries, no new API calls.
+## What We're Building
+A complete subscription billing system where tuition admins pay ₹1199/month with a 21-day free trial, supporting UPI and card payments via Stripe Checkout.
 
 ---
 
-## Hook: useStudentAlerts
-
-### Data Sources (all already available in Index.tsx)
-- `students` -- student list with names and classes
-- `attendance` -- last 30 days of attendance records (already fetched)
-- `weeklyTests` -- test definitions with dates, subjects, max marks
-- `testResults` -- student marks for each test
-
-### Consecutive Absence Detection Logic
-```text
-For each student:
-  1. Get all their attendance records, sorted by date (most recent first)
-  2. Walk backward from the most recent record
-  3. Count consecutive "absent" statuses (per unique date)
-  4. If count >= 3, generate an alert
-  5. Skip dates where the student had no attendance record
-     (they might not have had class that day)
-```
-
-### Score Drop Detection Logic
-```text
-For each student:
-  1. Get all their test results, joined with test info
-  2. Sort tests by date (newest first)
-  3. Take the last 3 tests as "recent" and the 3 before that as "previous"
-  4. Calculate average percentage for each group
-  5. If recent average is 20%+ lower than previous average, generate alert
-  6. Only trigger if student has at least 4 tests total (enough data)
-```
-
-### Alert Interface
-```typescript
-interface StudentAlert {
-  id: string;             // unique key for dismissal tracking
-  studentId: string;
-  studentName: string;
-  studentClass: string;
-  type: 'consecutive_absence' | 'score_drop';
-  severity: 'warning' | 'critical';
-  message: string;
-  detail: string;         // e.g., "Last present: Jan 22"
-  value: number;          // consecutive days or drop percentage
-}
-```
-
-### Dismissal Tracking
-- Uses `sessionStorage` to track dismissed alert IDs
-- Alerts reset each new browser session so they aren't permanently hidden
-- Individual dismiss button per alert
-
-### Performance
-- All computations wrapped in `useMemo` with proper dependencies
-- No additional API calls -- reuses existing cached data
-- Filters efficiently using Map/Set data structures
+## Requirements Recap
+- **Price**: ₹1199/month (INR)
+- **Free trial**: 21 days (no card required upfront)
+- **Payment methods**: UPI + Cards (Stripe India supports both)
+- **Flow**: Super Admin creates tuition → tuition gets 21-day trial → after trial, tuition admin subscribes via Stripe
 
 ---
 
-## Component: StudentAlertsCard
+## Implementation Steps
 
-### Layout
-```text
-+--------------------------------------------------+
-| [!] Student Alerts                    3 alerts    |
-+--------------------------------------------------+
-| [RED]  Ravi Kumar (10th)                          |
-|        Absent for 5 consecutive days        [x]   |
-|        Last present: Feb 3                        |
-+--------------------------------------------------+
-| [AMBER] Priya Sharma (8th)                        |
-|         Test scores dropped by 25%          [x]   |
-|         Recent avg: 47% | Previous avg: 72%       |
-+--------------------------------------------------+
-| [AMBER] Amit Patel (9th)                          |
-|         Absent for 3 consecutive days       [x]   |
-|         Last present: Feb 5                        |
-+--------------------------------------------------+
-```
+### Step 1: Enable Stripe Integration
+- Use the Lovable Stripe tooling to enable Stripe and collect the secret key
+- Create a Stripe product ("Tutly Pro") with a ₹1199/month recurring price
 
-### Behavior
-- Card is collapsible (default expanded if there are alerts)
-- Hidden entirely when there are zero alerts
-- Each alert row is clickable and opens the StudentDetailsDialog for that student
-- Dismiss button (X) removes the alert for the current session
-- Sorted by severity (critical first), then by value (highest first)
-- Maximum 10 alerts shown, with a "View all" link if more exist
-- Respects feature flags: absence alerts need `attendance` enabled, score alerts always shown
+### Step 2: Database Changes
+- Add columns to `tuitions` table:
+  - `stripe_customer_id` (text, nullable)
+  - `stripe_subscription_id` (text, nullable)
+  - `trial_ends_at` (timestamptz, nullable — set to `now() + 21 days` on creation)
+- Update `subscription_status` to support values: `trial`, `active`, `past_due`, `expired`, `suspended`
 
-### Mobile Optimization
-- Full-width card with compact padding
-- Touch-friendly dismiss buttons
-- Scrollable if many alerts
+### Step 3: Edge Function — `create-checkout-session`
+- Creates a Stripe Checkout session in `subscription` mode
+- Sets `trial_period_days: 21` if tuition is still in trial
+- Enables UPI via `payment_method_types: ['card', 'upi']`
+- Passes `tuition_id` as metadata
+- Returns the checkout URL to redirect the tuition admin
+
+### Step 4: Edge Function — `stripe-webhook`
+- Handles Stripe webhook events:
+  - `checkout.session.completed` → update `stripe_customer_id`, `stripe_subscription_id`, set status to `active`
+  - `invoice.paid` → extend `subscription_end_date`, set status `active`
+  - `invoice.payment_failed` → set status `past_due`
+  - `customer.subscription.deleted` → set status `expired`
+- Uses `verify_jwt = false` (Stripe sends the webhook, not a user)
+- Validates webhook signature using Stripe signing secret
+
+### Step 5: Subscription Management Page
+- New `/subscription` route for tuition admins
+- Shows current plan status (trial/active/expired), days remaining
+- "Subscribe Now" / "Manage Billing" button
+- For active subscribers: link to Stripe Customer Portal for invoice history, cancellation, payment method updates
+
+### Step 6: Update Existing Components
+- **`CreateTuitionDialog`**: Auto-set `trial_ends_at = now() + 21 days`, `subscription_status = 'trial'`
+- **`SubscriptionExpiryAlert`**: Update to handle trial expiry ("Your free trial ends in X days")
+- **`TuitionInactiveScreen`**: Add "Subscribe Now" CTA that triggers checkout
+- **`ProtectedRoute`**: Already blocks expired/suspended — no changes needed
+
+### Step 7: Super Admin Visibility
+- Show Stripe subscription status and payment history in `TuitionDetailsDialog`
+- Badge showing `trial` / `active` / `past_due` in `TuitionsList`
 
 ---
 
-## Integration with Index.tsx
-
-The alerts card will be placed between the DailySummaryCard and ManagementCards, giving it prominent visibility without overwhelming the dashboard:
+## Architecture Flow
 
 ```text
-[Subscription Expiry Alert]
-[Birthday Banner]
-[Tuition Branding + Actions]
-[Daily Summary Card]       <-- existing
-[Student Alerts Card]      <-- NEW
-[Management Cards]         <-- existing
+Tuition Created → trial (21 days)
+         ↓
+Trial Expiring → SubscriptionExpiryAlert shown
+         ↓
+Click "Subscribe" → Edge Function creates Checkout Session
+         ↓
+Stripe Checkout (Card/UPI) → Payment
+         ↓
+Stripe Webhook → Updates tuitions table (status=active, dates set)
+         ↓
+Monthly Invoice → Stripe auto-charges → Webhook confirms
+         ↓
+Payment Failed → status=past_due → Grace period → expired
 ```
 
-The hook will consume the same data already loaded by `useSupabaseData()`, so there is zero additional network overhead.
+---
+
+## Prerequisites Before Implementation
+1. **Stripe account** with India entity (for INR + UPI support)
+2. **Stripe Secret Key** — will be collected via the Stripe enable tool
+3. **Stripe Webhook Signing Secret** — needed after setting up the webhook endpoint
+
+---
+
+## What UPI on Stripe Requires
+- Stripe India account (registered Indian business)
+- UPI is automatically available for INR subscriptions via Stripe Checkout
+- No additional configuration needed beyond enabling it in Stripe Dashboard payment methods
+
