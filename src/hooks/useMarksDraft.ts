@@ -18,7 +18,7 @@ const DRAFT_DEBOUNCE_MS = 500;
 export function useWeeklyTestMarksDraft(testId: string) {
   const { tuitionId } = useUserTuition();
   const draftKey = `marks_draft_weekly_${tuitionId}_${testId}`;
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getDraft = useCallback((): MarksDraft | null => {
     try {
