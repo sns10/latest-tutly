@@ -91,7 +91,7 @@ export function useTermExamMarksDraft(termExamId: string, subjectId?: string, di
   const draftKey = `marks_draft_term_${tuitionId}_${termExamId}_${subjectKey}_${divisionKey}`;
   // Legacy key for migration
   const legacyDraftKey = `marks_draft_term_${tuitionId}_${termExamId}`;
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getDraft = useCallback((): TermExamMarksDraft | null => {
     try {

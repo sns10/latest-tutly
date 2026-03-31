@@ -22,7 +22,7 @@ const ResizableHandle = ({
   withHandle,
   className,
   ...props
-}: React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle> & {
+}: React.ComponentProps<(typeof ResizablePrimitive)["PanelResizeHandle"]> & {
   withHandle?: boolean
 }) => (
   <ResizablePrimitive.PanelResizeHandle
