@@ -99,7 +99,7 @@ const handler = async (req: Request): Promise<Response> => {
         { status: 429, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }
-    const { tuitionId, action, backupId, backupData: uploadedBackupData }: BackupRequest = await req.json();
+    const { tuitionId, action, backupId, backupData: uploadedBackupData, resetMode }: BackupRequest = await req.json();
 
     if (!tuitionId || !action) {
       return new Response(
