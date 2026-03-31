@@ -120,8 +120,11 @@ export const feeStructureSchema = z.object({
 // =====================
 
 export const scheduleClassSchema = z.object({
-  class: z.enum(['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'] as const, {
-    required_error: 'Class is required',
+  class: z.enum({
+    '4th': '4th', '5th': '5th', '6th': '6th', '7th': '7th', '8th': '8th',
+    '9th': '9th', '10th': '10th', '11th': '11th', '12th': '12th',
+  }, {
+    error: 'Class is required',
   }),
   subjectId: z.string().uuid('Invalid subject').min(1, 'Subject is required'),
   facultyId: z.string().uuid('Invalid faculty').optional(),
