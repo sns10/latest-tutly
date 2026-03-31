@@ -22,7 +22,7 @@ export function useAttendanceNotification(
   const [pendingClass, setPendingClass] = useState<PendingAttendanceClass | null>(null);
   const [notifiedClasses, setNotifiedClasses] = useState<Set<string>>(new Set());
   const notifiedClassesRef = useRef<Set<string>>(new Set());
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Sync ref with state whenever state changes
   useEffect(() => {

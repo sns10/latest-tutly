@@ -4,7 +4,8 @@ import { useUserTuition } from '@/hooks/useUserTuition';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, Download, RefreshCw, Shield, Clock, Database, CheckCircle2, AlertCircle, Upload, RotateCcw } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Loader2, Download, RefreshCw, Shield, Clock, Database, CheckCircle2, AlertCircle, Upload, RotateCcw, CalendarX2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
@@ -17,6 +18,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface BackupStats {
   studentsCount: number;
@@ -58,6 +66,13 @@ export function BackupDashboard() {
   const [selectedBackupId, setSelectedBackupId] = useState<string | null>(null);
   const [restoreResults, setRestoreResults] = useState<Record<string, RestoreResult> | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Reset state
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
+  const [resetMode, setResetMode] = useState<'keep_structure' | 'full_reset'>('keep_structure');
+  const [resetConfirmText, setResetConfirmText] = useState('');
+  const [resetting, setResetting] = useState(false);
+  const [resetResults, setResetResults] = useState<Record<string, number> | null>(null);
 
   const fetchBackups = async () => {
     if (!tuitionId) return;
@@ -185,7 +200,6 @@ export function BackupDashboard() {
       const text = await file.text();
       const backupData = JSON.parse(text);
 
-      // Validate backup structure
       if (!backupData?.data || !backupData?.metadata) {
         throw new Error('Invalid backup file format');
       }
@@ -212,6 +226,37 @@ export function BackupDashboard() {
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+    }
+  };
+
+  const handleReset = async () => {
+    if (!tuitionId || resetConfirmText !== 'RESET') return;
+
+    setResetting(true);
+    setResetDialogOpen(false);
+    setResetConfirmText('');
+
+    try {
+      const response = await supabase.functions.invoke('backup-tuition-data', {
+        body: { tuitionId, action: 'reset', resetMode: resetMode },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      if (response.data?.success) {
+        toast.success(response.data.message || 'Academic year reset completed!');
+        setResetResults(response.data.deletionLog);
+        fetchBackups(); // Refresh to show the pre-reset backup
+      } else {
+        throw new Error(response.data?.error || 'Failed to reset data');
+      }
+    } catch (error: any) {
+      console.error('Error resetting data:', error);
+      toast.error(error.message || 'Failed to reset data');
+    } finally {
+      setResetting(false);
     }
   };
 
@@ -344,6 +389,28 @@ export function BackupDashboard() {
             </div>
           )}
 
+          {/* Reset Results */}
+          {resetResults && (
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <h4 className="text-sm font-medium text-amber-900 mb-2">Reset Results — Records Deleted</h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                {Object.entries(resetResults).filter(([, count]) => count > 0).map(([key, count]) => (
+                  <div key={key} className="p-2 rounded bg-amber-100">
+                    <span className="font-medium capitalize">{key.replace(/_/g, ' ')}:</span> {count}
+                  </div>
+                ))}
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="mt-2"
+                onClick={() => setResetResults(null)}
+              >
+                Dismiss
+              </Button>
+            </div>
+          )}
+
           {/* Backups List */}
           <div className="space-y-2">
             <h4 className="text-sm font-medium text-muted-foreground">Recent Backups</h4>
@@ -372,14 +439,19 @@ export function BackupDashboard() {
                         <p className="text-sm font-medium">
                           {format(new Date(backup.created_at), 'MMM d, yyyy - h:mm a')}
                         </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatFileSize(backup.file_size)}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(backup.file_size)}
+                          </p>
+                          {backup.status === 'pre_reset_backup' && (
+                            <Badge variant="outline" className="text-xs text-amber-600 border-amber-300">Pre-reset</Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={backup.status === 'completed' ? 'default' : 'secondary'}>
-                        {backup.status}
+                      <Badge variant={backup.status === 'completed' || backup.status === 'pre_reset_backup' ? 'default' : 'secondary'}>
+                        {backup.status === 'pre_reset_backup' ? 'backup' : backup.status}
                       </Badge>
                       <Button 
                         variant="ghost" 
@@ -434,6 +506,49 @@ export function BackupDashboard() {
         </CardContent>
       </Card>
 
+      {/* New Academic Year Reset Card */}
+      <Card className="border-red-200 mt-4">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-red-700">
+            <CalendarX2 className="h-5 w-5" />
+            New Academic Year — Reset Data
+          </CardTitle>
+          <CardDescription>
+            Clear all transactional data to start a fresh academic year. A backup is automatically created before any data is deleted.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="p-3 rounded-lg border border-green-200 bg-green-50">
+              <h4 className="text-sm font-semibold text-green-800">Keep Students & Structure</h4>
+              <p className="text-xs text-green-700 mt-1">
+                Keeps students, subjects, faculty, divisions, rooms, and class fee config. 
+                Clears attendance, tests, marks, fees, XP, badges, homework, announcements, challenges, timetable, and term exams.
+              </p>
+            </div>
+            <div className="p-3 rounded-lg border border-red-200 bg-red-50">
+              <h4 className="text-sm font-semibold text-red-800">Complete Fresh Start</h4>
+              <p className="text-xs text-red-700 mt-1">
+                Deletes everything including students. Only the tuition center record, subjects, faculty, divisions, rooms, and fee config remain.
+              </p>
+            </div>
+          </div>
+          <Button 
+            variant="destructive" 
+            onClick={() => setResetDialogOpen(true)}
+            disabled={resetting}
+            className="w-full sm:w-auto"
+          >
+            {resetting ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Trash2 className="h-4 w-4 mr-2" />
+            )}
+            {resetting ? 'Resetting...' : 'Start New Academic Year'}
+          </Button>
+        </CardContent>
+      </Card>
+
       {/* Restore Confirmation Dialog */}
       <AlertDialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
         <AlertDialogContent>
@@ -448,6 +563,69 @@ export function BackupDashboard() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmRestore}>
               Restore Data
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Academic Year Reset Confirmation Dialog */}
+      <AlertDialog open={resetDialogOpen} onOpenChange={(open) => {
+        setResetDialogOpen(open);
+        if (!open) {
+          setResetConfirmText('');
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" />
+              Academic Year Reset
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-3">
+                <p>This will permanently delete transactional data. A backup will be created automatically before deletion.</p>
+                
+                <div>
+                  <label className="text-sm font-medium text-foreground">Reset Mode</label>
+                  <Select value={resetMode} onValueChange={(v) => setResetMode(v as 'keep_structure' | 'full_reset')}>
+                    <SelectTrigger className="mt-1">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="keep_structure">Keep Students & Structure</SelectItem>
+                      <SelectItem value="full_reset">Complete Fresh Start</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {resetMode === 'full_reset' && (
+                  <div className="p-2 rounded bg-red-100 border border-red-300 text-red-800 text-xs">
+                    ⚠️ This will also delete ALL student records permanently.
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium text-foreground">
+                    Type <span className="font-mono bg-muted px-1 rounded">RESET</span> to confirm
+                  </label>
+                  <Input 
+                    className="mt-1"
+                    placeholder="Type RESET"
+                    value={resetConfirmText}
+                    onChange={(e) => setResetConfirmText(e.target.value)}
+                  />
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleReset}
+              disabled={resetConfirmText !== 'RESET'}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Reset Data
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
