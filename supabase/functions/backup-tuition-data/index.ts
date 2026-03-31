@@ -8,9 +8,10 @@ const corsHeaders = {
 
 interface BackupRequest {
   tuitionId: string;
-  action: 'export' | 'create' | 'list' | 'download' | 'restore';
+  action: 'export' | 'create' | 'list' | 'download' | 'restore' | 'reset';
   backupId?: string;
   backupData?: any; // For restore from file upload
+  resetMode?: 'keep_structure' | 'full_reset';
 }
 
 const MAX_BACKUPS_PER_TUITION = 5;
