@@ -48,8 +48,14 @@ export const paymentAmountSchema = z.object({
       const num = parseFloat(val);
       return num <= 10000000;
     }, 'Amount cannot exceed ₹1,00,00,000'),
-  paymentMethod: z.enum(['cash', 'upi', 'bank_transfer', 'cheque', 'card'] as const, {
-    required_error: 'Payment method is required',
+  paymentMethod: z.enum({
+    cash: 'cash',
+    upi: 'upi',
+    bank_transfer: 'bank_transfer',
+    cheque: 'cheque',
+    card: 'card',
+  }, {
+    error: 'Payment method is required',
   }),
   reference: z
     .string()
