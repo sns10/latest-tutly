@@ -39,7 +39,7 @@ import { WeeklyTest, ClassName, Subject } from "@/types";
 const formSchema = z.object({
   name: z.string().min(2, "Test name must be at least 2 characters."),
   subject: z.string().min(1, "Please select a subject."),
-  maxMarks: z.coerce.number().int().positive("Max marks must be a positive number."),
+  maxMarks: z.number().int().positive("Max marks must be a positive number."),
   date: z.date(),
   class: z.enum(["4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "All"]),
 });

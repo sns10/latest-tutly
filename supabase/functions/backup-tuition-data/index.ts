@@ -807,6 +807,140 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // RESET: Academic year reset with auto-backup
+    if (action === 'reset') {
+      const mode = resetMode || 'keep_structure';
+      console.log(`Academic year reset for tuition: ${tuitionId}, mode: ${mode}`);
+
+      // Step 1: Auto-backup before reset
+      console.log('Creating auto-backup before reset...');
+      const backupData = await fetchTuitionData();
+      const { error: backupError } = await supabaseAdmin
+        .from('tuition_backups')
+        .insert({
+          tuition_id: tuitionId,
+          created_by: callerUser.id,
+          backup_data: backupData,
+          file_size: JSON.stringify(backupData).length,
+          status: 'pre_reset_backup'
+        });
+
+      if (backupError) {
+        console.error('Failed to create pre-reset backup:', backupError);
+        return new Response(
+          JSON.stringify({ error: 'Failed to create safety backup before reset. Reset aborted.' }),
+          { status: 500, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+        );
+      }
+      console.log('Pre-reset backup created successfully');
+
+      // Step 2: Get student IDs for this tuition
+      const { data: students } = await supabaseAdmin
+        .from('students')
+        .select('id')
+        .eq('tuition_id', tuitionId);
+      const studentIds = (students || []).map((s: any) => s.id);
+
+      // Step 3: Get fee IDs for batch deletion of fee_payments
+      let feeIds: string[] = [];
+      if (studentIds.length > 0) {
+        const { data: fees } = await supabaseAdmin
+          .from('student_fees')
+          .select('id')
+          .in('student_id', studentIds);
+        feeIds = (fees || []).map((f: any) => f.id);
+      }
+
+      const deletionLog: Record<string, number> = {};
+
+      // Helper to delete in batches
+      const batchDelete = async (table: string, column: string, ids: string[]) => {
+        let total = 0;
+        const batchSize = 100;
+        for (let i = 0; i < ids.length; i += batchSize) {
+          const batch = ids.slice(i, i + batchSize);
+          const { data, error } = await supabaseAdmin
+            .from(table)
+            .delete()
+            .in(column, batch)
+            .select('id');
+          if (!error && data) total += data.length;
+          if (error) console.error(`Error deleting from ${table}:`, error);
+        }
+        return total;
+      };
+
+      // Step 4: Delete child tables first (respecting FK dependencies)
+      // 4a. fee_payments (depends on student_fees)
+      if (feeIds.length > 0) {
+        deletionLog.fee_payments = await batchDelete('fee_payments', 'fee_id', feeIds);
+      }
+
+      // 4b. Student-linked child tables
+      if (studentIds.length > 0) {
+        deletionLog.student_test_results = await batchDelete('student_test_results', 'student_id', studentIds);
+        deletionLog.student_attendance = await batchDelete('student_attendance', 'student_id', studentIds);
+        deletionLog.student_xp = await batchDelete('student_xp', 'student_id', studentIds);
+        deletionLog.student_badges = await batchDelete('student_badges', 'student_id', studentIds);
+        deletionLog.student_rewards = await batchDelete('student_rewards', 'student_id', studentIds);
+        deletionLog.student_challenges = await batchDelete('student_challenges', 'student_id', studentIds);
+        deletionLog.student_fees = await batchDelete('student_fees', 'student_id', studentIds);
+
+        // Reset total_xp on students
+        await supabaseAdmin
+          .from('students')
+          .update({ total_xp: 0 })
+          .eq('tuition_id', tuitionId);
+      }
+
+      // 4c. term_exam_results (depends on term_exams)
+      const { data: termExams } = await supabaseAdmin
+        .from('term_exams')
+        .select('id')
+        .eq('tuition_id', tuitionId);
+      const termExamIds = (termExams || []).map((te: any) => te.id);
+      
+      if (termExamIds.length > 0) {
+        deletionLog.term_exam_results = await batchDelete('term_exam_results', 'term_exam_id', termExamIds);
+        deletionLog.term_exam_subjects = await batchDelete('term_exam_subjects', 'term_exam_id', termExamIds);
+      }
+
+      // Step 5: Delete parent tables (tuition-level)
+      const tuitionTables = ['weekly_tests', 'term_exams', 'homework', 'announcements', 'challenges', 'timetable'];
+      for (const table of tuitionTables) {
+        const { data, error } = await supabaseAdmin
+          .from(table)
+          .delete()
+          .eq('tuition_id', tuitionId)
+          .select('id');
+        deletionLog[table] = (!error && data) ? data.length : 0;
+      }
+
+      // Step 6: If full reset, also delete students
+      if (mode === 'full_reset') {
+        const { data, error } = await supabaseAdmin
+          .from('students')
+          .delete()
+          .eq('tuition_id', tuitionId)
+          .select('id');
+        deletionLog.students = (!error && data) ? data.length : 0;
+      }
+
+      console.log('Reset completed. Deletion log:', deletionLog);
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: mode === 'full_reset'
+            ? 'Complete reset done. All data wiped for fresh start.'
+            : 'Academic year reset done. Students & structure kept, transactional data cleared.',
+          deletionLog,
+          backupCreated: true,
+        }),
+        { headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
     return new Response(
       JSON.stringify({ error: 'Invalid action' }),
       { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
