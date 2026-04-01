@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 import { useTermExamData } from '@/hooks/useTermExamData';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Search, Users, GraduationCap, Flame, ArrowLeft } from 'lucide-react';
+import { Search, Users, GraduationCap, Flame, ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
@@ -19,6 +19,9 @@ import { StudentDetailsDialog } from '@/components/StudentDetailsDialog';
 import { RegistrationLinkManager } from '@/components/RegistrationLinkManager';
 import { useAttendanceStreak } from '@/hooks/useAttendanceStreak';
 import { StudentsPageSkeleton } from '@/components/skeletons/PageSkeletons';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 
 export default function StudentsPage() {
   const { 
