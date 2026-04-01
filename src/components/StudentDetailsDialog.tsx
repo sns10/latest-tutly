@@ -98,6 +98,8 @@ export function StudentDetailsDialog({
   const [editDateOfBirth, setEditDateOfBirth] = useState(student.dateOfBirth || '');
   const [editParentName, setEditParentName] = useState(student.parentName || '');
   const [editParentPhone, setEditParentPhone] = useState(student.parentPhone || '');
+  const [editFatherPhone, setEditFatherPhone] = useState(student.fatherPhone || '');
+  const [editMotherPhone, setEditMotherPhone] = useState(student.motherPhone || '');
   const [editAddress, setEditAddress] = useState(student.address || '');
   const [editGender, setEditGender] = useState<'male' | 'female' | 'other' | ''>(student.gender || '');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
