@@ -269,9 +269,7 @@ export function RecordPaymentDialog({
                 placeholder={paymentMethod === 'cheque' ? 'Enter cheque number' : 'Enter transaction ID'}
                 maxLength={MAX_REFERENCE_LENGTH}
                 className={errors.reference ? 'border-destructive' : ''}
-            />
-            <p className="text-xs text-muted-foreground">{notes.length}/{MAX_NOTES_LENGTH}</p>
-            {errors.notes && <p className="text-xs text-destructive">{errors.notes}</p>}
+              />
               <p className="text-xs text-muted-foreground mt-1">{reference.length}/{MAX_REFERENCE_LENGTH}</p>
               {errors.reference && <p className="text-xs text-destructive">{errors.reference}</p>}
             </div>
