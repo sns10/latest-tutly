@@ -821,8 +821,12 @@ export function StudentDetailsDialog({
                           <p className="text-sm font-medium">{student.parentName || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Phone</p>
-                          <p className="text-sm font-medium">{student.parentPhone || '-'}</p>
+                          <p className="text-xs text-muted-foreground">Father Phone</p>
+                          <p className="text-sm font-medium">{student.fatherPhone || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Mother Phone</p>
+                          <p className="text-sm font-medium">{student.motherPhone || '-'}</p>
                         </div>
                       </div>
                     </div>
