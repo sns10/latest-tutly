@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
     const data: RegistrationData = await req.json();
 
     // Validate required fields
-    if (!data.tuitionId || !data.name || !data.class || !data.dateOfBirth || !data.parentPhone) {
+    if (!data.tuitionId || !data.name || !data.class || !data.dateOfBirth || !data.fatherPhone) {
       return new Response(
         JSON.stringify({ error: "Missing required fields: tuitionId, name, class, dateOfBirth, parentPhone" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
