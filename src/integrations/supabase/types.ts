@@ -877,8 +877,10 @@ export type Database = {
           date_of_birth: string | null
           division_id: string | null
           email: string | null
+          father_phone: string | null
           gender: string | null
           id: string
+          mother_phone: string | null
           name: string
           parent_name: string | null
           parent_phone: string | null
@@ -897,8 +899,10 @@ export type Database = {
           date_of_birth?: string | null
           division_id?: string | null
           email?: string | null
+          father_phone?: string | null
           gender?: string | null
           id?: string
+          mother_phone?: string | null
           name: string
           parent_name?: string | null
           parent_phone?: string | null
@@ -917,8 +921,10 @@ export type Database = {
           date_of_birth?: string | null
           division_id?: string | null
           email?: string | null
+          father_phone?: string | null
           gender?: string | null
           id?: string
+          mother_phone?: string | null
           name?: string
           parent_name?: string | null
           parent_phone?: string | null
