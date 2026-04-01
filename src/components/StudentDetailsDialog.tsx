@@ -439,6 +439,8 @@ export function StudentDetailsDialog({
     setEditDateOfBirth(student.dateOfBirth || '');
     setEditParentName(student.parentName || '');
     setEditParentPhone(student.parentPhone || '');
+    setEditFatherPhone(student.fatherPhone || '');
+    setEditMotherPhone(student.motherPhone || '');
     setEditAddress(student.address || '');
     setEditGender(student.gender || '');
   };
