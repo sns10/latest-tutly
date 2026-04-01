@@ -199,7 +199,9 @@ export default function StudentRegistration() {
             email: formData.email || null,
             phone: formData.phone || null,
             parentName: formData.parentName || null,
-            parentPhone: formData.parentPhone,
+            parentPhone: formData.parentPhone || null,
+            fatherPhone: formData.fatherPhone,
+            motherPhone: formData.motherPhone || null,
             address: formData.address || null,
           }),
         }
