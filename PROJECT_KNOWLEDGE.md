@@ -91,7 +91,7 @@ Defined in: `src/hooks/useTuitionFeatures.ts` → `ALL_FEATURES` array
 | `tuitions` | Tenant config: name, logo, features, subscription, portal_email, slug |
 | `profiles` | User profiles with tuition_id mapping |
 | `user_roles` | Role assignments (app_role enum) |
-| `students` | Student records with class, division, XP, user_id link |
+| `students` | Student records with class, division, XP, father_phone, mother_phone, user_id link |
 | `divisions` | Class divisions (e.g., 10th-A, 10th-B) |
 | `subjects` | Subjects per class per tuition |
 | `faculty` | Faculty members |
