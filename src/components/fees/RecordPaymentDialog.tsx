@@ -287,6 +287,8 @@ export function RecordPaymentDialog({
               maxLength={MAX_NOTES_LENGTH}
               className={errors.notes ? 'border-destructive' : ''}
             />
+            <p className="text-xs text-muted-foreground">{notes.length}/{MAX_NOTES_LENGTH}</p>
+            {errors.notes && <p className="text-xs text-destructive">{errors.notes}</p>}
           </div>
         </div>
 
