@@ -147,9 +147,10 @@ Defined in: `src/hooks/useTuitionFeatures.ts` → `ALL_FEATURES` array
 
 ### Performance Patterns
 - Chunked `.in()` filters for arrays > 200 items
-- Historical data capped at 5,000 records
+- Paginated queries for fees and test results (no blanket limits)
 - Explicit `tuition_id` filters on all queries
 - Joined queries to reduce API calls (e.g., fees + payments)
+- Fee status calculated from DB truth via `useRecordPaymentMutation`
 - Optimistic mutations for attendance marking
 - Virtualized lists for large student lists (`@tanstack/react-virtual`)
 
