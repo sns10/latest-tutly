@@ -33,7 +33,9 @@ const registrationSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
   parentName: z.string().optional(),
-  parentPhone: z.string().min(10, "Parent phone is required").max(15, "Invalid phone number"),
+  parentPhone: z.string().optional(),
+  fatherPhone: z.string().min(10, "Father's phone is required").max(15, "Invalid phone number"),
+  motherPhone: z.string().optional(),
   address: z.string().optional(),
 });
 
