@@ -194,6 +194,8 @@ export function useSupabaseData() {
     if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
     if (updates.parentName !== undefined) updateData.parent_name = updates.parentName;
     if (updates.parentPhone !== undefined) updateData.parent_phone = updates.parentPhone;
+    if (updates.fatherPhone !== undefined) updateData.father_phone = updates.fatherPhone;
+    if (updates.motherPhone !== undefined) updateData.mother_phone = updates.motherPhone;
     if (updates.address !== undefined) updateData.address = updates.address;
     if (updates.gender !== undefined) updateData.gender = updates.gender;
 
