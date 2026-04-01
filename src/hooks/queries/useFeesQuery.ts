@@ -34,7 +34,6 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      // Explicit tuition_id filter via student join to optimize DB scan
       let query = supabase
         .from('student_fees')
         .select('*, students!inner(tuition_id)')
@@ -56,17 +55,22 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
         query = query.gte('due_date', startOfMonth).lte('due_date', endOfMonth);
       }
 
-      // Limit to reasonable amount
-      query = query.limit(500);
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching fees:', error);
-        throw error;
+      // Paginate to get all fees (no arbitrary limit)
+      const allData: any[] = [];
+      let from = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+        if (error) {
+          console.error('Error fetching fees:', error);
+          throw error;
+        }
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      return formatFees(data || []);
+      return formatFees(allData);
     },
     enabled: !!tuitionId,
     staleTime: STALE_TIME,
@@ -209,6 +213,127 @@ export function useDeleteFeeMutation(tuitionId: string | null) {
     onError: (error) => {
       console.error('Error deleting fee:', error);
       toast.error('Failed to delete fee');
+    },
+  });
+}
+
+// ---- Payments Query (replaces useState in Fees.tsx) ----
+
+interface FeePayment {
+  id: string;
+  feeId: string;
+  amount: number;
+  paymentDate: string;
+  paymentMethod: string;
+  paymentReference?: string;
+  notes?: string;
+  createdAt: string;
+}
+
+export function usePaymentsQuery(tuitionId: string | null) {
+  return useQuery({
+    queryKey: ['feePayments', tuitionId],
+    queryFn: async () => {
+      if (!tuitionId) return [];
+
+      // Join through student_fees → students to filter by tuition
+      const { data, error } = await supabase
+        .from('fee_payments')
+        .select('*, student_fees!inner(student_id, students!inner(tuition_id))')
+        .eq('student_fees.students.tuition_id', tuitionId)
+        .order('created_at', { ascending: false })
+        .limit(2000);
+
+      if (error) {
+        console.error('Error fetching payments:', error);
+        throw error;
+      }
+
+      return (data || []).map((p: any) => ({
+        id: p.id,
+        feeId: p.fee_id,
+        amount: Number(p.amount) || 0,
+        paymentDate: p.payment_date,
+        paymentMethod: p.payment_method || 'cash',
+        paymentReference: p.payment_reference || undefined,
+        notes: p.notes || undefined,
+        createdAt: p.created_at,
+      })) as FeePayment[];
+    },
+    enabled: !!tuitionId,
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
+}
+
+export function useRecordPaymentMutation(tuitionId: string | null) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (params: {
+      feeId: string;
+      amount: number;
+      paymentMethod: string;
+      reference?: string;
+      notes?: string;
+    }) => {
+      // 1. Insert the payment record
+      const { error: paymentError } = await supabase
+        .from('fee_payments')
+        .insert({
+          fee_id: params.feeId,
+          amount: params.amount,
+          payment_method: params.paymentMethod,
+          payment_reference: params.reference || null,
+          notes: params.notes || null,
+        });
+
+      if (paymentError) throw paymentError;
+
+      // 2. Re-query actual total paid from DB (no stale state)
+      const { data: allPayments, error: fetchError } = await supabase
+        .from('fee_payments')
+        .select('amount')
+        .eq('fee_id', params.feeId);
+
+      if (fetchError) throw fetchError;
+
+      const totalPaid = (allPayments || []).reduce((sum, p) => sum + Number(p.amount), 0);
+
+      // 3. Get the fee amount to compare
+      const { data: feeData, error: feeError } = await supabase
+        .from('student_fees')
+        .select('amount')
+        .eq('id', params.feeId)
+        .single();
+
+      if (feeError) throw feeError;
+
+      // 4. Update fee status based on actual DB totals
+      const feeAmount = Number(feeData.amount);
+      const newStatus = totalPaid >= feeAmount ? 'paid' : 'partial';
+      const paidDate = totalPaid >= feeAmount ? new Date().toISOString().split('T')[0] : null;
+
+      const { error: updateError } = await supabase
+        .from('student_fees')
+        .update({
+          status: newStatus,
+          paid_date: paidDate,
+        })
+        .eq('id', params.feeId);
+
+      if (updateError) throw updateError;
+
+      return { totalPaid, feeAmount, newStatus };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
+    },
+    onError: (error) => {
+      console.error('Error recording payment:', error);
+      toast.error('Failed to record payment');
     },
   });
 }

@@ -8,7 +8,7 @@ export { useStudentsQuery, useAddStudentMutation, useRemoveStudentMutation } fro
 export { useAttendanceQuery, useTodayAttendanceQuery, useHistoricalAttendanceQuery, useStudentAttendanceQuery, useMarkAttendanceMutation, useBulkMarkAttendanceMutation } from './useAttendanceQuery';
 
 // Fees queries - loaded on-demand
-export { useFeesQuery, useClassFeesQuery, useAddFeeMutation, useUpdateFeeStatusMutation, useDeleteFeeMutation, useUpdateClassFeeMutation } from './useFeesQuery';
+export { useFeesQuery, useClassFeesQuery, useAddFeeMutation, useUpdateFeeStatusMutation, useDeleteFeeMutation, useUpdateClassFeeMutation, usePaymentsQuery, useRecordPaymentMutation } from './useFeesQuery';
 
 // Tests queries - loaded on-demand
 export { useWeeklyTestsQuery, useTestResultsQuery, useAddWeeklyTestMutation, useDeleteWeeklyTestMutation, useAddTestResultMutation, useAddTestResultsBatchMutation } from './useTestsQuery';

@@ -45,26 +45,33 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      // Single query with inner join — no pagination loop needed
-      // Tests are limited to 100 most recent, so results are naturally bounded
       let query = supabase
         .from('student_test_results')
         .select('test_id, student_id, marks, weekly_tests!inner(tuition_id)')
-        .eq('weekly_tests.tuition_id', tuitionId)
-        .limit(2000);
+        .eq('weekly_tests.tuition_id', tuitionId);
 
       if (testId) {
         query = query.eq('test_id', testId);
       }
 
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching test results:', error);
-        throw error;
+      // Paginate to get ALL results (no blanket limit)
+      const allData: any[] = [];
+      let from = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+        if (error) {
+          console.error('Error fetching test results:', error);
+          throw error;
+        }
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+        // Safety cap at 5000 for dashboard stability
+        if (from >= 5000) break;
       }
 
-      return (data ?? []).map((r: any) => ({
+      return allData.map((r: any) => ({
         testId: r.test_id,
         studentId: r.student_id,
         marks: Number(r.marks),

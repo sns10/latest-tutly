@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
-import { supabase } from '@/integrations/supabase/client';
+import { usePaymentsQuery, useRecordPaymentMutation } from '@/hooks/queries/useFeesQuery';
+import { useUserTuition } from '@/hooks/useUserTuition';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt, Activity } from 'lucide-react';
@@ -16,17 +17,6 @@ import {
 import { FeesPageSkeleton } from '@/components/skeletons/PageSkeletons';
 import { toast } from 'sonner';
 
-interface FeePayment {
-  id: string;
-  feeId: string;
-  amount: number;
-  paymentDate: string;
-  paymentMethod: string;
-  paymentReference?: string;
-  notes?: string;
-  createdAt: string;
-}
-
 export default function FeesPage() {
   const { 
     students, 
@@ -39,72 +29,27 @@ export default function FeesPage() {
     updateFeeStatus,
     updateClassFee,
     deleteFee,
-    fetchFees
   } = useSupabaseData();
 
+  const { tuitionId } = useUserTuition();
+  const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery(tuitionId);
+  const recordPaymentMutation = useRecordPaymentMutation(tuitionId);
+
   const [addFeeDialogOpen, setAddFeeDialogOpen] = useState(false);
-  const [payments, setPayments] = useState<FeePayment[]>([]);
-
-  // Fetch payments
-  useEffect(() => {
-    fetchPayments();
-  }, [fees]);
-
-  const fetchPayments = async () => {
-    const { data, error } = await supabase
-      .from('fee_payments')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching payments:', error);
-      return;
-    }
-
-    setPayments((data || []).map(p => ({
-      id: p.id,
-      feeId: p.fee_id,
-      amount: Number(p.amount) || 0,
-      paymentDate: p.payment_date,
-      paymentMethod: p.payment_method || 'cash',
-      paymentReference: p.payment_reference || undefined,
-      notes: p.notes || undefined,
-      createdAt: p.created_at,
-    })));
-  };
 
   const handleRecordPayment = async (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => {
-    const { error } = await supabase
-      .from('fee_payments')
-      .insert({
-        fee_id: feeId,
+    try {
+      await recordPaymentMutation.mutateAsync({
+        feeId,
         amount,
-        payment_method: paymentMethod,
-        payment_reference: reference || null,
-        notes: notes || null,
+        paymentMethod,
+        reference,
+        notes,
       });
-
-    if (error) {
-      console.error('Error recording payment:', error);
-      toast.error('Failed to record payment');
-      return;
+      toast.success(`Payment of ₹${amount.toLocaleString('en-IN')} recorded`);
+    } catch {
+      // Error handled by mutation onError
     }
-
-    // Calculate total paid for this fee
-    const fee = fees.find(f => f.id === feeId);
-    if (fee) {
-      const existingPayments = payments.filter(p => p.feeId === feeId);
-      const totalPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0) + amount;
-      
-      if (totalPaid >= fee.amount) {
-        await updateFeeStatus(feeId, 'paid', new Date().toISOString().split('T')[0]);
-      } else {
-        await updateFeeStatus(feeId, 'partial');
-      }
-    }
-
-    await fetchPayments();
-    toast.success(`Payment of ₹${amount.toLocaleString('en-IN')} recorded`);
   };
 
   const handleDeleteFee = async (feeId: string) => {
@@ -113,8 +58,7 @@ export default function FeesPage() {
     }
   };
 
-  // Show skeleton during loading
-  if (loading) {
+  if (loading || paymentsLoading) {
     return <FeesPageSkeleton />;
   }
 
