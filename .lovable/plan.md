@@ -1,82 +1,75 @@
 
 
-# Academic Year Reset — Fresh Start Feature
+# Three Feature Updates
 
-## What We're Building
-A "New Academic Year" reset feature that lets tuition admins wipe all transactional data (attendance, tests, marks, fees, XP, etc.) while optionally keeping structural data (students, subjects, faculty, divisions, rooms, timetable). This ensures a clean slate for the new academic year.
+## Feature 1: Father & Mother Phone Numbers
 
-## How It Works
+Currently the `students` table has a single `parent_phone` field. We need to split this into two separate fields.
 
-1. **Auto-backup before reset** — The system creates a full backup automatically before wiping anything, so data is never lost.
-2. **Two reset modes**:
-   - **Full Reset**: Deletes everything except the tuition record itself, subjects, faculty, divisions, and rooms. Students are kept but their transactional data (attendance, fees, tests, XP, badges) is wiped.
-   - **Complete Fresh Start**: Deletes ALL data including students — truly starting from zero.
-3. **Confirmation with typed input** — Admin must type "RESET" to confirm (prevents accidental resets).
+### Database Migration
+- Add two new columns to `students` table: `father_phone` (text, nullable) and `mother_phone` (text, nullable)
+- Keep existing `parent_phone` column for backward compatibility (copy its value to `father_phone` via migration)
 
-## Data Deletion Order (respecting dependencies)
+### Files Modified
+- **`src/types.ts`** — Add `fatherPhone?: string` and `motherPhone?: string` to `Student` interface
+- **`src/components/AddStudentDialog.tsx`** — Replace single "Parent Ph" field with "Father Phone *" and "Mother Phone (optional)"
+- **`src/components/StudentDetailsDialog.tsx`** — Show both phone fields in Info tab and edit form
+- **`src/pages/StudentRegistration.tsx`** — Update registration form with both fields, update Zod schema (father phone required, mother phone optional)
+- **`src/hooks/queries/useStudentsQuery.ts`** — Map `father_phone` and `mother_phone` from DB
+- **`src/hooks/useSupabaseData.ts`** — Handle updates for both fields
+- **`src/components/BulkImportStudentsDialog.tsx`** — Update Excel template columns
+- **`supabase/functions/register-student/index.ts`** — Accept `fatherPhone` and `motherPhone`
+- **`src/components/fees/WhatsAppReminderDialog.tsx`** — Use `fatherPhone` for WhatsApp link, fallback to `motherPhone`
 
-```text
-Delete first (child tables):
-  → fee_payments
-  → student_test_results
-  → term_exam_results
-  → student_attendance
-  → student_xp, student_badges, student_rewards
-  → student_challenges
-  → student_fees
+---
 
-Then parent tables:
-  → weekly_tests
-  → term_exam_subjects → term_exams
-  → homework
-  → announcements
-  → challenges
-  → timetable (optional — keep structure mode)
+## Feature 2: Export Student Data (Class-wise or All)
 
-If "Complete Fresh Start":
-  → students (also resets total_xp)
+Add an export button on the Students page to download student details as Excel.
+
+### Files Modified
+- **`src/pages/Students.tsx`** — Add "Export Students" button with dropdown (current class filter / all students)
+- Uses existing `xlsx` library (already installed for bulk import) to generate a spreadsheet with columns: Name, Class, Division, Roll No, DOB, Gender, Email, Phone, Father Phone, Mother Phone, Parent Name, Address
+
+---
+
+## Feature 3: Malayalam Fee Reminder Template
+
+Add a language selector to the WhatsApp reminder dialog so tuition admins can send messages in Malayalam.
+
+### Files Modified
+- **`src/components/fees/WhatsAppReminderDialog.tsx`** — Add a language toggle (English / Malayalam) at the top. When Malayalam is selected, generate the fee reminder message in Malayalam script. The template will use proper Malayalam text for greeting, fee details, and closing. Admin can still edit the message before sending.
+
+### Malayalam Template Example
+```
+പ്രിയ രക്ഷിതാവ്,
+
+{student_name} (ക്ലാസ്: {class}) യുടെ ഫീസ് അടവ് സംബന്ധിച്ച ഒരു ഓർമ്മപ്പെടുത്തലാണ് ഇത്.
+
+*കുടിശ്ശിക ഫീസ്:*
+{fee_details}
+
+*ആകെ കുടിശ്ശിക: ₹{amount}*
+
+ലേറ്റ് ഫീസ് ഒഴിവാക്കാൻ ദയവായി എത്രയും വേഗം ഫീസ് അടയ്ക്കുക.
+
+നന്ദി.
+ട്യൂഷൻ അഡ്മിനിസ്ട്രേഷൻ
 ```
 
-## Implementation Steps
+---
 
-### Step 1: Add `reset` action to `backup-tuition-data` edge function
-- New action `reset` with a `resetMode` parameter (`keep_structure` or `full_reset`)
-- Auto-creates a backup first
-- Deletes data in correct dependency order using service role (bypasses RLS)
-- Returns counts of deleted records per table
+## Summary of All Changes
 
-### Step 2: Add Reset UI to `BackupDashboard.tsx`
-- New "New Academic Year" button with a warning card
-- Two-option selector: "Keep Students & Structure" vs "Complete Fresh Start"
-- Confirmation dialog requiring typed "RESET" input
-- Progress display showing which tables are being cleared
-- Summary of deleted records after completion
-
-### Step 3: Fix existing build error in `CreateTestDialog.tsx`
-- Fix the `maxMarks` type mismatch (zod schema returns `unknown`, needs explicit `number` coercion)
-
-## Files Modified
-- `supabase/functions/backup-tuition-data/index.ts` — add `reset` action
-- `src/components/BackupDashboard.tsx` — add reset UI section
-- `src/components/CreateTestDialog.tsx` — fix type error
-
-## What Gets Preserved (Keep Structure mode)
-| Kept | Deleted |
-|------|---------|
-| Students (names, contact, class) | Attendance records |
-| Subjects | Test results & marks |
-| Faculty & assignments | Fees & payments |
-| Divisions | XP, badges, rewards |
-| Rooms | Homework |
-| Class fee config | Announcements |
-| | Challenges & completions |
-| | Term exams & results |
-| | Timetable schedules |
-
-## Safety Measures
-- Mandatory backup created before any deletion
-- Typed confirmation ("RESET") required
-- Only tuition_admin or super_admin can trigger
-- Rate limited (existing rate limiter)
-- Detailed deletion log returned to UI
+| Area | Files Changed |
+|------|--------------|
+| DB Migration | 1 new migration (add `father_phone`, `mother_phone`) |
+| Types | `src/types.ts` |
+| Add Student | `AddStudentDialog.tsx` |
+| Student Details | `StudentDetailsDialog.tsx` |
+| Registration | `StudentRegistration.tsx`, `register-student/index.ts` |
+| Data Hooks | `useStudentsQuery.ts`, `useSupabaseData.ts` |
+| Bulk Import | `BulkImportStudentsDialog.tsx` |
+| Export | `Students.tsx` (new export button) |
+| WhatsApp | `WhatsAppReminderDialog.tsx` (Malayalam template + language toggle) |
 
