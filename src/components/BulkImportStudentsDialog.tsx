@@ -331,7 +331,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                       <th className="p-2 text-left whitespace-nowrap">Class</th>
                       <th className="p-2 text-left whitespace-nowrap">Division</th>
                       <th className="p-2 text-left whitespace-nowrap">DOB</th>
-                      <th className="p-2 text-left whitespace-nowrap">Parent Phone</th>
+                      <th className="p-2 text-left whitespace-nowrap">Father Phone</th>
                     </tr>
                   </thead>
                   <tbody>
