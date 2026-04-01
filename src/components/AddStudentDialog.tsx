@@ -99,6 +99,8 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
     setPhone("");
     setParentName("");
     setParentPhone("");
+    setFatherPhone("");
+    setMotherPhone("");
     setAddress("");
     setShowAdditional(false);
   };
