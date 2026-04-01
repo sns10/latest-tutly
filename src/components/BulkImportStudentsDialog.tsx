@@ -227,7 +227,9 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         phone: row.Phone?.toString().trim() || undefined,
         email: row.Email?.toString().trim() || undefined,
         parentName: row['Parent Name']?.toString().trim() || undefined,
-        parentPhone: row['Parent Phone']?.toString().trim() || undefined,
+        parentPhone: row['Father Phone']?.toString().trim() || row['Parent Phone']?.toString().trim() || undefined,
+        fatherPhone: row['Father Phone']?.toString().trim() || undefined,
+        motherPhone: row['Mother Phone']?.toString().trim() || undefined,
         address: row.Address?.toString().trim() || undefined,
         avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
       };
