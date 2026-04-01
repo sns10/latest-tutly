@@ -342,7 +342,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                         <td className="p-2">{row.Class}</td>
                         <td className="p-2">{row.Division || '-'}</td>
                         <td className="p-2">{row['Date of Birth'] ? formatDate(row['Date of Birth']) : '-'}</td>
-                        <td className="p-2">{row['Parent Phone'] || '-'}</td>
+                        <td className="p-2">{row['Father Phone'] || row['Parent Phone'] || '-'}</td>
                       </tr>
                     ))}
                     {previewData.length > 10 && (
