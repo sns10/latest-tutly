@@ -1,75 +1,72 @@
 
 
-# Three Feature Updates
+# Data Integrity Fix — Fees & Marks Disappearing
 
-## Feature 1: Father & Mother Phone Numbers
+## Root Causes Found
 
-Currently the `students` table has a single `parent_phone` field. We need to split this into two separate fields.
+### Bug 1: Fee status reverts due to stale payment data (CRITICAL)
+In `Fees.tsx`, payments are stored in local `useState` (not React Query). When `handleRecordPayment` runs:
+1. A payment is inserted into the database
+2. `totalPaid` is calculated using the **stale local `payments` array** (which hasn't refetched yet)
+3. If the stale array is missing previous payments, the code calculates wrong totals and sets status to `'partial'` instead of `'paid'`
+4. Next time the page loads, it re-fetches and the fee appears as `partial` or `unpaid`
 
-### Database Migration
-- Add two new columns to `students` table: `father_phone` (text, nullable) and `mother_phone` (text, nullable)
-- Keep existing `parent_phone` column for backward compatibility (copy its value to `father_phone` via migration)
+Additionally, `handleMarkAsPaid` in `FeesList.tsx` calls `onRecordPayment` but never directly calls `onUpdateFeeStatus('paid')` — it relies entirely on the stale-state calculation above.
 
-### Files Modified
-- **`src/types.ts`** — Add `fatherPhone?: string` and `motherPhone?: string` to `Student` interface
-- **`src/components/AddStudentDialog.tsx`** — Replace single "Parent Ph" field with "Father Phone *" and "Mother Phone (optional)"
-- **`src/components/StudentDetailsDialog.tsx`** — Show both phone fields in Info tab and edit form
-- **`src/pages/StudentRegistration.tsx`** — Update registration form with both fields, update Zod schema (father phone required, mother phone optional)
-- **`src/hooks/queries/useStudentsQuery.ts`** — Map `father_phone` and `mother_phone` from DB
-- **`src/hooks/useSupabaseData.ts`** — Handle updates for both fields
-- **`src/components/BulkImportStudentsDialog.tsx`** — Update Excel template columns
-- **`supabase/functions/register-student/index.ts`** — Accept `fatherPhone` and `motherPhone`
-- **`src/components/fees/WhatsAppReminderDialog.tsx`** — Use `fatherPhone` for WhatsApp link, fallback to `motherPhone`
+### Bug 2: Bulk "Mark as Paid" skips payment records (CRITICAL)  
+`handleBulkMarkPaid` in `FeesList.tsx` (line 259-269) only calls `onUpdateFeeStatus(feeId, 'paid')` without recording a payment entry. This means:
+- Fee shows as "paid" initially
+- But there's no `fee_payments` record to back it up
+- When the dashboard recalculates totals from `fee_payments`, the numbers don't match
+- Some views may show it as unpaid because `totalPaid` from payments = 0
 
----
+### Bug 3: Test results disappear due to query limit
+`useTestResultsQuery` has `.limit(2000)`. A tuition with 50 students × 50 tests = 2500 results. Older test marks simply vanish from the UI because they exceed the limit. Same issue with `useFeesQuery` having `.limit(500)`.
 
-## Feature 2: Export Student Data (Class-wise or All)
-
-Add an export button on the Students page to download student details as Excel.
-
-### Files Modified
-- **`src/pages/Students.tsx`** — Add "Export Students" button with dropdown (current class filter / all students)
-- Uses existing `xlsx` library (already installed for bulk import) to generate a spreadsheet with columns: Name, Class, Division, Roll No, DOB, Gender, Email, Phone, Father Phone, Mother Phone, Parent Name, Address
+### Bug 4: Payments fetched without tuition filter
+`fetchPayments()` in `Fees.tsx` does `supabase.from('fee_payments').select('*')` with no tuition filter. While RLS handles isolation, it fetches ALL historical payments with no limit, which can be slow and cause timeouts on large datasets.
 
 ---
 
-## Feature 3: Malayalam Fee Reminder Template
+## Fix Plan
 
-Add a language selector to the WhatsApp reminder dialog so tuition admins can send messages in Malayalam.
+### Fix 1: Move payments to React Query (eliminates stale state)
+**File: `src/hooks/queries/useFeesQuery.ts`**
+- Add a new `usePaymentsQuery(tuitionId)` hook using React Query
+- Filter by tuition via join (like fees query does)
+- This eliminates the stale `useState` + `useEffect` pattern
 
-### Files Modified
-- **`src/components/fees/WhatsAppReminderDialog.tsx`** — Add a language toggle (English / Malayalam) at the top. When Malayalam is selected, generate the fee reminder message in Malayalam script. The template will use proper Malayalam text for greeting, fee details, and closing. Admin can still edit the message before sending.
+### Fix 2: Fix fee status calculation to use database truth
+**File: `src/pages/Fees.tsx`**
+- Replace `useState` payments with the new `usePaymentsQuery`
+- In `handleRecordPayment`: after inserting the payment, **re-query the actual total from the database** before deciding paid/partial status, instead of relying on stale local state
+- Or simpler: fetch payments for that specific fee after insert, then calculate
 
-### Malayalam Template Example
-```
-പ്രിയ രക്ഷിതാവ്,
+### Fix 3: Fix "Mark as Paid" to always create a payment record
+**File: `src/components/fees/FeesList.tsx`**  
+- `handleBulkMarkPaid` must record a payment entry for each fee (like `handleMarkAsPaid` does for single fees)
+- This ensures `fee_payments` always has a matching record when status = 'paid'
 
-{student_name} (ക്ലാസ്: {class}) യുടെ ഫീസ് അടവ് സംബന്ധിച്ച ഒരു ഓർമ്മപ്പെടുത്തലാണ് ഇത്.
+### Fix 4: Remove dangerous query limits / use pagination
+**File: `src/hooks/queries/useTestsQuery.ts`**
+- Remove the `.limit(2000)` on test results — instead, scope results to only the tests already fetched (which are limited to 100 most recent)
+- Use `test_id.in(testIds)` filter instead of a blanket limit
 
-*കുടിശ്ശിക ഫീസ്:*
-{fee_details}
+**File: `src/hooks/queries/useFeesQuery.ts`**
+- Remove `.limit(500)` or increase significantly, since fees are already scoped by tuition_id and optional month filter
 
-*ആകെ കുടിശ്ശിക: ₹{amount}*
-
-ലേറ്റ് ഫീസ് ഒഴിവാക്കാൻ ദയവായി എത്രയും വേഗം ഫീസ് അടയ്ക്കുക.
-
-നന്ദി.
-ട്യൂഷൻ അഡ്മിനിസ്ട്രേഷൻ
-```
+### Fix 5: Fix RecordPaymentDialog JSX nesting error
+**File: `src/components/fees/RecordPaymentDialog.tsx`**
+- Lines 273-274 have misplaced JSX (notes counter/error shown inside the reference field block). This causes notes validation display to break.
 
 ---
 
-## Summary of All Changes
-
-| Area | Files Changed |
-|------|--------------|
-| DB Migration | 1 new migration (add `father_phone`, `mother_phone`) |
-| Types | `src/types.ts` |
-| Add Student | `AddStudentDialog.tsx` |
-| Student Details | `StudentDetailsDialog.tsx` |
-| Registration | `StudentRegistration.tsx`, `register-student/index.ts` |
-| Data Hooks | `useStudentsQuery.ts`, `useSupabaseData.ts` |
-| Bulk Import | `BulkImportStudentsDialog.tsx` |
-| Export | `Students.tsx` (new export button) |
-| WhatsApp | `WhatsAppReminderDialog.tsx` (Malayalam template + language toggle) |
+## Files Modified
+| File | Change |
+|------|--------|
+| `src/hooks/queries/useFeesQuery.ts` | Add `usePaymentsQuery` hook, remove/increase limits |
+| `src/pages/Fees.tsx` | Use React Query for payments, fix status calculation |
+| `src/components/fees/FeesList.tsx` | Fix bulk mark-paid to record payments |
+| `src/hooks/queries/useTestsQuery.ts` | Scope test results to fetched test IDs instead of blanket limit |
+| `src/components/fees/RecordPaymentDialog.tsx` | Fix misplaced JSX |
 
