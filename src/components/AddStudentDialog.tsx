@@ -78,6 +78,8 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
         phone: phone || undefined,
         parentName: parentName || undefined,
         parentPhone: parentPhone || undefined,
+        fatherPhone: fatherPhone || undefined,
+        motherPhone: motherPhone || undefined,
         address: address || undefined,
         avatar: `https://images.unsplash.com/${randomAvatar}?w=500&h=500&fit=crop`
       });
