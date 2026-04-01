@@ -74,6 +74,8 @@ export default function StudentRegistration() {
     phone: "",
     parentName: "",
     parentPhone: "",
+    fatherPhone: "",
+    motherPhone: "",
     address: "",
   });
 
