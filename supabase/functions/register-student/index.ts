@@ -16,7 +16,9 @@ interface RegistrationData {
   email?: string | null;
   phone?: string | null;
   parentName?: string | null;
-  parentPhone: string;
+  parentPhone?: string | null;
+  fatherPhone: string;
+  motherPhone?: string | null;
   address?: string | null;
 }
 
