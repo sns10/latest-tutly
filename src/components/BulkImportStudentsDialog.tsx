@@ -50,7 +50,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         Phone: "9876543210",
         Email: "john@email.com",
         "Parent Name": "Mr. Doe",
-        "Parent Phone": "9876543211",
+        "Father Phone": "9876543211",
+        "Mother Phone": "9876543212",
         Address: "123 Main St"
       },
       { 
@@ -63,7 +64,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         Phone: "",
         Email: "",
         "Parent Name": "Mrs. Smith",
-        "Parent Phone": "9876543212",
+        "Father Phone": "9876543213",
+        "Mother Phone": "",
         Address: ""
       },
       { 
@@ -76,7 +78,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         Phone: "",
         Email: "",
         "Parent Name": "",
-        "Parent Phone": "9876543213",
+        "Father Phone": "9876543214",
+        "Mother Phone": "",
         Address: ""
       },
     ];
