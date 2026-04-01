@@ -267,12 +267,42 @@ Defined in: `src/hooks/useTuitionFeatures.ts` → `ALL_FEATURES` array
 
 ## 11. Recent Changes Log
 
+### April 2026 — Data Integrity Fixes (Critical)
+- **Fee status persistence fix**: Migrated payment state from local `useState` to React Query (`usePaymentsQuery`, `useRecordPaymentMutation`). Fee status now recalculated from database truth after each payment, preventing stale-state overwrites that caused fees to revert to "unpaid"
+- **Bulk payment tracking**: `handleBulkMarkPaid` now creates actual `fee_payments` records for every fee marked as paid, ensuring consistency between status and financial records
+- **Query limit removal**: Removed `.limit(500)` on fees and `.limit(2000)` on test results. Both now use pagination loops to fetch all records, preventing older data from disappearing
+- **RecordPaymentDialog JSX fix**: Fixed nesting error causing notes validation/character counter to display incorrectly
+
+### April 2026 — Father & Mother Phone Numbers
+- **Database**: Added `father_phone` and `mother_phone` columns to `students` table. Existing `parent_phone` data auto-migrated to `father_phone`
+- **Forms updated**: AddStudentDialog, StudentDetailsDialog, StudentRegistration — father phone required, mother phone optional
+- **Bulk import**: Excel template updated with both phone columns
+- **Edge function**: `register-student` updated to accept both phone fields
+- **WhatsApp reminders**: Use `fatherPhone` with fallback to `motherPhone`
+
+### April 2026 — Student Data Export
+- **Export button** on Students page with dropdown: export current class filter or all students
+- **Excel output** includes: Name, Class, Division, Roll No, DOB, Gender, Email, Phone, Father Phone, Mother Phone, Parent Name, Address
+- Uses existing `xlsx` library
+
+### April 2026 — Malayalam Fee Reminder Template
+- **Language toggle** (English / മലയാളം) in WhatsApp fee reminder dialog
+- Full Malayalam template with proper script for greeting, fee details, and closing
+- Admin can edit message before sending regardless of language
+
+### April 2026 — Academic Year Reset Feature
+- **"New Academic Year"** reset in settings for tuition admins
+- Wipes transactional data (attendance, tests, marks, fees, XP, badges, rewards, homework, announcements, challenges, term exams, timetable)
+- Optionally keeps structural data (students, subjects, faculty, divisions, rooms, class fee config)
+- Mandatory backup before deletion, typed confirmation ("RESET") required
+- Only tuition_admin or super_admin can trigger
+
 ### March 2026 — Cloud Usage Optimization
-- **Consolidated tuition queries**: 3 separate hooks (`useTuitionInfo`, `useTuitionFeatures`, `useTuitionStatus`) now derive from single `useTuitionData` hook → saved 2 API calls per page load
-- **Converted useEffect hooks to React Query**: `useUserRole` (30min cache), `ProtectedRoute` portal check (30min cache) → eliminated redundant navigation refetches
+- **Consolidated tuition queries**: 3 separate hooks → single `useTuitionData` hook → saved 2 API calls per page load
+- **Converted useEffect hooks to React Query**: `useUserRole` (30min cache), `ProtectedRoute` portal check (30min cache)
 - **Increased global staleTime**: 2min → 5min, gcTime: 10min → 15min
-- **Updated all dependencies** to latest versions (security fixes for xlsx, vite-plugin-pwa)
-- **Result**: ~50% reduction in API calls on dashboard load, near-zero redundant calls on navigation
+- **Updated all dependencies** to latest versions
+- **Result**: ~50% reduction in API calls on dashboard load
 
 ---
 
