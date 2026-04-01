@@ -57,6 +57,8 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
   const [phone, setPhone] = useState("");
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [fatherPhone, setFatherPhone] = useState("");
+  const [motherPhone, setMotherPhone] = useState("");
   const [address, setAddress] = useState("");
 
   // Filter divisions based on selected class
