@@ -261,8 +261,21 @@ export function FeesList({
       toast.error('No fees selected');
       return;
     }
+    const paidDate = new Date().toISOString().split('T')[0];
     selectedFees.forEach(feeId => {
-      onUpdateFeeStatus(feeId, 'paid', new Date().toISOString().split('T')[0]);
+      const fee = fees.find(f => f.id === feeId);
+      if (!fee) {
+        onUpdateFeeStatus(feeId, 'paid', paidDate);
+        return;
+      }
+      const totalPaid = getTotalPaid(feeId);
+      const remaining = fee.amount - totalPaid;
+      if (remaining > 0) {
+        // Record a payment entry so fee_payments stays consistent
+        onRecordPayment(feeId, remaining, 'cash', undefined, 'Bulk marked as paid');
+      } else {
+        onUpdateFeeStatus(feeId, 'paid', paidDate);
+      }
     });
     toast.success(`${selectedFees.size} fees marked as paid`);
     setSelectedFees(new Set());
