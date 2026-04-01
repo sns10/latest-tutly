@@ -11,9 +11,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { MessageSquare, Send, Copy } from 'lucide-react';
+import { MessageSquare, Send, Copy, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { sanitizeString } from '@/lib/validation';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 // WhatsApp message limit
 const MAX_MESSAGE_LENGTH = 4096;
@@ -25,20 +26,14 @@ interface WhatsAppReminderDialogProps {
   unpaidFees: StudentFee[];
 }
 
-export function WhatsAppReminderDialog({
-  open,
-  onOpenChange,
-  student,
-  unpaidFees
-}: WhatsAppReminderDialogProps) {
-  const totalUnpaid = unpaidFees.reduce((sum, f) => sum + f.amount, 0);
-  
-  const defaultMessage = useMemo(() => {
-    const feeDetails = unpaidFees.map(f => 
-      `• ${f.feeType || 'Monthly Fee'}: ₹${f.amount.toLocaleString('en-IN')} (Due: ${new Date(f.dueDate).toLocaleDateString()})`
-    ).join('\n');
+type Language = 'english' | 'malayalam';
 
-    return `Dear Parent,
+function generateEnglishMessage(student: Student, unpaidFees: StudentFee[], totalUnpaid: number): string {
+  const feeDetails = unpaidFees.map(f => 
+    `• ${f.feeType || 'Monthly Fee'}: ₹${f.amount.toLocaleString('en-IN')} (Due: ${new Date(f.dueDate).toLocaleDateString()})`
+  ).join('\n');
+
+  return `Dear Parent,
 
 This is a friendly reminder regarding the pending fee payment for *${student.name}* (Class: ${student.class}).
 
@@ -53,12 +48,57 @@ Thank you for your cooperation.
 
 Best regards,
 Tuition Administration`;
-  }, [student, unpaidFees, totalUnpaid]);
+}
+
+function generateMalayalamMessage(student: Student, unpaidFees: StudentFee[], totalUnpaid: number): string {
+  const feeDetails = unpaidFees.map(f => 
+    `• ${f.feeType || 'മാസ ഫീസ്'}: ₹${f.amount.toLocaleString('en-IN')} (അവസാന തീയതി: ${new Date(f.dueDate).toLocaleDateString()})`
+  ).join('\n');
+
+  return `പ്രിയ രക്ഷിതാവ്,
+
+*${student.name}* (ക്ലാസ്: ${student.class}) യുടെ ഫീസ് അടവ് സംബന്ധിച്ച ഒരു ഓർമ്മപ്പെടുത്തലാണ് ഇത്.
+
+*കുടിശ്ശിക ഫീസ്:*
+${feeDetails}
+
+*ആകെ കുടിശ്ശിക: ₹${totalUnpaid.toLocaleString('en-IN')}*
+
+ലേറ്റ് ഫീസ് ഒഴിവാക്കാൻ ദയവായി എത്രയും വേഗം ഫീസ് അടയ്ക്കുക.
+
+നന്ദി.
+ട്യൂഷൻ അഡ്മിനിസ്ട്രേഷൻ`;
+}
+
+export function WhatsAppReminderDialog({
+  open,
+  onOpenChange,
+  student,
+  unpaidFees
+}: WhatsAppReminderDialogProps) {
+  const totalUnpaid = unpaidFees.reduce((sum, f) => sum + f.amount, 0);
+  const [language, setLanguage] = useState<Language>('english');
+  
+  const defaultMessage = useMemo(() => {
+    return language === 'malayalam'
+      ? generateMalayalamMessage(student, unpaidFees, totalUnpaid)
+      : generateEnglishMessage(student, unpaidFees, totalUnpaid);
+  }, [student, unpaidFees, totalUnpaid, language]);
 
   const [message, setMessage] = useState(defaultMessage);
 
+  // Update message when language changes
+  const handleLanguageChange = (value: string) => {
+    if (value === 'english' || value === 'malayalam') {
+      setLanguage(value);
+      const newMsg = value === 'malayalam'
+        ? generateMalayalamMessage(student, unpaidFees, totalUnpaid)
+        : generateEnglishMessage(student, unpaidFees, totalUnpaid);
+      setMessage(newMsg);
+    }
+  };
+
   const handleMessageChange = (value: string) => {
-    // Limit to WhatsApp max length
     if (value.length <= MAX_MESSAGE_LENGTH) {
       setMessage(value);
     }
@@ -70,10 +110,17 @@ Tuition Administration`;
       return;
     }
     
-    // Sanitize and encode the message
+    // Use father phone, fallback to mother phone, then parent phone
+    const phoneNumber = student.fatherPhone || student.motherPhone || student.parentPhone || '';
     const sanitizedMessage = sanitizeString(message);
     const encodedMessage = encodeURIComponent(sanitizedMessage);
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+    
+    // If we have a phone number, include it in the WhatsApp link
+    const whatsappUrl = phoneNumber 
+      ? `https://wa.me/${phoneNumber.replace(/[^0-9]/g, '')}?text=${encodedMessage}`
+      : `https://wa.me/?text=${encodedMessage}`;
+    
+    window.open(whatsappUrl, '_blank');
     toast.success('WhatsApp opened with reminder message');
     onOpenChange(false);
   };
@@ -98,6 +145,15 @@ Tuition Administration`;
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {/* Language Toggle */}
+          <div className="flex items-center gap-2">
+            <Languages className="h-4 w-4 text-muted-foreground" />
+            <ToggleGroup type="single" value={language} onValueChange={handleLanguageChange} className="justify-start">
+              <ToggleGroupItem value="english" className="text-xs px-3 h-8">English</ToggleGroupItem>
+              <ToggleGroupItem value="malayalam" className="text-xs px-3 h-8">മലയാളം</ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+
           {/* Summary */}
           <div className="p-3 bg-muted rounded-lg">
             <div className="flex justify-between items-center">
