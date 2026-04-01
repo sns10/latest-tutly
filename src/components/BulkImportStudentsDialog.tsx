@@ -96,7 +96,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
       { wch: 12 }, // Phone
       { wch: 20 }, // Email
       { wch: 15 }, // Parent Name
-      { wch: 12 }, // Parent Phone
+      { wch: 14 }, // Father Phone
+      { wch: 14 }, // Mother Phone
       { wch: 25 }, // Address
     ];
     const wb = XLSX.utils.book_new();
