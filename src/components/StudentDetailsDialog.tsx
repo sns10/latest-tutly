@@ -458,6 +458,8 @@ export function StudentDetailsDialog({
       dateOfBirth: editDateOfBirth || null,
       parentName: editParentName.trim() || null,
       parentPhone: editParentPhone.trim() || null,
+      fatherPhone: editFatherPhone.trim() || null,
+      motherPhone: editMotherPhone.trim() || null,
       address: editAddress.trim() || null,
       gender: editGender || null,
     });
