@@ -33,7 +33,9 @@ const registrationSchema = z.object({
   email: z.string().email("Invalid email").optional().or(z.literal("")),
   phone: z.string().optional(),
   parentName: z.string().optional(),
-  parentPhone: z.string().min(10, "Parent phone is required").max(15, "Invalid phone number"),
+  parentPhone: z.string().optional(),
+  fatherPhone: z.string().min(10, "Father's phone is required").max(15, "Invalid phone number"),
+  motherPhone: z.string().optional(),
   address: z.string().optional(),
 });
 
@@ -72,6 +74,8 @@ export default function StudentRegistration() {
     phone: "",
     parentName: "",
     parentPhone: "",
+    fatherPhone: "",
+    motherPhone: "",
     address: "",
   });
 
@@ -195,7 +199,9 @@ export default function StudentRegistration() {
             email: formData.email || null,
             phone: formData.phone || null,
             parentName: formData.parentName || null,
-            parentPhone: formData.parentPhone,
+            parentPhone: formData.parentPhone || null,
+            fatherPhone: formData.fatherPhone,
+            motherPhone: formData.motherPhone || null,
             address: formData.address || null,
           }),
         }
@@ -448,18 +454,29 @@ export default function StudentRegistration() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="parentPhone">Parent Phone *</Label>
+                    <Label htmlFor="fatherPhone">Father's Phone *</Label>
                     <Input
-                      id="parentPhone"
+                      id="fatherPhone"
                       type="tel"
-                      placeholder="Parent's phone number"
-                      value={formData.parentPhone}
-                      onChange={(e) => handleInputChange("parentPhone", e.target.value)}
-                      className={validationErrors.parentPhone ? "border-destructive" : ""}
+                      placeholder="Father's phone number"
+                      value={formData.fatherPhone}
+                      onChange={(e) => handleInputChange("fatherPhone", e.target.value)}
+                      className={validationErrors.fatherPhone ? "border-destructive" : ""}
                     />
-                    {validationErrors.parentPhone && (
-                      <p className="text-sm text-destructive">{validationErrors.parentPhone}</p>
+                    {validationErrors.fatherPhone && (
+                      <p className="text-sm text-destructive">{validationErrors.fatherPhone}</p>
                     )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="motherPhone">Mother's Phone</Label>
+                    <Input
+                      id="motherPhone"
+                      type="tel"
+                      placeholder="Mother's phone number (optional)"
+                      value={formData.motherPhone}
+                      onChange={(e) => handleInputChange("motherPhone", e.target.value)}
+                    />
                   </div>
                 </div>
               </div>

@@ -58,6 +58,8 @@ interface StudentDetailsDialogProps {
     dateOfBirth?: string | null;
     parentName?: string | null;
     parentPhone?: string | null;
+    fatherPhone?: string | null;
+    motherPhone?: string | null;
     address?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
   }) => void;
@@ -96,6 +98,8 @@ export function StudentDetailsDialog({
   const [editDateOfBirth, setEditDateOfBirth] = useState(student.dateOfBirth || '');
   const [editParentName, setEditParentName] = useState(student.parentName || '');
   const [editParentPhone, setEditParentPhone] = useState(student.parentPhone || '');
+  const [editFatherPhone, setEditFatherPhone] = useState(student.fatherPhone || '');
+  const [editMotherPhone, setEditMotherPhone] = useState(student.motherPhone || '');
   const [editAddress, setEditAddress] = useState(student.address || '');
   const [editGender, setEditGender] = useState<'male' | 'female' | 'other' | ''>(student.gender || '');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
@@ -417,6 +421,8 @@ export function StudentDetailsDialog({
     setEditDateOfBirth(student.dateOfBirth || '');
     setEditParentName(student.parentName || '');
     setEditParentPhone(student.parentPhone || '');
+    setEditFatherPhone(student.fatherPhone || '');
+    setEditMotherPhone(student.motherPhone || '');
     setEditAddress(student.address || '');
     setEditGender(student.gender || '');
     setIsEditing(true);
@@ -433,6 +439,8 @@ export function StudentDetailsDialog({
     setEditDateOfBirth(student.dateOfBirth || '');
     setEditParentName(student.parentName || '');
     setEditParentPhone(student.parentPhone || '');
+    setEditFatherPhone(student.fatherPhone || '');
+    setEditMotherPhone(student.motherPhone || '');
     setEditAddress(student.address || '');
     setEditGender(student.gender || '');
   };
@@ -450,6 +458,8 @@ export function StudentDetailsDialog({
       dateOfBirth: editDateOfBirth || null,
       parentName: editParentName.trim() || null,
       parentPhone: editParentPhone.trim() || null,
+      fatherPhone: editFatherPhone.trim() || null,
+      motherPhone: editMotherPhone.trim() || null,
       address: editAddress.trim() || null,
       gender: editGender || null,
     });
@@ -706,12 +716,21 @@ export function StudentDetailsDialog({
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-muted-foreground">Parent Phone</label>
+                          <label className="text-xs font-medium text-muted-foreground">Father Phone</label>
                           <Input
                             type="tel"
-                            value={editParentPhone}
-                            onChange={(e) => setEditParentPhone(e.target.value)}
-                            placeholder="+91 98765 43210"
+                            value={editFatherPhone}
+                            onChange={(e) => setEditFatherPhone(e.target.value)}
+                            placeholder="Father's phone number"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Mother Phone</label>
+                          <Input
+                            type="tel"
+                            value={editMotherPhone}
+                            onChange={(e) => setEditMotherPhone(e.target.value)}
+                            placeholder="Mother's phone (optional)"
                           />
                         </div>
                       </div>
@@ -802,8 +821,12 @@ export function StudentDetailsDialog({
                           <p className="text-sm font-medium">{student.parentName || '-'}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Phone</p>
-                          <p className="text-sm font-medium">{student.parentPhone || '-'}</p>
+                          <p className="text-xs text-muted-foreground">Father Phone</p>
+                          <p className="text-sm font-medium">{student.fatherPhone || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Mother Phone</p>
+                          <p className="text-sm font-medium">{student.motherPhone || '-'}</p>
                         </div>
                       </div>
                     </div>

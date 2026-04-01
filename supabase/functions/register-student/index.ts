@@ -16,7 +16,9 @@ interface RegistrationData {
   email?: string | null;
   phone?: string | null;
   parentName?: string | null;
-  parentPhone: string;
+  parentPhone?: string | null;
+  fatherPhone: string;
+  motherPhone?: string | null;
   address?: string | null;
 }
 
@@ -36,9 +38,9 @@ Deno.serve(async (req) => {
     const data: RegistrationData = await req.json();
 
     // Validate required fields
-    if (!data.tuitionId || !data.name || !data.class || !data.dateOfBirth || !data.parentPhone) {
+    if (!data.tuitionId || !data.name || !data.class || !data.dateOfBirth || !data.fatherPhone) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: tuitionId, name, class, dateOfBirth, parentPhone" }),
+        JSON.stringify({ error: "Missing required fields: tuitionId, name, class, dateOfBirth, fatherPhone" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -114,7 +116,9 @@ Deno.serve(async (req) => {
         email: data.email || null,
         phone: data.phone || null,
         parent_name: data.parentName || null,
-        parent_phone: data.parentPhone,
+        parent_phone: data.fatherPhone || data.parentPhone || null,
+        father_phone: data.fatherPhone,
+        mother_phone: data.motherPhone || null,
         address: data.address || null,
         avatar: randomAvatar,
         total_xp: 0,

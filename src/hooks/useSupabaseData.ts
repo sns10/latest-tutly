@@ -140,6 +140,15 @@ export function useSupabaseData() {
         avatar: newStudent.avatar,
         tuition_id: tuitionId!,
         roll_no: rollNoToUse,
+        phone: newStudent.phone || null,
+        date_of_birth: newStudent.dateOfBirth || null,
+        parent_name: newStudent.parentName || null,
+        parent_phone: newStudent.fatherPhone || newStudent.parentPhone || null,
+        father_phone: newStudent.fatherPhone || null,
+        mother_phone: newStudent.motherPhone || null,
+        address: newStudent.address || null,
+        gender: newStudent.gender || null,
+        email: newStudent.email || null,
       })
       .select()
       .single();
@@ -181,6 +190,8 @@ export function useSupabaseData() {
     dateOfBirth?: string | null;
     parentName?: string | null;
     parentPhone?: string | null;
+    fatherPhone?: string | null;
+    motherPhone?: string | null;
     address?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
   }) => {
@@ -194,6 +205,8 @@ export function useSupabaseData() {
     if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
     if (updates.parentName !== undefined) updateData.parent_name = updates.parentName;
     if (updates.parentPhone !== undefined) updateData.parent_phone = updates.parentPhone;
+    if (updates.fatherPhone !== undefined) updateData.father_phone = updates.fatherPhone;
+    if (updates.motherPhone !== undefined) updateData.mother_phone = updates.motherPhone;
     if (updates.address !== undefined) updateData.address = updates.address;
     if (updates.gender !== undefined) updateData.gender = updates.gender;
 

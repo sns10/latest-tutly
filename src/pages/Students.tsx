@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 import { useTermExamData } from '@/hooks/useTermExamData';
@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Search, Users, GraduationCap, Flame, ArrowLeft } from 'lucide-react';
+import { Search, Users, GraduationCap, Flame, ArrowLeft, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { AddStudentDialog } from '@/components/AddStudentDialog';
@@ -19,6 +19,9 @@ import { StudentDetailsDialog } from '@/components/StudentDetailsDialog';
 import { RegistrationLinkManager } from '@/components/RegistrationLinkManager';
 import { useAttendanceStreak } from '@/hooks/useAttendanceStreak';
 import { StudentsPageSkeleton } from '@/components/skeletons/PageSkeletons';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 
 export default function StudentsPage() {
   const { 
@@ -98,6 +101,44 @@ export default function StudentsPage() {
     }
   };
 
+  const handleExportStudents = useCallback((exportAll: boolean) => {
+    const studentsToExport = exportAll ? students : filteredStudents;
+    if (studentsToExport.length === 0) {
+      toast.error('No students to export');
+      return;
+    }
+
+    const exportData = studentsToExport.map(s => ({
+      'Roll No': s.rollNo || '',
+      'Name': s.name,
+      'Class': s.class,
+      'Division': s.division?.name || '',
+      'Date of Birth': s.dateOfBirth || '',
+      'Gender': s.gender ? s.gender.charAt(0).toUpperCase() + s.gender.slice(1) : '',
+      'Email': s.email || '',
+      'Phone': s.phone || '',
+      'Father Phone': s.fatherPhone || '',
+      'Mother Phone': s.motherPhone || '',
+      'Parent Name': s.parentName || '',
+      'Address': s.address || '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [
+      { wch: 8 }, { wch: 22 }, { wch: 8 }, { wch: 10 },
+      { wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 14 },
+      { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 30 },
+    ];
+    const wb = XLSX.utils.book_new();
+    const sheetName = exportAll ? 'All Students' : `${classFilter} Class`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const fileName = exportAll 
+      ? `all-students-${new Date().toISOString().split('T')[0]}.xlsx`
+      : `${classFilter}-students-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast.success(`Exported ${studentsToExport.length} students`);
+  }, [students, filteredStudents, classFilter]);
+
   // Show skeleton during loading
   if (loading || featuresLoading || termExamLoading) {
     return <StudentsPageSkeleton />;
@@ -126,6 +167,24 @@ export default function StudentsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {tuitionId && <RegistrationLinkManager tuitionId={tuitionId} />}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {classFilter !== 'All' && (
+                <DropdownMenuItem onClick={() => handleExportStudents(false)}>
+                  Export {classFilter} Class
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => handleExportStudents(true)}>
+                Export All Students
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {showBulkImport && <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />}
           <AddStudentDialog divisions={divisions} onAddStudent={addStudent} />
         </div>

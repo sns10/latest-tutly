@@ -28,6 +28,8 @@ const formatStudents = (studentsData: any[]): Student[] => {
     dateOfBirth: student.date_of_birth || undefined,
     parentName: student.parent_name || undefined,
     parentPhone: student.parent_phone || undefined,
+    fatherPhone: student.father_phone || undefined,
+    motherPhone: student.mother_phone || undefined,
     address: student.address || undefined,
     gender: student.gender || undefined,
     team: student.team as TeamName | null,

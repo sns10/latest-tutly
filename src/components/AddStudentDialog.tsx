@@ -57,6 +57,8 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
   const [phone, setPhone] = useState("");
   const [parentName, setParentName] = useState("");
   const [parentPhone, setParentPhone] = useState("");
+  const [fatherPhone, setFatherPhone] = useState("");
+  const [motherPhone, setMotherPhone] = useState("");
   const [address, setAddress] = useState("");
 
   // Filter divisions based on selected class
@@ -76,6 +78,8 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
         phone: phone || undefined,
         parentName: parentName || undefined,
         parentPhone: parentPhone || undefined,
+        fatherPhone: fatherPhone || undefined,
+        motherPhone: motherPhone || undefined,
         address: address || undefined,
         avatar: `https://images.unsplash.com/${randomAvatar}?w=500&h=500&fit=crop`
       });
@@ -95,6 +99,8 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
     setPhone("");
     setParentName("");
     setParentPhone("");
+    setFatherPhone("");
+    setMotherPhone("");
     setAddress("");
     setShowAdditional(false);
   };
@@ -259,16 +265,29 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="parentPhone" className="text-right">
-                  Parent Ph
+                <Label htmlFor="fatherPhone" className="text-right">
+                  Father Ph *
                 </Label>
                 <Input
-                  id="parentPhone"
+                  id="fatherPhone"
                   type="tel"
-                  value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
+                  value={fatherPhone}
+                  onChange={(e) => setFatherPhone(e.target.value)}
                   className="col-span-3"
-                  placeholder="Parent phone number"
+                  placeholder="Father's phone number"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="motherPhone" className="text-right">
+                  Mother Ph
+                </Label>
+                <Input
+                  id="motherPhone"
+                  type="tel"
+                  value={motherPhone}
+                  onChange={(e) => setMotherPhone(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Mother's phone (optional)"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">

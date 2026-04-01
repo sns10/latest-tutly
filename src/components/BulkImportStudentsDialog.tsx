@@ -50,7 +50,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         Phone: "9876543210",
         Email: "john@email.com",
         "Parent Name": "Mr. Doe",
-        "Parent Phone": "9876543211",
+        "Father Phone": "9876543211",
+        "Mother Phone": "9876543212",
         Address: "123 Main St"
       },
       { 
@@ -63,7 +64,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         Phone: "",
         Email: "",
         "Parent Name": "Mrs. Smith",
-        "Parent Phone": "9876543212",
+        "Father Phone": "9876543213",
+        "Mother Phone": "",
         Address: ""
       },
       { 
@@ -76,7 +78,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         Phone: "",
         Email: "",
         "Parent Name": "",
-        "Parent Phone": "9876543213",
+        "Father Phone": "9876543214",
+        "Mother Phone": "",
         Address: ""
       },
     ];
@@ -93,7 +96,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
       { wch: 12 }, // Phone
       { wch: 20 }, // Email
       { wch: 15 }, // Parent Name
-      { wch: 12 }, // Parent Phone
+      { wch: 14 }, // Father Phone
+      { wch: 14 }, // Mother Phone
       { wch: 25 }, // Address
     ];
     const wb = XLSX.utils.book_new();
@@ -223,7 +227,9 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         phone: row.Phone?.toString().trim() || undefined,
         email: row.Email?.toString().trim() || undefined,
         parentName: row['Parent Name']?.toString().trim() || undefined,
-        parentPhone: row['Parent Phone']?.toString().trim() || undefined,
+        parentPhone: row['Father Phone']?.toString().trim() || row['Parent Phone']?.toString().trim() || undefined,
+        fatherPhone: row['Father Phone']?.toString().trim() || undefined,
+        motherPhone: row['Mother Phone']?.toString().trim() || undefined,
         address: row.Address?.toString().trim() || undefined,
         avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
       };
@@ -325,7 +331,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                       <th className="p-2 text-left whitespace-nowrap">Class</th>
                       <th className="p-2 text-left whitespace-nowrap">Division</th>
                       <th className="p-2 text-left whitespace-nowrap">DOB</th>
-                      <th className="p-2 text-left whitespace-nowrap">Parent Phone</th>
+                      <th className="p-2 text-left whitespace-nowrap">Father Phone</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -336,7 +342,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
                         <td className="p-2">{row.Class}</td>
                         <td className="p-2">{row.Division || '-'}</td>
                         <td className="p-2">{row['Date of Birth'] ? formatDate(row['Date of Birth']) : '-'}</td>
-                        <td className="p-2">{row['Parent Phone'] || '-'}</td>
+                        <td className="p-2">{row['Father Phone'] || row['Parent Phone'] || '-'}</td>
                       </tr>
                     ))}
                     {previewData.length > 10 && (
