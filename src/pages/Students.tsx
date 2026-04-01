@@ -101,6 +101,44 @@ export default function StudentsPage() {
     }
   };
 
+  const handleExportStudents = useCallback((exportAll: boolean) => {
+    const studentsToExport = exportAll ? students : filteredStudents;
+    if (studentsToExport.length === 0) {
+      toast.error('No students to export');
+      return;
+    }
+
+    const exportData = studentsToExport.map(s => ({
+      'Roll No': s.rollNo || '',
+      'Name': s.name,
+      'Class': s.class,
+      'Division': s.division?.name || '',
+      'Date of Birth': s.dateOfBirth || '',
+      'Gender': s.gender ? s.gender.charAt(0).toUpperCase() + s.gender.slice(1) : '',
+      'Email': s.email || '',
+      'Phone': s.phone || '',
+      'Father Phone': s.fatherPhone || '',
+      'Mother Phone': s.motherPhone || '',
+      'Parent Name': s.parentName || '',
+      'Address': s.address || '',
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    ws['!cols'] = [
+      { wch: 8 }, { wch: 22 }, { wch: 8 }, { wch: 10 },
+      { wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 14 },
+      { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 30 },
+    ];
+    const wb = XLSX.utils.book_new();
+    const sheetName = exportAll ? 'All Students' : `${classFilter} Class`;
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    const fileName = exportAll 
+      ? `all-students-${new Date().toISOString().split('T')[0]}.xlsx`
+      : `${classFilter}-students-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+    toast.success(`Exported ${studentsToExport.length} students`);
+  }, [students, filteredStudents, classFilter]);
+
   // Show skeleton during loading
   if (loading || featuresLoading || termExamLoading) {
     return <StudentsPageSkeleton />;
