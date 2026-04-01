@@ -34,7 +34,6 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      // Explicit tuition_id filter via student join to optimize DB scan
       let query = supabase
         .from('student_fees')
         .select('*, students!inner(tuition_id)')
@@ -56,17 +55,22 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
         query = query.gte('due_date', startOfMonth).lte('due_date', endOfMonth);
       }
 
-      // Limit to reasonable amount
-      query = query.limit(500);
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching fees:', error);
-        throw error;
+      // Paginate to get all fees (no arbitrary limit)
+      const allData: any[] = [];
+      let from = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+        if (error) {
+          console.error('Error fetching fees:', error);
+          throw error;
+        }
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      return formatFees(data || []);
+      return formatFees(allData);
     },
     enabled: !!tuitionId,
     staleTime: STALE_TIME,
