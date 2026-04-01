@@ -49,6 +49,8 @@ export interface Student {
   dateOfBirth?: string;
   parentName?: string;
   parentPhone?: string;
+  fatherPhone?: string;
+  motherPhone?: string;
   address?: string;
   gender?: 'male' | 'female' | 'other';
   xp: {

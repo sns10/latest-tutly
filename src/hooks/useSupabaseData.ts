@@ -181,6 +181,8 @@ export function useSupabaseData() {
     dateOfBirth?: string | null;
     parentName?: string | null;
     parentPhone?: string | null;
+    fatherPhone?: string | null;
+    motherPhone?: string | null;
     address?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
   }) => {

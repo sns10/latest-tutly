@@ -265,16 +265,29 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="parentPhone" className="text-right">
-                  Parent Ph
+                <Label htmlFor="fatherPhone" className="text-right">
+                  Father Ph *
                 </Label>
                 <Input
-                  id="parentPhone"
+                  id="fatherPhone"
                   type="tel"
-                  value={parentPhone}
-                  onChange={(e) => setParentPhone(e.target.value)}
+                  value={fatherPhone}
+                  onChange={(e) => setFatherPhone(e.target.value)}
                   className="col-span-3"
-                  placeholder="Parent phone number"
+                  placeholder="Father's phone number"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="motherPhone" className="text-right">
+                  Mother Ph
+                </Label>
+                <Input
+                  id="motherPhone"
+                  type="tel"
+                  value={motherPhone}
+                  onChange={(e) => setMotherPhone(e.target.value)}
+                  className="col-span-3"
+                  placeholder="Mother's phone (optional)"
                 />
               </div>
               <div className="grid grid-cols-4 items-center gap-4">
