@@ -716,12 +716,21 @@ export function StudentDetailsDialog({
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <label className="text-xs font-medium text-muted-foreground">Parent Phone</label>
+                          <label className="text-xs font-medium text-muted-foreground">Father Phone</label>
                           <Input
                             type="tel"
-                            value={editParentPhone}
-                            onChange={(e) => setEditParentPhone(e.target.value)}
-                            placeholder="+91 98765 43210"
+                            value={editFatherPhone}
+                            onChange={(e) => setEditFatherPhone(e.target.value)}
+                            placeholder="Father's phone number"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Mother Phone</label>
+                          <Input
+                            type="tel"
+                            value={editMotherPhone}
+                            onChange={(e) => setEditMotherPhone(e.target.value)}
+                            placeholder="Mother's phone (optional)"
                           />
                         </div>
                       </div>
