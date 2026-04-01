@@ -167,6 +167,24 @@ export default function StudentsPage() {
         </div>
         <div className="flex flex-wrap gap-2">
           {tuitionId && <RegistrationLinkManager tuitionId={tuitionId} />}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="mr-2 h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {classFilter !== 'All' && (
+                <DropdownMenuItem onClick={() => handleExportStudents(false)}>
+                  Export {classFilter} Class
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem onClick={() => handleExportStudents(true)}>
+                Export All Students
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {showBulkImport && <BulkImportStudentsDialog divisions={divisions} onImportStudents={handleBulkImport} />}
           <AddStudentDialog divisions={divisions} onAddStudent={addStudent} />
         </div>

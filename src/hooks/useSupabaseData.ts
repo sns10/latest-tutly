@@ -140,6 +140,15 @@ export function useSupabaseData() {
         avatar: newStudent.avatar,
         tuition_id: tuitionId!,
         roll_no: rollNoToUse,
+        phone: newStudent.phone || null,
+        date_of_birth: newStudent.dateOfBirth || null,
+        parent_name: newStudent.parentName || null,
+        parent_phone: newStudent.fatherPhone || newStudent.parentPhone || null,
+        father_phone: newStudent.fatherPhone || null,
+        mother_phone: newStudent.motherPhone || null,
+        address: newStudent.address || null,
+        gender: newStudent.gender || null,
+        email: newStudent.email || null,
       })
       .select()
       .single();
