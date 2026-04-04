@@ -104,6 +104,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
     setFatherPhone("");
     setMotherPhone("");
     setAddress("");
+    setSchoolName("");
     setShowAdditional(false);
   };
 
