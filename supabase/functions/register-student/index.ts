@@ -20,6 +20,7 @@ interface RegistrationData {
   fatherPhone: string;
   motherPhone?: string | null;
   address?: string | null;
+  schoolName?: string | null;
 }
 
 Deno.serve(async (req) => {
