@@ -194,6 +194,7 @@ export function useSupabaseData() {
     fatherPhone?: string | null;
     motherPhone?: string | null;
     address?: string | null;
+    schoolName?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
   }) => {
     const updateData: any = {};
