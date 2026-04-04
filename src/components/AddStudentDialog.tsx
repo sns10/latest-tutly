@@ -82,6 +82,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
         fatherPhone: fatherPhone || undefined,
         motherPhone: motherPhone || undefined,
         address: address || undefined,
+        schoolName: schoolName || undefined,
         avatar: `https://images.unsplash.com/${randomAvatar}?w=500&h=500&fit=crop`
       });
       resetForm();
