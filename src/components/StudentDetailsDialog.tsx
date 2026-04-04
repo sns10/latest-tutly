@@ -465,6 +465,7 @@ export function StudentDetailsDialog({
       fatherPhone: editFatherPhone.trim() || null,
       motherPhone: editMotherPhone.trim() || null,
       address: editAddress.trim() || null,
+      schoolName: editSchoolName.trim() || null,
       gender: editGender || null,
     });
     setIsEditing(false);
