@@ -426,6 +426,7 @@ export function StudentDetailsDialog({
     setEditFatherPhone(student.fatherPhone || '');
     setEditMotherPhone(student.motherPhone || '');
     setEditAddress(student.address || '');
+    setEditSchoolName(student.schoolName || '');
     setEditGender(student.gender || '');
     setIsEditing(true);
   };
