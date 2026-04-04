@@ -210,6 +210,7 @@ export function useSupabaseData() {
     if (updates.fatherPhone !== undefined) updateData.father_phone = updates.fatherPhone;
     if (updates.motherPhone !== undefined) updateData.mother_phone = updates.motherPhone;
     if (updates.address !== undefined) updateData.address = updates.address;
+    if (updates.schoolName !== undefined) updateData.school_name = updates.schoolName;
     if (updates.gender !== undefined) updateData.gender = updates.gender;
 
     const { error } = await supabase.from('students').update(updateData).eq('id', studentId);

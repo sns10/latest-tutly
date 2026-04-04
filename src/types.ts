@@ -52,6 +52,7 @@ export interface Student {
   fatherPhone?: string;
   motherPhone?: string;
   address?: string;
+  schoolName?: string;
   gender?: 'male' | 'female' | 'other';
   xp: {
     blackout: number;
