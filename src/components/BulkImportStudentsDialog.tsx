@@ -82,7 +82,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         "Parent Name": "",
         "Father Phone": "9876543214",
         "Mother Phone": "",
-        Address: ""
+        Address: "",
+        "School Name": ""
       },
     ];
 
