@@ -102,6 +102,7 @@ export function StudentDetailsDialog({
   const [editFatherPhone, setEditFatherPhone] = useState(student.fatherPhone || '');
   const [editMotherPhone, setEditMotherPhone] = useState(student.motherPhone || '');
   const [editAddress, setEditAddress] = useState(student.address || '');
+  const [editSchoolName, setEditSchoolName] = useState(student.schoolName || '');
   const [editGender, setEditGender] = useState<'male' | 'female' | 'other' | ''>(student.gender || '');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
