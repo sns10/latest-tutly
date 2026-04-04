@@ -102,6 +102,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
       { wch: 14 }, // Father Phone
       { wch: 14 }, // Mother Phone
       { wch: 25 }, // Address
+      { wch: 20 }, // School Name
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
