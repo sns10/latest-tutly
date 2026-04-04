@@ -121,13 +121,14 @@ export default function StudentsPage() {
       'Mother Phone': s.motherPhone || '',
       'Parent Name': s.parentName || '',
       'Address': s.address || '',
+      'School Name': s.schoolName || '',
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
     ws['!cols'] = [
       { wch: 8 }, { wch: 22 }, { wch: 8 }, { wch: 10 },
       { wch: 12 }, { wch: 8 }, { wch: 22 }, { wch: 14 },
-      { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 30 },
+      { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 30 }, { wch: 20 },
     ];
     const wb = XLSX.utils.book_new();
     const sheetName = exportAll ? 'All Students' : `${classFilter} Class`;
