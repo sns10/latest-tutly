@@ -205,6 +205,7 @@ export default function StudentRegistration() {
             fatherPhone: formData.fatherPhone,
             motherPhone: formData.motherPhone || null,
             address: formData.address || null,
+            schoolName: formData.schoolName || null,
           }),
         }
       );
