@@ -886,6 +886,7 @@ export type Database = {
           parent_phone: string | null
           phone: string | null
           roll_no: number | null
+          school_name: string | null
           team: string | null
           total_xp: number
           tuition_id: string
@@ -908,6 +909,7 @@ export type Database = {
           parent_phone?: string | null
           phone?: string | null
           roll_no?: number | null
+          school_name?: string | null
           team?: string | null
           total_xp?: number
           tuition_id: string
@@ -930,6 +932,7 @@ export type Database = {
           parent_phone?: string | null
           phone?: string | null
           roll_no?: number | null
+          school_name?: string | null
           team?: string | null
           total_xp?: number
           tuition_id?: string
