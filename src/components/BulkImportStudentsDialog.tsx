@@ -235,6 +235,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         fatherPhone: row['Father Phone']?.toString().trim() || undefined,
         motherPhone: row['Mother Phone']?.toString().trim() || undefined,
         address: row.Address?.toString().trim() || undefined,
+        schoolName: row['School Name']?.toString().trim() || undefined,
         avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
       };
     });
