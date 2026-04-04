@@ -37,6 +37,7 @@ const registrationSchema = z.object({
   fatherPhone: z.string().min(10, "Father's phone is required").max(15, "Invalid phone number"),
   motherPhone: z.string().optional(),
   address: z.string().optional(),
+  schoolName: z.string().optional(),
 });
 
 interface Division {
