@@ -305,6 +305,18 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
                   placeholder="Full address"
                 />
               </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="schoolName" className="text-right">
+                  School
+                </Label>
+                <Input
+                  id="schoolName"
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  className="col-span-3"
+                  placeholder="School name"
+                />
+              </div>
             </CollapsibleContent>
           </Collapsible>
         </div>
