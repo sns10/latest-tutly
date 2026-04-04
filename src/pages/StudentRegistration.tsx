@@ -484,17 +484,28 @@ export default function StudentRegistration() {
                 </div>
               </div>
 
-              {/* Address */}
+              {/* Address & School */}
               <div className="border-t pt-6">
-                <div className="space-y-2">
-                  <Label htmlFor="address">Address</Label>
-                  <Textarea
-                    id="address"
-                    placeholder="Enter full address (optional)"
-                    value={formData.address}
-                    onChange={(e) => handleInputChange("address", e.target.value)}
-                    rows={3}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Textarea
+                      id="address"
+                      placeholder="Enter full address (optional)"
+                      value={formData.address}
+                      onChange={(e) => handleInputChange("address", e.target.value)}
+                      rows={3}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="schoolName">School Name</Label>
+                    <Input
+                      id="schoolName"
+                      placeholder="Enter school name (optional)"
+                      value={formData.schoolName}
+                      onChange={(e) => handleInputChange("schoolName", e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
