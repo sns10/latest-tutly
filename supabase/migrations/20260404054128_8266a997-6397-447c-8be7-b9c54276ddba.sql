@@ -1,0 +1,1 @@
+ALTER TABLE public.students ADD COLUMN school_name text DEFAULT NULL;

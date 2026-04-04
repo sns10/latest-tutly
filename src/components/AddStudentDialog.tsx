@@ -60,6 +60,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
   const [fatherPhone, setFatherPhone] = useState("");
   const [motherPhone, setMotherPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [schoolName, setSchoolName] = useState("");
 
   // Filter divisions based on selected class
   const availableDivisions = divisions.filter(d => d.class === studentClass);
@@ -81,6 +82,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
         fatherPhone: fatherPhone || undefined,
         motherPhone: motherPhone || undefined,
         address: address || undefined,
+        schoolName: schoolName || undefined,
         avatar: `https://images.unsplash.com/${randomAvatar}?w=500&h=500&fit=crop`
       });
       resetForm();
@@ -102,6 +104,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
     setFatherPhone("");
     setMotherPhone("");
     setAddress("");
+    setSchoolName("");
     setShowAdditional(false);
   };
 
@@ -300,6 +303,18 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
                   onChange={(e) => setAddress(e.target.value)}
                   className="col-span-3"
                   placeholder="Full address"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="schoolName" className="text-right">
+                  School
+                </Label>
+                <Input
+                  id="schoolName"
+                  value={schoolName}
+                  onChange={(e) => setSchoolName(e.target.value)}
+                  className="col-span-3"
+                  placeholder="School name"
                 />
               </div>
             </CollapsibleContent>

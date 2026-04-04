@@ -147,6 +147,7 @@ export function useSupabaseData() {
         father_phone: newStudent.fatherPhone || null,
         mother_phone: newStudent.motherPhone || null,
         address: newStudent.address || null,
+        school_name: newStudent.schoolName || null,
         gender: newStudent.gender || null,
         email: newStudent.email || null,
       })
@@ -193,6 +194,7 @@ export function useSupabaseData() {
     fatherPhone?: string | null;
     motherPhone?: string | null;
     address?: string | null;
+    schoolName?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
   }) => {
     const updateData: any = {};
@@ -208,6 +210,7 @@ export function useSupabaseData() {
     if (updates.fatherPhone !== undefined) updateData.father_phone = updates.fatherPhone;
     if (updates.motherPhone !== undefined) updateData.mother_phone = updates.motherPhone;
     if (updates.address !== undefined) updateData.address = updates.address;
+    if (updates.schoolName !== undefined) updateData.school_name = updates.schoolName;
     if (updates.gender !== undefined) updateData.gender = updates.gender;
 
     const { error } = await supabase.from('students').update(updateData).eq('id', studentId);

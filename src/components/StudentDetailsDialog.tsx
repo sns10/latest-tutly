@@ -61,6 +61,7 @@ interface StudentDetailsDialogProps {
     fatherPhone?: string | null;
     motherPhone?: string | null;
     address?: string | null;
+    schoolName?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
   }) => void;
   onStudentDataUpdated?: () => void;
@@ -101,6 +102,7 @@ export function StudentDetailsDialog({
   const [editFatherPhone, setEditFatherPhone] = useState(student.fatherPhone || '');
   const [editMotherPhone, setEditMotherPhone] = useState(student.motherPhone || '');
   const [editAddress, setEditAddress] = useState(student.address || '');
+  const [editSchoolName, setEditSchoolName] = useState(student.schoolName || '');
   const [editGender, setEditGender] = useState<'male' | 'female' | 'other' | ''>(student.gender || '');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string>('all');
@@ -424,6 +426,7 @@ export function StudentDetailsDialog({
     setEditFatherPhone(student.fatherPhone || '');
     setEditMotherPhone(student.motherPhone || '');
     setEditAddress(student.address || '');
+    setEditSchoolName(student.schoolName || '');
     setEditGender(student.gender || '');
     setIsEditing(true);
   };
@@ -442,6 +445,7 @@ export function StudentDetailsDialog({
     setEditFatherPhone(student.fatherPhone || '');
     setEditMotherPhone(student.motherPhone || '');
     setEditAddress(student.address || '');
+    setEditSchoolName(student.schoolName || '');
     setEditGender(student.gender || '');
   };
 
@@ -461,6 +465,7 @@ export function StudentDetailsDialog({
       fatherPhone: editFatherPhone.trim() || null,
       motherPhone: editMotherPhone.trim() || null,
       address: editAddress.trim() || null,
+      schoolName: editSchoolName.trim() || null,
       gender: editGender || null,
     });
     setIsEditing(false);
@@ -736,16 +741,26 @@ export function StudentDetailsDialog({
                       </div>
                     </div>
 
-                    {/* Address */}
+                    {/* Address & School */}
                     <div className="pt-2 border-t">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Address</label>
-                        <Textarea
-                          value={editAddress}
-                          onChange={(e) => setEditAddress(e.target.value)}
-                          placeholder="Full address"
-                          rows={2}
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Address</label>
+                          <Textarea
+                            value={editAddress}
+                            onChange={(e) => setEditAddress(e.target.value)}
+                            placeholder="Full address"
+                            rows={2}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">School Name</label>
+                          <Input
+                            value={editSchoolName}
+                            onChange={(e) => setEditSchoolName(e.target.value)}
+                            placeholder="School name"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -831,12 +846,20 @@ export function StudentDetailsDialog({
                       </div>
                     </div>
 
-                    {/* Address Display */}
+                    {/* Address & School Display */}
                     <div className="pt-3 border-t">
-                      <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> Address
-                      </p>
-                      <p className="text-sm">{student.address || '-'}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                            <MapPin className="h-3 w-3" /> Address
+                          </p>
+                          <p className="text-sm">{student.address || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">School</p>
+                          <p className="text-sm">{student.schoolName || '-'}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -52,7 +52,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         "Parent Name": "Mr. Doe",
         "Father Phone": "9876543211",
         "Mother Phone": "9876543212",
-        Address: "123 Main St"
+        Address: "123 Main St",
+        "School Name": "ABC School"
       },
       { 
         "Roll No": 2, 
@@ -66,7 +67,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         "Parent Name": "Mrs. Smith",
         "Father Phone": "9876543213",
         "Mother Phone": "",
-        Address: ""
+        Address: "",
+        "School Name": ""
       },
       { 
         "Roll No": "", 
@@ -80,7 +82,8 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         "Parent Name": "",
         "Father Phone": "9876543214",
         "Mother Phone": "",
-        Address: ""
+        Address: "",
+        "School Name": ""
       },
     ];
 
@@ -99,6 +102,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
       { wch: 14 }, // Father Phone
       { wch: 14 }, // Mother Phone
       { wch: 25 }, // Address
+      { wch: 20 }, // School Name
     ];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Students");
@@ -231,6 +235,7 @@ export function BulkImportStudentsDialog({ divisions = [], onImportStudents }: B
         fatherPhone: row['Father Phone']?.toString().trim() || undefined,
         motherPhone: row['Mother Phone']?.toString().trim() || undefined,
         address: row.Address?.toString().trim() || undefined,
+        schoolName: row['School Name']?.toString().trim() || undefined,
         avatar: `https://images.unsplash.com/${avatars[Math.floor(Math.random() * avatars.length)]}?w=500&h=500&fit=crop`
       };
     });
