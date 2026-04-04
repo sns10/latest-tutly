@@ -61,6 +61,7 @@ interface StudentDetailsDialogProps {
     fatherPhone?: string | null;
     motherPhone?: string | null;
     address?: string | null;
+    schoolName?: string | null;
     gender?: 'male' | 'female' | 'other' | null;
   }) => void;
   onStudentDataUpdated?: () => void;
