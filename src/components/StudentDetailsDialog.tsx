@@ -741,16 +741,26 @@ export function StudentDetailsDialog({
                       </div>
                     </div>
 
-                    {/* Address */}
+                    {/* Address & School */}
                     <div className="pt-2 border-t">
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-medium text-muted-foreground">Address</label>
-                        <Textarea
-                          value={editAddress}
-                          onChange={(e) => setEditAddress(e.target.value)}
-                          placeholder="Full address"
-                          rows={2}
-                        />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">Address</label>
+                          <Textarea
+                            value={editAddress}
+                            onChange={(e) => setEditAddress(e.target.value)}
+                            placeholder="Full address"
+                            rows={2}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-muted-foreground">School Name</label>
+                          <Input
+                            value={editSchoolName}
+                            onChange={(e) => setEditSchoolName(e.target.value)}
+                            placeholder="School name"
+                          />
+                        </div>
                       </div>
                     </div>
 
