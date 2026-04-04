@@ -147,6 +147,7 @@ export function useSupabaseData() {
         father_phone: newStudent.fatherPhone || null,
         mother_phone: newStudent.motherPhone || null,
         address: newStudent.address || null,
+        school_name: newStudent.schoolName || null,
         gender: newStudent.gender || null,
         email: newStudent.email || null,
       })
