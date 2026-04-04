@@ -78,6 +78,7 @@ export default function StudentRegistration() {
     fatherPhone: "",
     motherPhone: "",
     address: "",
+    schoolName: "",
   });
 
   // Fetch tuition info by slug
