@@ -846,12 +846,20 @@ export function StudentDetailsDialog({
                       </div>
                     </div>
 
-                    {/* Address Display */}
+                    {/* Address & School Display */}
                     <div className="pt-3 border-t">
-                      <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
-                        <MapPin className="h-3 w-3" /> Address
-                      </p>
-                      <p className="text-sm">{student.address || '-'}</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1 flex items-center gap-1">
+                            <MapPin className="h-3 w-3" /> Address
+                          </p>
+                          <p className="text-sm">{student.address || '-'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium text-muted-foreground mb-1">School</p>
+                          <p className="text-sm">{student.schoolName || '-'}</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
