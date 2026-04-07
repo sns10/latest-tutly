@@ -27,7 +27,7 @@ interface StudentAlertsCardProps {
 
 const MAX_VISIBLE = 10;
 
-export function StudentAlertsCard({
+export const StudentAlertsCard = memo(function StudentAlertsCard({
   alerts,
   totalCount,
   onDismiss,
