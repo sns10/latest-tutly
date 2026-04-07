@@ -62,13 +62,24 @@ export function useTermExamData() {
     queryKey: ['termExamResults', tuitionId],
     queryFn: async () => {
       if (!tuitionId) return [];
-      const { data, error } = await supabase
+      const baseQuery = supabase
         .from('term_exam_results')
         .select('*, term_exams!inner(tuition_id)')
-        .eq('term_exams.tuition_id', tuitionId)
-        .limit(5000);
-      if (error) throw error;
-      return (data ?? []).map((result: any) => ({
+        .eq('term_exams.tuition_id', tuitionId);
+
+      const allData: any[] = [];
+      let from = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await baseQuery.range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
+        if (from >= 10000) break;
+      }
+
+      return allData.map((result: any) => ({
         id: result.id, termExamId: result.term_exam_id, studentId: result.student_id,
         subjectId: result.subject_id, marks: result.marks, grade: result.grade,
         createdAt: result.created_at, updatedAt: result.updated_at,

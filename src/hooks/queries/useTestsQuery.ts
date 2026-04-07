@@ -75,8 +75,8 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
         allData.push(...(data || []));
         if (!data || data.length < PAGE_SIZE) break;
         from += PAGE_SIZE;
-        // Safety cap at 5000 for dashboard stability
-        if (from >= 5000) break;
+        // Safety cap at 10000 to prevent runaway loops
+        if (from >= 10000) break;
       }
 
       return allData.map((r: any) => ({

@@ -1,6 +1,7 @@
 /**
- * DEPRECATED — Thin facade for backward compatibility.
- * New code should import domain hooks directly from '@/hooks/queries'.
+ * @deprecated This file is unused as of April 2026. All pages now import
+ * domain hooks directly from '@/hooks/queries'. Delete in next cleanup.
+ * New code should NEVER import from this file.
  */
 import { useUserTuition } from './useUserTuition';
 import {
