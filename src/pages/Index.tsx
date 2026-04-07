@@ -1,11 +1,38 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useState, useCallback } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from '@/components/AuthProvider';
-import { useSupabaseData } from "@/hooks/useSupabaseData";
 import { useTuitionInfo } from "@/hooks/useTuitionInfo";
 import { useTermExamData } from "@/hooks/useTermExamData";
 import { useUserTuition } from "@/hooks/useUserTuition";
 import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
+import {
+  useStudentsQuery,
+  useDivisionsQuery,
+  useSubjectsQuery,
+  useFacultyQuery,
+  useAttendanceQuery,
+  useTimetableQuery,
+  useFeesQuery,
+  useClassFeesQuery,
+  useChallengesQuery,
+  useAnnouncementsQuery,
+  useStudentChallengesQuery,
+  useWeeklyTestsQuery,
+  useTestResultsQuery,
+  useAddStudentMutation,
+  useRemoveStudentMutation,
+  useAddWeeklyTestMutation,
+  useDeleteWeeklyTestMutation,
+  useAddTestResultMutation,
+  useMarkAttendanceMutation,
+  useAddFeeMutation,
+  useUpdateFeeStatusMutation,
+  useUpdateClassFeeMutation,
+} from "@/hooks/queries";
+import { useAddXpMutation, useAwardXpMutation, useBuyRewardMutation, useUseRewardMutation } from "@/hooks/queries/useXpMutations";
+import { useAssignTeamMutation } from "@/hooks/queries/useStudentMutations";
+import { useAddChallengeMutation, useCompleteChallengeMutation } from "@/hooks/queries/useChallengeMutations";
+import { useAddAnnouncementMutation } from "@/hooks/queries/useAnnouncementMutations";
 import { WeeklyTestManager } from "@/components/WeeklyTestManager";
 import { ManagementCards } from "@/components/ManagementCards";
 import { DailySummaryCard } from "@/components/DailySummaryCard";
@@ -23,6 +50,7 @@ import { BirthdayWishesBanner } from "@/components/BirthdayWishesBanner";
 import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
 import { useDailySummary } from "@/hooks/useDailySummary";
 import { useTodayPaymentsQuery } from "@/hooks/queries/useFeesQuery";
+import { Student, WeeklyTest, StudentTestResult, XPCategory, Challenge, Announcement, StudentFee, TeamName } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { TuitionBranding } from "@/components/TuitionBranding";
@@ -48,7 +76,6 @@ const StudentsPage = lazy(() => import('./Students'));
 const ReportsPage = lazy(() => import('./Reports'));
 const TestsPage = lazy(() => import('./Tests'));
 
-// Loading component for lazy routes
 const RouteLoader = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
     <div className="flex items-center gap-2">
@@ -64,79 +91,123 @@ const Index = () => {
   const { tuitionId } = useUserTuition();
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
   const [copied, setCopied] = useState(false);
+
+  // Domain queries — only what the dashboard needs
+  const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
+  const { data: faculty = [] } = useFacultyQuery(tuitionId);
+  const { data: attendance = [] } = useAttendanceQuery(tuitionId);
+  const { data: timetable = [] } = useTimetableQuery(tuitionId);
+  const { data: fees = [] } = useFeesQuery(tuitionId);
+  const { data: classFees = [] } = useClassFeesQuery(tuitionId);
+  const { data: challenges = [] } = useChallengesQuery(tuitionId);
+  const { data: announcements = [] } = useAnnouncementsQuery(tuitionId);
+  const { data: studentChallenges = [] } = useStudentChallengesQuery(tuitionId);
+  const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
+  const { data: testResults = [] } = useTestResultsQuery(tuitionId);
+
+  // Mutations
+  const addStudentMut = useAddStudentMutation(tuitionId);
+  const removeStudentMut = useRemoveStudentMutation(tuitionId);
+  const addTestMut = useAddWeeklyTestMutation(tuitionId);
+  const deleteTestMut = useDeleteWeeklyTestMutation(tuitionId);
+  const addResultMut = useAddTestResultMutation(tuitionId);
+  const addXpMut = useAddXpMutation(tuitionId);
+  const awardXpMut = useAwardXpMutation(tuitionId);
+  const assignTeamMut = useAssignTeamMutation(tuitionId);
+  const buyRewardMut = useBuyRewardMutation(tuitionId);
+  const useRewardMut = useUseRewardMutation(tuitionId);
+  const addChallengeMut = useAddChallengeMutation(tuitionId);
+  const completeChallengeMut = useCompleteChallengeMutation(tuitionId);
+  const addAnnouncementMut = useAddAnnouncementMutation(tuitionId);
+  const markAttendanceMut = useMarkAttendanceMutation(tuitionId);
+  const addFeeMut = useAddFeeMutation(tuitionId);
+  const updateFeeStatusMut = useUpdateFeeStatusMutation(tuitionId);
+  const updateClassFeeMut = useUpdateClassFeeMutation(tuitionId);
+
+  // Term exams
   const {
-    termExams,
-    termExamSubjects,
-    termExamResults,
+    termExams, termExamSubjects, termExamResults,
     loading: termExamLoading,
-    addTermExam,
-    deleteTermExam,
-    addTermExamResult,
-    bulkAddTermExamResults,
+    addTermExam, deleteTermExam, addTermExamResult, bulkAddTermExamResults,
   } = useTermExamData();
-  const {
-    students,
-    weeklyTests,
-    testResults,
-    challenges,
-    studentChallenges,
-    announcements,
-    attendance,
-    fees,
-    classFees,
-    subjects,
-    faculty,
-    divisions,
-    timetable,
-    loading,
-    addStudent,
-    addWeeklyTest,
-    deleteWeeklyTest,
-    addTestResult,
-    addXp,
-    awardXP,
-    removeStudent,
-    assignTeam,
-    buyReward,
-    useReward,
-    addChallenge,
-    completeChallenge,
-    addAnnouncement,
-    markAttendance,
-    addFee,
-    updateFeeStatus,
-    updateClassFee,
-  } = useSupabaseData();
+
+  // Wrapper functions
+  const addStudent = (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
+    addStudentMut.mutate({
+      name: newStudent.name, class: newStudent.class, divisionId: newStudent.divisionId,
+      avatar: newStudent.avatar, rollNo: newStudent.rollNo, phone: newStudent.phone,
+      dateOfBirth: newStudent.dateOfBirth, parentName: newStudent.parentName,
+      parentPhone: newStudent.fatherPhone || newStudent.parentPhone,
+      address: newStudent.address, gender: newStudent.gender, email: newStudent.email,
+    });
+  };
+
+  const addWeeklyTest = (newTest: Omit<WeeklyTest, 'id'>) => { addTestMut.mutate(newTest); };
+  const deleteWeeklyTest = (testId: string) => { deleteTestMut.mutate(testId); };
+
+  const addTestResult = async (result: StudentTestResult): Promise<boolean> => {
+    try { await addResultMut.mutateAsync(result); return true; } catch { return false; }
+  };
+
+  const awardXP = (studentId: string, amount: number, reason: string) => {
+    const student = students.find(s => s.id === studentId);
+    awardXpMut.mutate({ studentId, amount, reason, studentName: student?.name });
+  };
+
+  const removeStudent = (studentId: string) => { removeStudentMut.mutate(studentId); };
+
+  const addChallenge = (newChallenge: Omit<Challenge, 'id' | 'createdAt'>) => {
+    addChallengeMut.mutate(newChallenge);
+  };
+
+  const completeChallenge = (studentId: string, challengeId: string) => {
+    const challenge = challenges.find(c => c.id === challengeId);
+    completeChallengeMut.mutate({
+      studentId, challengeId,
+      xpReward: challenge?.xpReward || 0,
+      challengeTitle: challenge?.title || '',
+    });
+  };
+
+  const addAnnouncement = (newAnnouncement: Omit<Announcement, 'id' | 'publishedAt'>) => {
+    addAnnouncementMut.mutate(newAnnouncement);
+  };
+
+  const markAttendance = useCallback((
+    studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused',
+    notes?: string, subjectId?: string, facultyId?: string
+  ) => {
+    markAttendanceMut.mutate({ studentId, date, status, notes, subjectId, facultyId });
+  }, [markAttendanceMut]);
+
+  const addFee = (newFee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    addFeeMut.mutate(newFee);
+  };
+
+  const updateFeeStatus = (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => {
+    updateFeeStatusMut.mutate({ feeId, status, paidDate });
+  };
+
+  const updateClassFee = (className: string, amount: number) => {
+    updateClassFeeMut.mutate({ className, amount });
+  };
 
   // Attendance notification system
   const { pendingClass, dismissNotification, ignoreNotification } = useAttendanceNotification(
-    timetable || [],
-    attendance,
-    subjects,
-    faculty
+    timetable || [], attendance, subjects, faculty
   );
 
-  // Today's payments query
   const { data: todayPayments = 0 } = useTodayPaymentsQuery(tuitionId);
 
-  // Daily summary computation
   const dailySummary = useDailySummary({
-    students,
-    weeklyTests,
-    attendance,
-    fees,
-    timetable: timetable || [],
-    subjects,
-    faculty,
-    todayPayments,
+    students, weeklyTests, attendance, fees,
+    timetable: timetable || [], subjects, faculty, todayPayments,
   });
 
-  // Student alerts system
   const { alerts: studentAlerts, totalCount: alertsTotalCount, dismissAlert } = useStudentAlerts({
-    students,
-    attendance,
-    weeklyTests,
-    testResults,
+    students, attendance, weeklyTests, testResults,
     isAttendanceEnabled: isFeatureEnabled('attendance'),
   });
 
@@ -147,6 +218,8 @@ const Index = () => {
     toast.success('Student portal link copied to clipboard!');
     setTimeout(() => setCopied(false), 2000);
   };
+
+  const loading = studentsLoading;
 
   if (authLoading || loading || featuresLoading) {
     return (
@@ -173,10 +246,7 @@ const Index = () => {
       <Routes>
         <Route path="/" element={
         <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-background">
-          {/* Subscription Expiry Alert */}
           <SubscriptionExpiryAlert subscriptionEndDate={tuition?.subscription_end_date} />
-          
-          {/* Birthday Wishes Banner */}
           <BirthdayWishesBanner 
             students={students} 
             tuitionName={tuition?.name || 'Our Tuition'} 
@@ -184,10 +254,7 @@ const Index = () => {
           />
           
           <div className="mb-4 space-y-3">
-            <TuitionBranding 
-              name={tuition?.name || 'Dashboard'} 
-              logoUrl={tuition?.logo_url}
-            />
+            <TuitionBranding name={tuition?.name || 'Dashboard'} logoUrl={tuition?.logo_url} />
             <div className="flex items-center gap-1.5 flex-wrap">
               {tuitionId && (
                 <PortalEmailConfig
@@ -197,9 +264,7 @@ const Index = () => {
                 />
               )}
               <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSharePortalLink}
+                variant="outline" size="sm" onClick={handleSharePortalLink}
                 className="gap-1.5 text-indigo-600 border-indigo-200 hover:bg-indigo-50 h-7 text-xs px-2"
               >
                 {copied ? <Check className="h-3 w-3" /> : <Share2 className="h-3 w-3" />}
@@ -215,9 +280,7 @@ const Index = () => {
                 <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
                   <SheetHeader>
                     <SheetTitle>Settings</SheetTitle>
-                    <SheetDescription>
-                      Manage your tuition center settings, notifications, and backups
-                    </SheetDescription>
+                    <SheetDescription>Manage your tuition center settings, notifications, and backups</SheetDescription>
                   </SheetHeader>
                   <div className="mt-6 space-y-4">
                     <BackupDashboard />
@@ -231,13 +294,8 @@ const Index = () => {
             </div>
           </div>
           
-          {/* Daily Summary Dashboard */}
-          <DailySummaryCard 
-            summary={dailySummary} 
-            isFeatureEnabled={isFeatureEnabled} 
-          />
+          <DailySummaryCard summary={dailySummary} isFeatureEnabled={isFeatureEnabled} />
           
-          {/* Student Alerts */}
           <StudentAlertsCard
             alerts={studentAlerts}
             totalCount={alertsTotalCount}
@@ -272,9 +330,7 @@ const Index = () => {
             onAwardXP={awardXP}
           />
 
-          {/* Homework Manager - Feature Gated */}
           {isFeatureEnabled('homework') && <HomeworkManager />}
-
 
           <Card className="bg-white border border-gray-100 shadow-sm">
             <CardHeader className="pb-2 sm:pb-3">
@@ -314,60 +370,42 @@ const Index = () => {
         </div>
       } />
       <Route path="/tests" element={
-        <Suspense fallback={<RouteLoader />}>
-          <TestsPage />
-        </Suspense>
+        <Suspense fallback={<RouteLoader />}><TestsPage /></Suspense>
       } />
       <Route path="/leaderboard" element={
         <FeatureGate featureKey="leaderboard" featureName="Leaderboard">
-          <Suspense fallback={<RouteLoader />}>
-            <LeaderboardPage />
-          </Suspense>
+          <Suspense fallback={<RouteLoader />}><LeaderboardPage /></Suspense>
         </FeatureGate>
       } />
       <Route path="/materials" element={
         <FeatureGate featureKey="materials" featureName="Materials">
-          <Suspense fallback={<RouteLoader />}>
-            <MaterialsPage />
-          </Suspense>
+          <Suspense fallback={<RouteLoader />}><MaterialsPage /></Suspense>
         </FeatureGate>
       } />
       <Route path="/fees" element={
         <FeatureGate featureKey="fees" featureName="Fees">
-          <Suspense fallback={<RouteLoader />}>
-            <FeesPage />
-          </Suspense>
+          <Suspense fallback={<RouteLoader />}><FeesPage /></Suspense>
         </FeatureGate>
       } />
       <Route path="/attendance" element={
         <FeatureGate featureKey="attendance" featureName="Attendance">
-          <Suspense fallback={<RouteLoader />}>
-            <AttendancePage />
-          </Suspense>
+          <Suspense fallback={<RouteLoader />}><AttendancePage /></Suspense>
         </FeatureGate>
       } />
       <Route path="/timetable" element={
         <FeatureGate featureKey="timetable" featureName="Timetable">
-          <Suspense fallback={<RouteLoader />}>
-            <TimetablePage />
-          </Suspense>
+          <Suspense fallback={<RouteLoader />}><TimetablePage /></Suspense>
         </FeatureGate>
       } />
       <Route path="/classes" element={
-        <Suspense fallback={<RouteLoader />}>
-          <ClassesPage />
-        </Suspense>
+        <Suspense fallback={<RouteLoader />}><ClassesPage /></Suspense>
       } />
       <Route path="/students" element={
-        <Suspense fallback={<RouteLoader />}>
-          <StudentsPage />
-        </Suspense>
+        <Suspense fallback={<RouteLoader />}><StudentsPage /></Suspense>
       } />
       <Route path="/reports" element={
         <FeatureGate featureKey="reports" featureName="Reports">
-          <Suspense fallback={<RouteLoader />}>
-            <ReportsPage />
-          </Suspense>
+          <Suspense fallback={<RouteLoader />}><ReportsPage /></Suspense>
         </FeatureGate>
       } />
       </Routes>

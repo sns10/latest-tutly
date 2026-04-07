@@ -56,15 +56,15 @@ export default function TimetablePage() {
     });
   };
 
-  const addRoom = (name: string, capacity?: number, description?: string) => {
+  const addRoom = async (name: string, capacity?: number, description?: string) => {
     addRoomMut.mutate({ name, capacity, description });
   };
 
-  const updateRoom = (id: string, name: string, capacity?: number, description?: string) => {
+  const updateRoom = async (id: string, name: string, capacity?: number, description?: string) => {
     updateRoomMut.mutate({ id, name, capacity, description });
   };
 
-  const deleteRoom = (id: string) => {
+  const deleteRoom = async (id: string) => {
     deleteRoomMut.mutate(id);
   };
 
