@@ -197,6 +197,22 @@ All data fetching and mutations use **domain-specific hooks** in `src/hooks/quer
 
 ---
 
+## 7b. Database Functions (PostgreSQL)
+
+| Function | Purpose | Notes |
+|----------|---------|-------|
+| `record_fee_payment(p_fee_id, p_amount, p_payment_method, p_reference, p_notes)` | Atomically records a fee payment, recalculates total paid, and updates fee status (`paid`/`partial`) | `SECURITY DEFINER`. Returns `{totalPaid, feeAmount, newStatus}` as JSONB. Prevents race conditions from concurrent payments. |
+| `has_role(_user_id, _role)` | Checks if a user has a specific role | `SECURITY DEFINER`. Used in RLS policies to avoid recursion. |
+| `get_user_tuition_id(_user_id)` | Returns the tuition_id for a user from profiles | `SECURITY DEFINER`. Used in RLS policies. |
+| `get_user_email()` | Returns the current user's email from auth.users | `SECURITY DEFINER`. Used in portal RLS policies. |
+| `setup_tuition_admin(_user_id, _tuition_id, _full_name)` | Creates/updates profile and assigns tuition_admin role | `SECURITY DEFINER`. Called by edge function. |
+| `handle_new_user()` | Trigger function: creates profile row on auth signup | `SECURITY DEFINER`. Attached to `auth.users` insert. |
+| `auto_assign_student_role()` | Trigger function: assigns student role when `user_id` is set on a student | `SECURITY DEFINER`. |
+| `auto_assign_tuition_admin_role()` | Trigger function: assigns tuition_admin role when profile gets `tuition_id` | `SECURITY DEFINER`. |
+| `update_updated_at_column()` | Generic trigger function: sets `updated_at = now()` on row update | Used by multiple tables. |
+
+---
+
 ## 8. Module Details
 
 ### Super Admin
