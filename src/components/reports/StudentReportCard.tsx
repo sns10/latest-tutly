@@ -23,7 +23,6 @@ export function StudentReportCard() {
   const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
-  const { tuitionId } = useUserTuition();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 90), 'yyyy-MM-dd'));

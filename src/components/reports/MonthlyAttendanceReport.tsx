@@ -33,7 +33,6 @@ export function MonthlyAttendanceReport() {
   const { data: students = [] } = useStudentsQuery(tuitionId);
   const { data: divisions = [] } = useDivisionsQuery(tuitionId);
   const { tuition } = useTuitionInfo();
-  const { tuitionId } = useUserTuition();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedDivision, setSelectedDivision] = useState<string>('all');
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));
