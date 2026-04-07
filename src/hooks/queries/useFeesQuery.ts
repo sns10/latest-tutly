@@ -237,19 +237,27 @@ export function usePaymentsQuery(tuitionId: string | null) {
       if (!tuitionId) return [];
 
       // Join through student_fees → students to filter by tuition
-      const { data, error } = await supabase
+      const baseQuery = supabase
         .from('fee_payments')
         .select('*, student_fees!inner(student_id, students!inner(tuition_id))')
         .eq('student_fees.students.tuition_id', tuitionId)
-        .order('created_at', { ascending: false })
-        .limit(2000);
+        .order('created_at', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching payments:', error);
-        throw error;
+      const allData: any[] = [];
+      let from = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await baseQuery.range(from, from + PAGE_SIZE - 1);
+        if (error) {
+          console.error('Error fetching payments:', error);
+          throw error;
+        }
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      return (data || []).map((p: any) => ({
+      return allData.map((p: any) => ({
         id: p.id,
         feeId: p.fee_id,
         amount: Number(p.amount) || 0,

@@ -1,6 +1,6 @@
 # Tutly by UpSkillr — Project Knowledge Base
 
-> **Last updated**: 2026-04-01
+> **Last updated**: 2026-04-07
 > This file serves as the single source of truth for AI context. Update it whenever significant changes are made.
 
 ---
@@ -127,27 +127,54 @@ Defined in: `src/hooks/useTuitionFeatures.ts` → `ALL_FEATURES` array
 
 ## 6. Key Hooks & Data Flow
 
-### Consolidated Data Hooks (Optimized March 2026)
+### Domain Hook Architecture (Refactored April 2026)
+
+All data fetching and mutations use **domain-specific hooks** in `src/hooks/queries/`. The old monolithic `useSupabaseData` hook is deprecated and unused.
+
+| Hook File | Queries | Mutations |
+|-----------|---------|-----------|
+| `useCoreDataQuery.ts` | divisions, subjects, faculty, rooms, timetable, challenges, announcements, studentChallenges | — |
+| `useStudentsQuery.ts` | students | addStudent (with auto-division + roll number), removeStudent |
+| `useStudentMutations.ts` | — | updateStudent, assignEmail, assignTeam, updateDivision |
+| `useAttendanceQuery.ts` | attendance, todayAttendance, historicalAttendance, reportAttendance, studentAttendance | markAttendance, bulkMarkAttendance |
+| `useFeesQuery.ts` | fees (paginated), classFees, todayPayments, payments (paginated) | addFee, updateFeeStatus, deleteFee, recordPayment, updateClassFee |
+| `useFeesMutations.ts` | — | addFeesBatch |
+| `useTestsQuery.ts` | weeklyTests (paginated), testResults (paginated) | addWeeklyTest, deleteWeeklyTest, addTestResult, addTestResultsBatch |
+| `useXpMutations.ts` | — | addXp, reduceXp, awardXp, buyReward, useReward |
+| `useChallengeMutations.ts` | — | addChallenge, completeChallenge |
+| `useAnnouncementMutations.ts` | — | addAnnouncement |
+| `useFacultyMutations.ts` | — | addFaculty, updateFaculty, deleteFaculty |
+| `useSubjectMutations.ts` | — | addSubject, updateSubject, deleteSubject |
+| `useTimetableMutations.ts` | — | addTimetableEntry, updateTimetableEntry, deleteTimetableEntry |
+| `useDivisionMutations.ts` | — | addDivision, updateDivision, deleteDivision |
+| `useRoomMutations.ts` | — | addRoom, updateRoom, deleteRoom |
+
+### Tuition Data Hooks
 | Hook | Purpose | Cache |
 |------|---------|-------|
-| `useTuitionData` | **Single query** for all tuition fields (replaces 3 separate hooks) | 10 min stale |
-| `useTuitionInfo` | Derives info from useTuitionData | shared cache |
-| `useTuitionFeatures` | Derives features from useTuitionData | shared cache |
-| `useTuitionStatus` | Derives status from useTuitionData | shared cache |
+| `useTuitionData` | Single query for all tuition fields | 10 min stale |
+| `useTuitionInfo` | Derived from useTuitionData | shared cache |
+| `useTuitionFeatures` | Derived from useTuitionData | shared cache |
+| `useTuitionStatus` | Derived from useTuitionData | shared cache |
 | `useUserRole` | React Query cached role fetch | 30 min stale |
 | `useUserTuition` | Profile → tuition_id mapping | 30 min stale |
-| `useSupabaseData` | Main data orchestrator for tuition admin dashboard | per-query |
+
+### Term Exam Data
+| Hook | Purpose |
+|------|---------|
+| `useTermExamData` | All term exam queries + mutations (paginated results) |
 
 ### Query Architecture
 - Global `staleTime`: 5 minutes (set in App.tsx QueryClient)
 - Global `gcTime`: 15 minutes
 - Role/tuition data: 30 min stale (rarely changes)
 - Feature flags: derived from shared tuition query (zero extra calls)
-- Dashboard loads only essential data; deferred queries for non-visible modules
+- **All large datasets use pagination loops** (no arbitrary `.limit()` caps)
 
 ### Performance Patterns
+- Each page imports only its required domain hooks (no global re-renders)
 - Chunked `.in()` filters for arrays > 200 items
-- Paginated queries for fees and test results (no blanket limits)
+- Paginated queries for fees, test results, payments, term exam results
 - Explicit `tuition_id` filters on all queries
 - Joined queries to reduce API calls (e.g., fees + payments)
 - Fee status calculated from DB truth via `useRecordPaymentMutation`
@@ -268,42 +295,42 @@ Defined in: `src/hooks/useTuitionFeatures.ts` → `ALL_FEATURES` array
 
 ## 11. Recent Changes Log
 
-### April 2026 — Data Integrity Fixes (Critical)
-- **Fee status persistence fix**: Migrated payment state from local `useState` to React Query (`usePaymentsQuery`, `useRecordPaymentMutation`). Fee status now recalculated from database truth after each payment, preventing stale-state overwrites that caused fees to revert to "unpaid"
-- **Bulk payment tracking**: `handleBulkMarkPaid` now creates actual `fee_payments` records for every fee marked as paid, ensuring consistency between status and financial records
-- **Query limit removal**: Removed `.limit(500)` on fees and `.limit(2000)` on test results. Both now use pagination loops to fetch all records, preventing older data from disappearing
-- **RecordPaymentDialog JSX fix**: Fixed nesting error causing notes validation/character counter to display incorrectly
+### April 2026 — God Hook Refactor (Architecture)
+- **Eliminated `useSupabaseData`**: Decomposed 972-line monolithic hook into 14 domain-specific hook files in `src/hooks/queries/`
+- **Pages decoupled**: Each page (Index, Tests, Students, Fees, Attendance, Timetable, Classes, Leaderboard, Reports) now imports only its required hooks — no cross-domain re-renders
+- **Facade deprecated**: `useSupabaseData.ts` reduced to thin re-export, marked `@deprecated`, unused by any component
+- **Student logic consolidated**: Division auto-creation + roll number assignment moved into `useAddStudentMutation`
+
+### April 2026 — Data Integrity Fixes (Pagination)
+- **Payments query**: Removed `.limit(2000)` → paginated loop
+- **Weekly tests query**: Removed `.limit(100)` → paginated loop
+- **Test results query**: Raised safety cap from 5000 → 10000
+- **Term exam results**: Removed `.limit(5000)` → paginated loop
+- **Report attendance**: New `useReportAttendanceQuery` with on-demand fetch (no auto-fire)
+- **Service worker**: Added cache-first strategy for static assets to prevent app hanging after WhatsApp share
+
+### April 2026 — Fee Status Persistence Fix
+- Migrated payment state from local `useState` to React Query (`usePaymentsQuery`, `useRecordPaymentMutation`)
+- Fee status recalculated from DB truth after each payment, preventing stale-state overwrites
 
 ### April 2026 — Father & Mother Phone Numbers
-- **Database**: Added `father_phone` and `mother_phone` columns to `students` table. Existing `parent_phone` data auto-migrated to `father_phone`
-- **Forms updated**: AddStudentDialog, StudentDetailsDialog, StudentRegistration — father phone required, mother phone optional
-- **Bulk import**: Excel template updated with both phone columns
-- **Edge function**: `register-student` updated to accept both phone fields
-- **WhatsApp reminders**: Use `fatherPhone` with fallback to `motherPhone`
+- Added `father_phone` and `mother_phone` columns to `students` table
+- Updated all forms, bulk import, edge functions, WhatsApp reminders
 
-### April 2026 — Student Data Export
-- **Export button** on Students page with dropdown: export current class filter or all students
-- **Excel output** includes: Name, Class, Division, Roll No, DOB, Gender, Email, Phone, Father Phone, Mother Phone, Parent Name, Address
-- Uses existing `xlsx` library
+### April 2026 — Parent Name & School Name
+- Added `parent_name` and `school_name` columns to `students` table
+- Updated AddStudentDialog, StudentDetailsDialog, BulkImport, registration
 
-### April 2026 — Malayalam Fee Reminder Template
-- **Language toggle** (English / മലയാളം) in WhatsApp fee reminder dialog
-- Full Malayalam template with proper script for greeting, fee details, and closing
-- Admin can edit message before sending regardless of language
-
-### April 2026 — Academic Year Reset Feature
-- **"New Academic Year"** reset in settings for tuition admins
-- Wipes transactional data (attendance, tests, marks, fees, XP, badges, rewards, homework, announcements, challenges, term exams, timetable)
-- Optionally keeps structural data (students, subjects, faculty, divisions, rooms, class fee config)
-- Mandatory backup before deletion, typed confirmation ("RESET") required
-- Only tuition_admin or super_admin can trigger
+### April 2026 — Other Features
+- Student data export to Excel
+- Malayalam fee reminder template
+- Academic year reset feature
 
 ### March 2026 — Cloud Usage Optimization
-- **Consolidated tuition queries**: 3 separate hooks → single `useTuitionData` hook → saved 2 API calls per page load
-- **Converted useEffect hooks to React Query**: `useUserRole` (30min cache), `ProtectedRoute` portal check (30min cache)
-- **Increased global staleTime**: 2min → 5min, gcTime: 10min → 15min
-- **Updated all dependencies** to latest versions
-- **Result**: ~50% reduction in API calls on dashboard load
+- Consolidated 3 tuition hooks → single `useTuitionData`
+- Converted useEffect hooks to React Query with long caches
+- Increased global staleTime/gcTime
+- ~50% reduction in API calls on dashboard load
 
 ---
 
@@ -338,13 +365,30 @@ src/
 │   ├── useTuitionStatus.ts          # Derived from useTuitionData
 │   ├── useUserRole.ts               # Cached role fetch
 │   ├── useUserTuition.ts            # Profile → tuition_id
-│   ├── useSupabaseData.ts           # Main data orchestrator
+│   ├── useTermExamData.ts           # Term exam queries + mutations
+│   ├── useSupabaseData.ts           # ⚠️ DEPRECATED — do not use
 │   └── queries/                     # Domain-specific React Query hooks
+│       ├── index.ts                 # Central re-export barrel
+│       ├── useCoreDataQuery.ts      # divisions, subjects, faculty, rooms, timetable, etc.
+│       ├── useStudentsQuery.ts      # students query + add/remove mutations
+│       ├── useStudentMutations.ts   # update, assignEmail, assignTeam, updateDivision
+│       ├── useAttendanceQuery.ts    # attendance queries + mark mutations
+│       ├── useFeesQuery.ts          # fees, classFees, payments queries + mutations
+│       ├── useFeesMutations.ts      # batch fee operations
+│       ├── useTestsQuery.ts         # weekly tests + test results queries + mutations
+│       ├── useXpMutations.ts        # XP add/reduce/award, rewards buy/use
+│       ├── useChallengeMutations.ts # challenge CRUD
+│       ├── useAnnouncementMutations.ts # announcement CRUD
+│       ├── useFacultyMutations.ts   # faculty CRUD
+│       ├── useSubjectMutations.ts   # subject CRUD
+│       ├── useTimetableMutations.ts # timetable CRUD
+│       ├── useDivisionMutations.ts  # division CRUD
+│       └── useRoomMutations.ts      # room CRUD
 ├── pages/
-│   ├── Index.tsx                    # Admin dashboard with nested routes
+│   ├── Index.tsx                    # Admin dashboard (imports domain hooks directly)
 │   ├── SuperAdmin.tsx               # Platform management
 │   ├── Student.tsx                  # Student portal
-│   └── [Feature pages]             # Lazy-loaded feature pages
+│   └── [Feature pages]             # Each imports only its domain hooks
 ├── integrations/supabase/
 │   ├── client.ts                    # Auto-generated Supabase client
 │   └── types.ts                     # Auto-generated DB types
@@ -366,4 +410,8 @@ src/
 7. **Chunk large operations** (300 per batch for upserts, 200 for `.in()` filters)
 8. **Stay on React 18** — React 19 has breaking changes with current dependencies
 9. **Keep `react-day-picker` at v8** — v9 requires shadcn calendar component rewrite
-10. **Update this file** when making significant architectural changes
+10. **Never import `useSupabaseData`** — it is deprecated. Import domain hooks from `@/hooks/queries`
+11. **Never use `.limit()` on data queries** — always paginate with `.range()` loops to prevent silent data loss
+12. **Each page must import only its domain hooks** — never subscribe to unrelated data domains
+13. **All mutations must be React Query `useMutation` hooks** — no raw async functions with inline Supabase calls
+14. **Update this file** when making significant architectural changes

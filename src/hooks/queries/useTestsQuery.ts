@@ -12,19 +12,27 @@ export function useWeeklyTestsQuery(tuitionId: string | null) {
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      const { data, error } = await supabase
+      const baseQuery = supabase
         .from('weekly_tests')
         .select('*')
         .eq('tuition_id', tuitionId)
-        .order('test_date', { ascending: false })
-        .limit(100);
+        .order('test_date', { ascending: false });
 
-      if (error) {
-        console.error('Error fetching weekly tests:', error);
-        throw error;
+      const allData: any[] = [];
+      let from = 0;
+      const PAGE_SIZE = 1000;
+      while (true) {
+        const { data, error } = await baseQuery.range(from, from + PAGE_SIZE - 1);
+        if (error) {
+          console.error('Error fetching weekly tests:', error);
+          throw error;
+        }
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      return data.map(test => ({
+      return allData.map(test => ({
         id: test.id,
         name: test.name,
         subject: test.subject,
@@ -67,8 +75,8 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
         allData.push(...(data || []));
         if (!data || data.length < PAGE_SIZE) break;
         from += PAGE_SIZE;
-        // Safety cap at 5000 for dashboard stability
-        if (from >= 5000) break;
+        // Safety cap at 10000 to prevent runaway loops
+        if (from >= 10000) break;
       }
 
       return allData.map((r: any) => ({
