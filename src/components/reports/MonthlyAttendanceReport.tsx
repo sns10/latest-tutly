@@ -7,10 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Download, Printer, FileSpreadsheet, ArrowUpDown, Users, TrendingUp, TrendingDown, Loader2, Search } from 'lucide-react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
-import { useTuitionInfo } from '@/hooks/useTuitionInfo';
-import { useReportAttendanceQuery } from '@/hooks/queries';
+import { useStudentsQuery, useDivisionsQuery, useReportAttendanceQuery } from '@/hooks/queries';
 import { useUserTuition } from '@/hooks/useUserTuition';
+import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
@@ -30,9 +29,10 @@ interface StudentAttendanceStats {
 }
 
 export function MonthlyAttendanceReport() {
-  const { students, divisions } = useSupabaseData();
-  const { tuition } = useTuitionInfo();
   const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedDivision, setSelectedDivision] = useState<string>('all');
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 30), 'yyyy-MM-dd'));

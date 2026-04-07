@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Download, Printer, FileSpreadsheet, Trophy, BookOpen, AlertTriangle } from 'lucide-react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useStudentsQuery, useDivisionsQuery, useSubjectsQuery } from '@/hooks/queries';
+import { useUserTuition } from '@/hooks/useUserTuition';
 import { useTermExamData } from '@/hooks/useTermExamData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { format, parseISO } from 'date-fns';
@@ -28,7 +29,10 @@ interface StudentTermResult {
 }
 
 export function TermExamReport() {
-  const { students, divisions, subjects } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');

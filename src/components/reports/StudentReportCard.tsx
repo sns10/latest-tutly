@@ -7,19 +7,22 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Download, Printer, User, CalendarDays, BookOpen, TrendingUp } from 'lucide-react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useStudentsQuery, useDivisionsQuery, useSubjectsQuery, useWeeklyTestsQuery, useTestResultsQuery, useStudentAttendanceQuery } from '@/hooks/queries';
 import { useTermExamData } from '@/hooks/useTermExamData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
-import { useStudentAttendanceQuery } from '@/hooks/queries';
 import { useUserTuition } from '@/hooks/useUserTuition';
 import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 
 export function StudentReportCard() {
-  const { students, weeklyTests, testResults, divisions, subjects } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
+  const { data: testResults = [] } = useTestResultsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
-  const { tuitionId } = useUserTuition();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedStudent, setSelectedStudent] = useState<string>('');
   const [startDate, setStartDate] = useState(format(subDays(new Date(), 90), 'yyyy-MM-dd'));

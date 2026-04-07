@@ -1,98 +1,74 @@
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useUserTuition } from '@/hooks/useUserTuition';
+import {
+  useFacultyQuery,
+  useSubjectsQuery,
+  useTimetableQuery,
+  useRoomsQuery,
+  useDivisionsQuery,
+  useAddTimetableEntryMutation,
+  useUpdateTimetableEntryMutation,
+  useDeleteTimetableEntryMutation,
+  useAddRoomMutation,
+  useUpdateRoomMutation,
+  useDeleteRoomMutation,
+} from '@/hooks/queries';
 import { SchedulingModule } from '@/components/scheduling/SchedulingModule';
 import { TimetablePageSkeleton } from '@/components/skeletons/PageSkeletons';
 import { ClassName } from '@/types';
 
 export default function TimetablePage() {
-  const {
-    faculty,
-    subjects,
-    timetable,
-    rooms,
-    divisions,
-    loading,
-    addTimetableEntry,
-    updateTimetableEntry,
-    deleteTimetableEntry,
-    addRoom,
-    updateRoom,
-    deleteRoom,
-  } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
 
-  // Wrapper to handle the extended parameters for adding entries
+  const { data: faculty = [] } = useFacultyQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
+  const { data: timetable = [], isLoading } = useTimetableQuery(tuitionId);
+  const { data: rooms = [] } = useRoomsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+
+  const addTimetableMut = useAddTimetableEntryMutation(tuitionId);
+  const updateTimetableMut = useUpdateTimetableEntryMutation(tuitionId);
+  const deleteTimetableMut = useDeleteTimetableEntryMutation(tuitionId);
+  const addRoomMut = useAddRoomMutation(tuitionId);
+  const updateRoomMut = useUpdateRoomMutation(tuitionId);
+  const deleteRoomMut = useDeleteRoomMutation(tuitionId);
+
   const handleAddEntry = async (
-    classValue: ClassName,
-    subjectId: string,
-    facultyId: string,
-    dayOfWeek: number,
-    startTime: string,
-    endTime: string,
-    type: 'regular' | 'special',
-    roomId?: string,
-    roomNumber?: string,
-    specificDate?: string,
-    eventType?: string,
-    notes?: string,
-    divisionId?: string
+    classValue: ClassName, subjectId: string, facultyId: string,
+    dayOfWeek: number, startTime: string, endTime: string,
+    type: 'regular' | 'special', roomId?: string, roomNumber?: string,
+    specificDate?: string, eventType?: string, notes?: string, divisionId?: string
   ) => {
-    await addTimetableEntry(
-      classValue,
-      subjectId,
-      facultyId,
-      dayOfWeek,
-      startTime,
-      endTime,
-      type,
-      roomId,
-      roomNumber,
-      specificDate,
-      undefined, // startDate
-      undefined, // endDate
-      eventType,
-      notes,
-      divisionId
-    );
+    addTimetableMut.mutate({
+      classValue, subjectId, facultyId, dayOfWeek, startTime, endTime, type,
+      roomId, roomNumber, specificDate, eventType, notes, divisionId,
+    });
   };
 
-  // Wrapper for updating entries
   const handleUpdateEntry = async (
-    id: string,
-    classValue: ClassName,
-    subjectId: string,
-    facultyId: string,
-    dayOfWeek: number,
-    startTime: string,
-    endTime: string,
-    type: 'regular' | 'special',
-    roomId?: string,
-    roomNumber?: string,
-    specificDate?: string,
-    startDate?: string,
-    endDate?: string,
-    divisionId?: string
+    id: string, classValue: ClassName, subjectId: string, facultyId: string,
+    dayOfWeek: number, startTime: string, endTime: string,
+    type: 'regular' | 'special', roomId?: string, roomNumber?: string,
+    specificDate?: string, startDate?: string, endDate?: string, divisionId?: string
   ) => {
-    await updateTimetableEntry(
-      id,
-      classValue,
-      subjectId,
-      facultyId,
-      dayOfWeek,
-      startTime,
-      endTime,
-      type,
-      roomId,
-      roomNumber,
-      specificDate,
-      startDate,
-      endDate,
-      undefined, // eventType
-      undefined, // notes
-      divisionId
-    );
+    updateTimetableMut.mutate({
+      id, classValue, subjectId, facultyId, dayOfWeek, startTime, endTime, type,
+      roomId, roomNumber, specificDate, startDate, endDate, divisionId,
+    });
   };
 
-  // Show skeleton during loading
-  if (loading) {
+  const addRoom = async (name: string, capacity?: number, description?: string) => {
+    addRoomMut.mutate({ name, capacity, description });
+  };
+
+  const updateRoom = async (id: string, name: string, capacity?: number, description?: string) => {
+    updateRoomMut.mutate({ id, name, capacity, description });
+  };
+
+  const deleteRoom = async (id: string) => {
+    deleteRoomMut.mutate(id);
+  };
+
+  if (isLoading) {
     return <TimetablePageSkeleton />;
   }
 
@@ -105,7 +81,7 @@ export default function TimetablePage() {
       divisions={divisions}
       onAddEntry={handleAddEntry}
       onUpdateEntry={handleUpdateEntry}
-      onDeleteEntry={deleteTimetableEntry}
+      onDeleteEntry={async (id: string) => { deleteTimetableMut.mutate(id); }}
       onAddRoom={addRoom}
       onUpdateRoom={updateRoom}
       onDeleteRoom={deleteRoom}

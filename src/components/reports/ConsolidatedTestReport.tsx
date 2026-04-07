@@ -6,7 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Download, Printer, FileSpreadsheet, Trophy, AlertTriangle } from 'lucide-react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useStudentsQuery, useDivisionsQuery, useWeeklyTestsQuery, useTestResultsQuery } from '@/hooks/queries';
+import { useUserTuition } from '@/hooks/useUserTuition';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { format, parseISO } from 'date-fns';
 import { toast } from 'sonner';
@@ -25,7 +26,11 @@ interface StudentTestStats {
 }
 
 export function ConsolidatedTestReport() {
-  const { students, weeklyTests, testResults, divisions } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
+  const { data: testResults = [] } = useTestResultsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
   const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedDivision, setSelectedDivision] = useState<string>('all');
