@@ -69,7 +69,7 @@ export function useSupabaseData() {
   const updateStudentMut = useUpdateStudentMutation(tuitionId);
   const assignEmailMut = useAssignStudentEmailMutation(tuitionId);
   const assignTeamMut = useAssignTeamMutation(tuitionId);
-  const updateDivisionMut = useUpdateStudentDivisionMutation(tuitionId);
+  const updateStudentDivMut = useUpdateStudentDivisionMutation(tuitionId);
 
   // ─── XP Mutations ───
   const addXpMut = useAddXpMutation(tuitionId);
