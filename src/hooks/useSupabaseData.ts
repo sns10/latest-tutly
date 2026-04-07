@@ -1,11 +1,13 @@
-import { useMemo, useCallback } from 'react';
+import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Student, WeeklyTest, StudentTestResult, ClassName, TeamName, XPCategory, Challenge, StudentChallenge, Announcement, StudentAttendance, StudentFee, ClassFee, Faculty, Subject, Timetable, Division, Room } from '@/types';
+import { Student, WeeklyTest, StudentTestResult, ClassName, TeamName, XPCategory, Challenge, Announcement, StudentFee } from '@/types';
 import { toast } from 'sonner';
 import { useUserTuition } from './useUserTuition';
 import {
   useStudentsQuery,
+  useAddStudentMutation,
+  useRemoveStudentMutation,
   useDivisionsQuery,
   useSubjectsQuery,
   useFacultyQuery,
@@ -23,43 +25,112 @@ import {
   useTestResultsQuery,
 } from './queries';
 
+// Domain mutation hooks
+import { useUpdateStudentMutation, useAssignStudentEmailMutation, useAssignTeamMutation, useUpdateStudentDivisionMutation } from './queries/useStudentMutations';
+import { useAddXpMutation, useReduceXpMutation, useAwardXpMutation, useBuyRewardMutation, useUseRewardMutation } from './queries/useXpMutations';
+import { useAddFeesBatchMutation } from './queries/useFeesMutations';
+import { useAddChallengeMutation, useCompleteChallengeMutation } from './queries/useChallengeMutations';
+import { useAddAnnouncementMutation } from './queries/useAnnouncementMutations';
+import { useAddFacultyMutation, useUpdateFacultyMutation, useDeleteFacultyMutation } from './queries/useFacultyMutations';
+import { useAddSubjectMutation, useUpdateSubjectMutation, useDeleteSubjectMutation } from './queries/useSubjectMutations';
+import { useAddTimetableEntryMutation, useUpdateTimetableEntryMutation, useDeleteTimetableEntryMutation } from './queries/useTimetableMutations';
+import { useAddDivisionMutation, useUpdateDivisionMutation, useDeleteDivisionMutation } from './queries/useDivisionMutations';
+import { useAddRoomMutation, useUpdateRoomMutation, useDeleteRoomMutation } from './queries/useRoomMutations';
+
+/**
+ * Facade hook — re-exports domain hooks for backward compatibility.
+ * New code should import domain hooks directly instead of using this.
+ */
 export function useSupabaseData() {
   const { tuitionId } = useUserTuition();
   const queryClient = useQueryClient();
 
-  // Core data - loaded immediately with caching
+  // ─── Queries ───
   const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
   const { data: divisions = [], isLoading: divisionsLoading } = useDivisionsQuery(tuitionId);
   const { data: subjects = [], isLoading: subjectsLoading } = useSubjectsQuery(tuitionId);
   const { data: faculty = [], isLoading: facultyLoading } = useFacultyQuery(tuitionId);
-  const { data: rooms = [], isLoading: roomsLoading } = useRoomsQuery(tuitionId);
-  
-  // Deferred data - only fetched when accessed via their respective pages
-  // These still use the shared tuitionId but won't block dashboard render
+  const { data: rooms = [] } = useRoomsQuery(tuitionId);
   const { data: timetable = [] } = useTimetableQuery(tuitionId);
   const { data: challenges = [] } = useChallengesQuery(tuitionId);
   const { data: announcements = [] } = useAnnouncementsQuery(tuitionId);
   const { data: studentChallenges = [] } = useStudentChallengesQuery(tuitionId);
-  
-  // On-demand data - loaded with filters, shorter cache
   const { data: attendance = [] } = useAttendanceQuery(tuitionId);
   const { data: fees = [] } = useFeesQuery(tuitionId);
   const { data: classFees = [] } = useClassFeesQuery(tuitionId);
   const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
   const { data: testResults = [] } = useTestResultsQuery(tuitionId);
 
-  // Rooms not needed for dashboard initial render — exclude from loading gate
   const loading = studentsLoading || divisionsLoading || subjectsLoading || facultyLoading;
 
-  // Invalidation helpers
-  const invalidateStudents = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['students', tuitionId] });
-  }, [queryClient, tuitionId]);
+  // ─── Student Mutations ───
+  const addStudentMut = useAddStudentMutation(tuitionId);
+  const removeStudentMut = useRemoveStudentMutation(tuitionId);
+  const updateStudentMut = useUpdateStudentMutation(tuitionId);
+  const assignEmailMut = useAssignStudentEmailMutation(tuitionId);
+  const assignTeamMut = useAssignTeamMutation(tuitionId);
+  const updateStudentDivMut = useUpdateStudentDivisionMutation(tuitionId);
 
-  const invalidateAttendance = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
-  }, [queryClient, tuitionId]);
+  // ─── XP Mutations ───
+  const addXpMut = useAddXpMutation(tuitionId);
+  const reduceXpMut = useReduceXpMutation(tuitionId);
+  const awardXpMut = useAwardXpMutation(tuitionId);
+  const buyRewardMut = useBuyRewardMutation(tuitionId);
+  const useRewardMut = useUseRewardMutation(tuitionId);
 
+  // ─── Fee Mutations ───
+  const addFeesBatchMut = useAddFeesBatchMutation(tuitionId);
+
+  // ─── Challenge Mutations ───
+  const addChallengeMut = useAddChallengeMutation(tuitionId);
+  const completeChallengeMut = useCompleteChallengeMutation(tuitionId);
+
+  // ─── Announcement Mutations ───
+  const addAnnouncementMut = useAddAnnouncementMutation(tuitionId);
+
+  // ─── Faculty Mutations ───
+  const addFacultyMut = useAddFacultyMutation(tuitionId);
+  const updateFacultyMut = useUpdateFacultyMutation(tuitionId);
+  const deleteFacultyMut = useDeleteFacultyMutation(tuitionId);
+
+  // ─── Subject Mutations ───
+  const addSubjectMut = useAddSubjectMutation(tuitionId);
+  const updateSubjectMut = useUpdateSubjectMutation(tuitionId);
+  const deleteSubjectMut = useDeleteSubjectMutation(tuitionId);
+
+  // ─── Timetable Mutations ───
+  const addTimetableMut = useAddTimetableEntryMutation(tuitionId);
+  const updateTimetableMut = useUpdateTimetableEntryMutation(tuitionId);
+  const deleteTimetableMut = useDeleteTimetableEntryMutation(tuitionId);
+
+  // ─── Division Mutations ───
+  const addDivisionMut = useAddDivisionMutation(tuitionId);
+  const updateDivisionMut = useUpdateDivisionMutation(tuitionId);
+  const deleteDivisionMut = useDeleteDivisionMutation(tuitionId);
+
+  // ─── Room Mutations ───
+  const addRoomMut = useAddRoomMutation(tuitionId);
+  const updateRoomMut = useUpdateRoomMutation(tuitionId);
+  const deleteRoomMut = useDeleteRoomMutation(tuitionId);
+
+  // ─── Attendance ───
+  const markAttendanceMutation = useMarkAttendanceMutation(tuitionId);
+  const bulkMarkAttendanceMutation = useBulkMarkAttendanceMutation(tuitionId);
+
+  const markAttendance = useCallback((
+    studentId: string, date: string, status: 'present' | 'absent' | 'late' | 'excused',
+    notes?: string, subjectId?: string, facultyId?: string
+  ) => {
+    markAttendanceMutation.mutate({ studentId, date, status, notes, subjectId, facultyId });
+  }, [markAttendanceMutation]);
+
+  const bulkMarkAttendance = useCallback((
+    records: Array<{ studentId: string; date: string; status: 'present' | 'absent' | 'late' | 'excused'; notes?: string; subjectId?: string; facultyId?: string }>
+  ) => {
+    bulkMarkAttendanceMutation.mutate(records);
+  }, [bulkMarkAttendanceMutation]);
+
+  // ─── Invalidation helpers for raw async wrappers ───
   const invalidateFees = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
     queryClient.invalidateQueries({ queryKey: ['classFees', tuitionId] });
@@ -70,42 +141,22 @@ export function useSupabaseData() {
     queryClient.invalidateQueries({ queryKey: ['testResults', tuitionId] });
   }, [queryClient, tuitionId]);
 
+  const invalidateStudents = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['students', tuitionId] });
+  }, [queryClient, tuitionId]);
+
   const invalidateDivisions = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['divisions', tuitionId] });
   }, [queryClient, tuitionId]);
 
-  const invalidateSubjects = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['subjects', tuitionId] });
-  }, [queryClient, tuitionId]);
+  // ─── Wrapper functions for backward compatibility ───
+  // These adapt the old function signatures to the new mutation hooks.
 
-  const invalidateFaculty = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['faculty', tuitionId] });
-  }, [queryClient, tuitionId]);
-
-  const invalidateRooms = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['rooms', tuitionId] });
-  }, [queryClient, tuitionId]);
-
-  const invalidateTimetable = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['timetable', tuitionId] });
-  }, [queryClient, tuitionId]);
-
-  const invalidateChallenges = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['challenges', tuitionId] });
-    queryClient.invalidateQueries({ queryKey: ['studentChallenges', tuitionId] });
-  }, [queryClient, tuitionId]);
-
-  const invalidateAnnouncements = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['announcements', tuitionId] });
-  }, [queryClient, tuitionId]);
-
-  // Student operations
   const addStudent = async (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
     let divisionIdToUse = newStudent.divisionId;
 
     if (!divisionIdToUse || divisionIdToUse === 'none') {
       const existingDivisionA = divisions.find(d => d.class === newStudent.class && d.name === 'A');
-
       if (existingDivisionA) {
         divisionIdToUse = existingDivisionA.id;
       } else {
@@ -114,7 +165,6 @@ export function useSupabaseData() {
           .insert({ class: newStudent.class, name: 'A', tuition_id: tuitionId! })
           .select()
           .single();
-
         if (divError) {
           console.error('Error creating default division:', divError);
         } else {
@@ -131,264 +181,78 @@ export function useSupabaseData() {
       rollNoToUse = maxRollNo + 1;
     }
 
-    const { data, error } = await supabase
-      .from('students')
-      .insert({
-        name: newStudent.name,
-        class: newStudent.class,
-        division_id: divisionIdToUse,
-        avatar: newStudent.avatar,
-        tuition_id: tuitionId!,
-        roll_no: rollNoToUse,
-        phone: newStudent.phone || null,
-        date_of_birth: newStudent.dateOfBirth || null,
-        parent_name: newStudent.parentName || null,
-        parent_phone: newStudent.fatherPhone || newStudent.parentPhone || null,
-        father_phone: newStudent.fatherPhone || null,
-        mother_phone: newStudent.motherPhone || null,
-        address: newStudent.address || null,
-        school_name: newStudent.schoolName || null,
-        gender: newStudent.gender || null,
-        email: newStudent.email || null,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      console.error('Error adding student:', error);
-      toast.error('Failed to add student');
-      return;
-    }
-
-    await supabase.from('student_xp').insert([
-      { student_id: data.id, category: 'blackout', amount: 0 },
-      { student_id: data.id, category: 'futureMe', amount: 0 },
-      { student_id: data.id, category: 'recallWar', amount: 0 },
-    ]);
-
-    invalidateStudents();
-    toast.success('Student added successfully!');
+    addStudentMut.mutate({
+      name: newStudent.name,
+      class: newStudent.class,
+      divisionId: divisionIdToUse,
+      avatar: newStudent.avatar,
+      rollNo: rollNoToUse,
+      phone: newStudent.phone,
+      dateOfBirth: newStudent.dateOfBirth,
+      parentName: newStudent.parentName,
+      parentPhone: newStudent.fatherPhone || newStudent.parentPhone,
+      address: newStudent.address,
+      gender: newStudent.gender,
+      email: newStudent.email,
+    });
   };
 
   const removeStudent = async (studentId: string) => {
-    const { error } = await supabase.from('students').delete().eq('id', studentId);
-    if (error) {
-      console.error('Error removing student:', error);
-      toast.error('Failed to remove student');
-      return;
-    }
-    invalidateStudents();
-    toast.success('Student removed successfully');
+    removeStudentMut.mutate(studentId);
   };
 
-  const updateStudent = async (studentId: string, updates: { 
-    name?: string; 
-    class?: ClassName; 
-    divisionId?: string | null; 
-    email?: string | null;
-    phone?: string | null;
-    rollNo?: number | null;
-    dateOfBirth?: string | null;
-    parentName?: string | null;
-    parentPhone?: string | null;
-    fatherPhone?: string | null;
-    motherPhone?: string | null;
-    address?: string | null;
-    schoolName?: string | null;
-    gender?: 'male' | 'female' | 'other' | null;
-  }) => {
-    const updateData: any = {};
-    if (updates.name !== undefined) updateData.name = updates.name;
-    if (updates.class !== undefined) updateData.class = updates.class;
-    if (updates.divisionId !== undefined) updateData.division_id = updates.divisionId;
-    if (updates.email !== undefined) updateData.email = updates.email;
-    if (updates.phone !== undefined) updateData.phone = updates.phone;
-    if (updates.rollNo !== undefined) updateData.roll_no = updates.rollNo;
-    if (updates.dateOfBirth !== undefined) updateData.date_of_birth = updates.dateOfBirth;
-    if (updates.parentName !== undefined) updateData.parent_name = updates.parentName;
-    if (updates.parentPhone !== undefined) updateData.parent_phone = updates.parentPhone;
-    if (updates.fatherPhone !== undefined) updateData.father_phone = updates.fatherPhone;
-    if (updates.motherPhone !== undefined) updateData.mother_phone = updates.motherPhone;
-    if (updates.address !== undefined) updateData.address = updates.address;
-    if (updates.schoolName !== undefined) updateData.school_name = updates.schoolName;
-    if (updates.gender !== undefined) updateData.gender = updates.gender;
-
-    const { error } = await supabase.from('students').update(updateData).eq('id', studentId);
-    if (error) {
-      console.error('Error updating student:', error);
-      toast.error('Failed to update student');
-      return;
-    }
-    toast.success('Student updated successfully');
-    invalidateStudents();
+  const updateStudent = async (studentId: string, updates: Parameters<typeof updateStudentMut.mutate>[0]['updates']) => {
+    updateStudentMut.mutate({ studentId, updates });
   };
 
   const assignStudentEmail = async (studentId: string, email: string): Promise<boolean> => {
-    const { error } = await supabase.from('students').update({ email }).eq('id', studentId);
-    if (error) {
-      console.error('Error assigning student email:', error);
-      toast.error('Failed to assign email');
+    try {
+      await assignEmailMut.mutateAsync({ studentId, email });
+      return true;
+    } catch {
       return false;
     }
-    invalidateStudents();
-    return true;
   };
 
   const assignTeam = async (studentId: string, team: TeamName | null) => {
-    const { error } = await supabase.from('students').update({ team }).eq('id', studentId);
-    if (error) {
-      console.error('Error assigning team:', error);
-      toast.error('Failed to assign team');
-      return;
-    }
-    invalidateStudents();
+    assignTeamMut.mutate({ studentId, team });
   };
 
   const updateStudentDivision = async (studentId: string, divisionId: string | null) => {
-    const { error } = await supabase.from('students').update({ division_id: divisionId }).eq('id', studentId);
-    if (error) {
-      console.error('Error updating student division:', error);
-      toast.error('Failed to update student division');
-      return;
-    }
-    toast.success('Student division updated successfully');
-    invalidateStudents();
+    updateStudentDivMut.mutate({ studentId, divisionId });
   };
 
-  // XP operations
   const addXp = async (studentId: string, category: XPCategory, amount: number) => {
-    const { data: currentXpData, error: fetchError } = await supabase
-      .from('student_xp')
-      .select('amount')
-      .eq('student_id', studentId)
-      .eq('category', category)
-      .maybeSingle();
-
-    if (fetchError) {
-      console.error('Error fetching current XP:', fetchError);
-      toast.error('Failed to update XP');
-      return;
-    }
-
-    const newAmount = (currentXpData?.amount || 0) + amount;
-
-    const { error: xpError } = await supabase
-      .from('student_xp')
-      .upsert({ student_id: studentId, category, amount: newAmount }, { onConflict: 'student_id,category' });
-
-    if (xpError) {
-      console.error('Error updating XP:', xpError);
-      toast.error('Failed to update XP');
-      return;
-    }
-
-    const { data: studentData } = await supabase.from('students').select('total_xp').eq('id', studentId).single();
-    const newTotalXp = (studentData?.total_xp || 0) + amount;
-    await supabase.from('students').update({ total_xp: newTotalXp }).eq('id', studentId);
-
-    invalidateStudents();
+    addXpMut.mutate({ studentId, category, amount });
   };
 
   const reduceXp = async (studentId: string, amount: number) => {
-    const { data: studentData, error: fetchError } = await supabase.from('students').select('total_xp').eq('id', studentId).single();
-    if (fetchError) {
-      console.error('Error fetching student:', fetchError);
-      toast.error('Failed to reduce XP');
-      return;
-    }
-
-    const newTotalXp = Math.max(0, (studentData?.total_xp || 0) - amount);
-    const { error } = await supabase.from('students').update({ total_xp: newTotalXp }).eq('id', studentId);
-
-    if (error) {
-      console.error('Error reducing XP:', error);
-      toast.error('Failed to reduce XP');
-      return;
-    }
-
     const student = students.find(s => s.id === studentId);
-    if (student) toast.success(`${student.name} lost -${amount} XP`);
-    invalidateStudents();
+    reduceXpMut.mutate({ studentId, amount, studentName: student?.name });
   };
 
   const awardXP = async (studentId: string, amount: number, reason: string) => {
-    const { data: studentData, error: fetchError } = await supabase.from('students').select('total_xp').eq('id', studentId).single();
-    if (fetchError) {
-      console.error('Error fetching student:', fetchError);
-      toast.error('Failed to award XP');
-      return;
-    }
-
-    const newTotalXp = (studentData?.total_xp || 0) + amount;
-    const { error } = await supabase.from('students').update({ total_xp: newTotalXp }).eq('id', studentId);
-
-    if (error) {
-      console.error('Error awarding XP:', error);
-      toast.error('Failed to award XP');
-      return;
-    }
-
     const student = students.find(s => s.id === studentId);
-    if (student) toast.success(`${student.name} earned +${amount} XP! (${reason})`);
-    invalidateStudents();
+    awardXpMut.mutate({ studentId, amount, reason, studentName: student?.name });
   };
 
   const buyReward = async (studentId: string, reward: any) => {
     const student = students.find(s => s.id === studentId);
-    if (!student || student.totalXp < reward.cost) {
-      toast.error('Insufficient XP');
-      return;
-    }
-
-    const { error: xpError } = await supabase.from('students').update({ total_xp: student.totalXp - reward.cost }).eq('id', studentId);
-    if (xpError) {
-      console.error('Error deducting XP:', xpError);
-      toast.error('Failed to purchase reward');
-      return;
-    }
-
-    const { error: rewardError } = await supabase.from('student_rewards').insert({
-      student_id: studentId,
-      reward_id: reward.id,
-    });
-
-    if (rewardError) {
-      console.error('Error adding reward:', rewardError);
-      toast.error('Failed to purchase reward');
-      return;
-    }
-
-    invalidateStudents();
-    toast.success(`${reward.name} purchased!`);
+    if (!student) { toast.error('Student not found'); return; }
+    buyRewardMut.mutate({ studentId, reward, currentXp: student.totalXp });
   };
 
-  const useReward = async (studentId: string, rewardInstanceId: string) => {
-    const { error } = await supabase.from('student_rewards').delete().eq('id', rewardInstanceId);
-    if (error) {
-      console.error('Error using reward:', error);
-      toast.error('Failed to use reward');
-      return;
-    }
-    invalidateStudents();
-    toast.success('Reward used!');
+  const useReward = async (_studentId: string, rewardInstanceId: string) => {
+    useRewardMut.mutate(rewardInstanceId);
   };
 
-  // Test operations
+  // Test operations — kept as raw async for return-value compatibility
   const addWeeklyTest = async (newTest: Omit<WeeklyTest, 'id'>) => {
     const { error } = await supabase.from('weekly_tests').insert({
-      name: newTest.name,
-      subject: newTest.subject,
-      max_marks: newTest.maxMarks,
-      test_date: newTest.date,
-      class: newTest.class,
-      tuition_id: tuitionId!,
+      name: newTest.name, subject: newTest.subject, max_marks: newTest.maxMarks,
+      test_date: newTest.date, class: newTest.class, tuition_id: tuitionId!,
     });
-
-    if (error) {
-      console.error('Error adding weekly test:', error);
-      toast.error('Failed to create test');
-      return;
-    }
+    if (error) { console.error('Error adding weekly test:', error); toast.error('Failed to create test'); return; }
     invalidateTests();
     toast.success(`Test "${newTest.name}" created successfully!`);
   };
@@ -396,153 +260,58 @@ export function useSupabaseData() {
   const deleteWeeklyTest = async (testId: string) => {
     await supabase.from('student_test_results').delete().eq('test_id', testId);
     const { error } = await supabase.from('weekly_tests').delete().eq('id', testId);
-    if (error) {
-      console.error('Error deleting test:', error);
-      toast.error('Failed to delete test');
-      return;
-    }
+    if (error) { console.error('Error deleting test:', error); toast.error('Failed to delete test'); return; }
     invalidateTests();
     toast.success('Test deleted successfully!');
   };
 
   const addTestResult = async (result: StudentTestResult): Promise<boolean> => {
     const { error } = await supabase.from('student_test_results').upsert({
-      test_id: result.testId,
-      student_id: result.studentId,
-      marks: result.marks,
+      test_id: result.testId, student_id: result.studentId, marks: result.marks,
     }, { onConflict: 'test_id,student_id' });
-
-    if (error) {
-      console.error('Error adding test result:', error);
-      toast.error('Failed to save test result');
-      return false;
-    }
+    if (error) { console.error('Error adding test result:', error); toast.error('Failed to save test result'); return false; }
     invalidateTests();
     return true;
   };
 
   const addTestResultsBatch = async (results: StudentTestResult[]): Promise<boolean> => {
     if (results.length === 0) return true;
-
-    const records = results.map(result => ({
-      test_id: result.testId,
-      student_id: result.studentId,
-      marks: result.marks,
-    }));
-
-    // Chunk large batches to avoid timeouts (max 300 per request)
+    const records = results.map(r => ({ test_id: r.testId, student_id: r.studentId, marks: r.marks }));
     const CHUNK_SIZE = 300;
     for (let i = 0; i < records.length; i += CHUNK_SIZE) {
       const chunk = records.slice(i, i + CHUNK_SIZE);
-      const { error } = await supabase
-        .from('student_test_results')
-        .upsert(chunk, { onConflict: 'test_id,student_id' });
-
-      if (error) {
-        console.error('Error adding test results:', error);
-        toast.error('Failed to save test results. Please try again.');
-        return false;
-      }
+      const { error } = await supabase.from('student_test_results').upsert(chunk, { onConflict: 'test_id,student_id' });
+      if (error) { console.error('Error adding test results:', error); toast.error('Failed to save test results.'); return false; }
     }
-    
     invalidateTests();
     toast.success(`Marks saved for ${results.length} students!`);
     return true;
   };
 
-  // Attendance operations - using optimistic mutations for instant UI
-  const markAttendanceMutation = useMarkAttendanceMutation(tuitionId);
-  const bulkMarkAttendanceMutation = useBulkMarkAttendanceMutation(tuitionId);
-
-  const markAttendance = useCallback((
-    studentId: string, 
-    date: string, 
-    status: 'present' | 'absent' | 'late' | 'excused', 
-    notes?: string, 
-    subjectId?: string, 
-    facultyId?: string
-  ) => {
-    markAttendanceMutation.mutate({ studentId, date, status, notes, subjectId, facultyId });
-  }, [markAttendanceMutation]);
-
-  const bulkMarkAttendance = useCallback((
-    records: Array<{
-      studentId: string;
-      date: string;
-      status: 'present' | 'absent' | 'late' | 'excused';
-      notes?: string;
-      subjectId?: string;
-      facultyId?: string;
-    }>
-  ) => {
-    bulkMarkAttendanceMutation.mutate(records);
-  }, [bulkMarkAttendanceMutation]);
-
-  // Fee operations
+  // Fee operations — kept as raw async for return-value compatibility
   const addFee = async (newFee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => {
     const { error } = await supabase.from('student_fees').insert({
-      student_id: newFee.studentId,
-      fee_type: newFee.feeType,
-      amount: newFee.amount,
-      due_date: newFee.dueDate,
-      paid_date: newFee.paidDate || null,
-      status: newFee.status,
-      notes: newFee.notes || null,
+      student_id: newFee.studentId, fee_type: newFee.feeType, amount: newFee.amount,
+      due_date: newFee.dueDate, paid_date: newFee.paidDate || null, status: newFee.status, notes: newFee.notes || null,
     });
-
-    if (error) {
-      console.error('Error adding fee:', error);
-      toast.error('Failed to add fee');
-      return;
-    }
+    if (error) { console.error('Error adding fee:', error); toast.error('Failed to add fee'); return; }
     invalidateFees();
     toast.success('Fee added successfully!');
   };
 
-  // Batch fee insertion - single API call for multiple fees
   const addFeesBatch = async (newFees: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>>) => {
-    if (newFees.length === 0) return;
-
-    const feeRecords = newFees.map(fee => ({
-      student_id: fee.studentId,
-      fee_type: fee.feeType,
-      amount: fee.amount,
-      due_date: fee.dueDate,
-      paid_date: fee.paidDate || null,
-      status: fee.status,
-      notes: fee.notes || null,
-    }));
-
-    const { error } = await supabase.from('student_fees').insert(feeRecords);
-
-    if (error) {
-      console.error('Error adding fees batch:', error);
-      toast.error('Failed to generate fees');
-      return;
-    }
-
-    invalidateFees();
-    toast.success(`Generated fees for ${newFees.length} students`);
+    addFeesBatchMut.mutate(newFees);
   };
 
   const updateFeeStatus = async (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => {
     const { error } = await supabase.from('student_fees').update({ status, paid_date: paidDate || null }).eq('id', feeId);
-    if (error) {
-      console.error('Error updating fee status:', error);
-      toast.error('Failed to update fee status');
-      return;
-    }
+    if (error) { console.error('Error updating fee status:', error); toast.error('Failed to update fee status'); return; }
     invalidateFees();
   };
 
   const updateClassFee = async (className: string, amount: number) => {
-    if (!tuitionId) {
-      toast.error('Unable to save class fee - no tuition context');
-      return;
-    }
-
+    if (!tuitionId) { toast.error('Unable to save class fee - no tuition context'); return; }
     const { data: existing } = await supabase.from('class_fees').select('id').eq('class', className).eq('tuition_id', tuitionId).maybeSingle();
-
     let error;
     if (existing) {
       const result = await supabase.from('class_fees').update({ amount }).eq('id', existing.id);
@@ -551,422 +320,107 @@ export function useSupabaseData() {
       const result = await supabase.from('class_fees').insert({ class: className, amount, tuition_id: tuitionId });
       error = result.error;
     }
-
-    if (error) {
-      console.error('Error updating class fee:', error);
-      toast.error('Failed to update class fee');
-      return;
-    }
+    if (error) { console.error('Error updating class fee:', error); toast.error('Failed to update class fee'); return; }
     invalidateFees();
   };
 
   const deleteFee = async (feeId: string) => {
     await supabase.from('fee_payments').delete().eq('fee_id', feeId);
     const { error } = await supabase.from('student_fees').delete().eq('id', feeId);
-    if (error) {
-      console.error('Error deleting fee:', error);
-      toast.error('Failed to delete fee');
-      return;
-    }
+    if (error) { console.error('Error deleting fee:', error); toast.error('Failed to delete fee'); return; }
     invalidateFees();
     toast.success('Fee deleted successfully');
   };
 
-  const fetchFees = useCallback(() => {
-    invalidateFees();
-  }, [invalidateFees]);
+  const fetchFees = useCallback(() => { invalidateFees(); }, [invalidateFees]);
 
-  // Challenge operations
+  // Challenge wrappers
   const addChallenge = async (newChallenge: Omit<Challenge, 'id' | 'createdAt'>) => {
-    const { error } = await supabase.from('challenges').insert([{
-      title: newChallenge.title,
-      description: newChallenge.description,
-      type: newChallenge.type,
-      xp_reward: newChallenge.xpReward,
-      difficulty: newChallenge.difficulty || 'medium',
-      start_date: newChallenge.startDate,
-      end_date: newChallenge.endDate,
-      is_active: newChallenge.isActive,
-      tuition_id: tuitionId!,
-    }]);
-
-    if (error) {
-      console.error('Error adding challenge:', error);
-      toast.error('Failed to create challenge');
-      return;
-    }
-    invalidateChallenges();
-    toast.success('Challenge created successfully!');
+    addChallengeMut.mutate(newChallenge);
   };
 
   const completeChallenge = async (studentId: string, challengeId: string) => {
-    const { error } = await supabase.from('student_challenges').insert({
-      student_id: studentId,
-      challenge_id: challengeId,
-      status: 'completed',
-    });
-
-    if (error) {
-      console.error('Error completing challenge:', error);
-      toast.error('Failed to complete challenge');
-      return;
-    }
-
     const challenge = challenges.find(c => c.id === challengeId);
-    if (challenge) {
-      await awardXP(studentId, challenge.xpReward, `Completed challenge: ${challenge.title}`);
-    }
-    invalidateChallenges();
+    completeChallengeMut.mutate({
+      studentId,
+      challengeId,
+      xpReward: challenge?.xpReward || 0,
+      challengeTitle: challenge?.title || '',
+    });
   };
 
-  // Announcement operations
+  // Announcement wrapper
   const addAnnouncement = async (newAnnouncement: Omit<Announcement, 'id' | 'publishedAt'>) => {
-    const { error } = await supabase.from('announcements').insert({
-      title: newAnnouncement.title,
-      body: newAnnouncement.body,
-      created_by: newAnnouncement.createdBy,
-      target_class: newAnnouncement.targetClass,
-      xp_bonus: newAnnouncement.xpBonus,
-      tuition_id: tuitionId!,
-    });
-
-    if (error) {
-      console.error('Error adding announcement:', error);
-      toast.error('Failed to create announcement');
-      return;
-    }
-    invalidateAnnouncements();
-    toast.success('Announcement created successfully!');
+    addAnnouncementMut.mutate(newAnnouncement);
   };
 
-  // Faculty operations
+  // Faculty wrappers
   const addFaculty = async (name: string, email: string, phone: string, subjectIds: string[]) => {
-    const { data: facultyData, error: facultyError } = await supabase
-      .from('faculty')
-      .insert({ name, email, phone, tuition_id: tuitionId! })
-      .select()
-      .single();
-
-    if (facultyError) {
-      console.error('Error adding faculty:', facultyError);
-      toast.error('Failed to add faculty');
-      return;
-    }
-
-    if (subjectIds.length > 0) {
-      await supabase.from('faculty_subjects').insert(subjectIds.map(subjectId => ({
-        faculty_id: facultyData.id,
-        subject_id: subjectId,
-      })));
-    }
-
-    toast.success('Faculty added successfully');
-    invalidateFaculty();
+    addFacultyMut.mutate({ name, email, phone, subjectIds });
   };
-
   const updateFaculty = async (id: string, name: string, email: string, phone: string, subjectIds: string[]) => {
-    const { error: updateError } = await supabase
-      .from('faculty')
-      .update({ name, email, phone, updated_at: new Date().toISOString() })
-      .eq('id', id);
-
-    if (updateError) {
-      console.error('Error updating faculty:', updateError);
-      toast.error('Failed to update faculty');
-      return;
-    }
-
-    await supabase.from('faculty_subjects').delete().eq('faculty_id', id);
-    if (subjectIds.length > 0) {
-      await supabase.from('faculty_subjects').insert(subjectIds.map(subjectId => ({
-        faculty_id: id,
-        subject_id: subjectId,
-      })));
-    }
-
-    toast.success('Faculty updated successfully');
-    invalidateFaculty();
+    updateFacultyMut.mutate({ id, name, email, phone, subjectIds });
   };
+  const deleteFaculty = async (id: string) => { deleteFacultyMut.mutate(id); };
 
-  const deleteFaculty = async (id: string) => {
-    const { error } = await supabase.from('faculty').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting faculty:', error);
-      toast.error('Failed to delete faculty');
-      return;
-    }
-    toast.success('Faculty deleted successfully');
-    invalidateFaculty();
-  };
-
-  // Subject operations
+  // Subject wrappers
   const addSubject = async (name: string, classValue: ClassName) => {
-    const { error } = await supabase.from('subjects').insert({ name, class: classValue, tuition_id: tuitionId! });
-    if (error) {
-      console.error('Error adding subject:', error);
-      toast.error('Failed to add subject');
-      return;
-    }
-    toast.success('Subject added successfully');
-    invalidateSubjects();
+    addSubjectMut.mutate({ name, classValue });
   };
-
   const updateSubject = async (id: string, name: string, classValue: ClassName) => {
-    const { error } = await supabase.from('subjects').update({ name, class: classValue }).eq('id', id);
-    if (error) {
-      console.error('Error updating subject:', error);
-      toast.error('Failed to update subject');
-      return;
-    }
-    toast.success('Subject updated successfully');
-    invalidateSubjects();
+    updateSubjectMut.mutate({ id, name, classValue });
   };
+  const deleteSubject = async (id: string) => { deleteSubjectMut.mutate(id); };
 
-  const deleteSubject = async (id: string) => {
-    const { error } = await supabase.from('subjects').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting subject:', error);
-      toast.error('Failed to delete subject');
-      return;
-    }
-    toast.success('Subject deleted successfully');
-    invalidateSubjects();
-  };
-
-  // Timetable operations
+  // Timetable wrappers
   const addTimetableEntry = async (
-    classValue: ClassName,
-    subjectId: string,
-    facultyId: string,
-    dayOfWeek: number,
-    startTime: string,
-    endTime: string,
-    type: 'regular' | 'special',
-    roomId?: string,
-    roomNumber?: string,
-    specificDate?: string,
-    startDate?: string,
-    endDate?: string,
-    eventType?: string,
-    notes?: string,
-    divisionId?: string
+    classValue: ClassName, subjectId: string, facultyId: string, dayOfWeek: number,
+    startTime: string, endTime: string, type: 'regular' | 'special',
+    roomId?: string, roomNumber?: string, specificDate?: string, startDate?: string,
+    endDate?: string, eventType?: string, notes?: string, divisionId?: string
   ) => {
-    const { error } = await supabase.from('timetable').insert({
-      class: classValue,
-      division_id: divisionId || null,
-      subject_id: subjectId,
-      faculty_id: facultyId,
-      day_of_week: dayOfWeek,
-      start_time: startTime,
-      end_time: endTime,
-      type,
-      room_id: roomId,
-      room_number: roomNumber,
-      specific_date: specificDate,
-      start_date: startDate,
-      end_date: endDate,
-      event_type: eventType,
-      notes,
-      tuition_id: tuitionId!,
-    });
-
-    if (error) {
-      console.error('Error adding timetable entry:', error);
-      toast.error('Failed to add timetable entry');
-      return;
-    }
-    toast.success('Timetable entry added successfully');
-    invalidateTimetable();
+    addTimetableMut.mutate({ classValue, subjectId, facultyId, dayOfWeek, startTime, endTime, type, roomId, roomNumber, specificDate, startDate, endDate, eventType, notes, divisionId });
   };
 
   const updateTimetableEntry = async (
-    id: string,
-    classValue: ClassName,
-    subjectId: string,
-    facultyId: string,
-    dayOfWeek: number,
-    startTime: string,
-    endTime: string,
-    type: 'regular' | 'special',
-    roomId?: string,
-    roomNumber?: string,
-    specificDate?: string,
-    startDate?: string,
-    endDate?: string,
-    eventType?: string,
-    notes?: string,
-    divisionId?: string
+    id: string, classValue: ClassName, subjectId: string, facultyId: string, dayOfWeek: number,
+    startTime: string, endTime: string, type: 'regular' | 'special',
+    roomId?: string, roomNumber?: string, specificDate?: string, startDate?: string,
+    endDate?: string, eventType?: string, notes?: string, divisionId?: string
   ) => {
-    const { error } = await supabase.from('timetable').update({
-      class: classValue,
-      division_id: divisionId || null,
-      subject_id: subjectId,
-      faculty_id: facultyId,
-      day_of_week: dayOfWeek,
-      start_time: startTime,
-      end_time: endTime,
-      type,
-      room_id: roomId,
-      room_number: roomNumber,
-      specific_date: specificDate,
-      start_date: startDate,
-      end_date: endDate,
-      event_type: eventType,
-      notes,
-      updated_at: new Date().toISOString(),
-    }).eq('id', id);
-
-    if (error) {
-      console.error('Error updating timetable entry:', error);
-      toast.error('Failed to update timetable entry');
-      return;
-    }
-    toast.success('Timetable entry updated successfully');
-    invalidateTimetable();
+    updateTimetableMut.mutate({ id, classValue, subjectId, facultyId, dayOfWeek, startTime, endTime, type, roomId, roomNumber, specificDate, startDate, endDate, eventType, notes, divisionId });
   };
 
-  const deleteTimetableEntry = async (id: string) => {
-    const { error } = await supabase.from('timetable').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting timetable entry:', error);
-      toast.error('Failed to delete timetable entry');
-      return;
-    }
-    toast.success('Timetable entry deleted successfully');
-    invalidateTimetable();
-  };
+  const deleteTimetableEntry = async (id: string) => { deleteTimetableMut.mutate(id); };
 
-  // Division operations
+  // Division wrappers
   const addDivision = async (classValue: ClassName, name: string) => {
-    const { error } = await supabase.from('divisions').insert({
-      class: classValue,
-      name: name.trim(),
-      tuition_id: tuitionId!,
-    });
-
-    if (error) {
-      console.error('Error adding division:', error);
-      toast.error('Failed to add division');
-      return;
-    }
-    toast.success('Division added successfully');
-    invalidateDivisions();
+    addDivisionMut.mutate({ classValue, name });
   };
-
   const updateDivision = async (id: string, name: string) => {
-    const { error } = await supabase.from('divisions').update({ name: name.trim() }).eq('id', id);
-    if (error) {
-      console.error('Error updating division:', error);
-      toast.error('Failed to update division');
-      return;
-    }
-    toast.success('Division updated successfully');
-    invalidateDivisions();
-    invalidateStudents();
+    updateDivisionMut.mutate({ id, name });
   };
+  const deleteDivision = async (id: string) => { deleteDivisionMut.mutate(id); };
 
-  const deleteDivision = async (id: string) => {
-    const { error } = await supabase.from('divisions').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting division:', error);
-      toast.error('Failed to delete division. Make sure no students are assigned to it.');
-      return;
-    }
-    toast.success('Division deleted successfully');
-    invalidateDivisions();
-    invalidateStudents();
-  };
-
-  // Room operations
+  // Room wrappers
   const addRoom = async (name: string, capacity?: number, description?: string) => {
-    const { error } = await supabase.from('rooms').insert({ name, capacity, description, tuition_id: tuitionId! });
-    if (error) {
-      console.error('Error adding room:', error);
-      toast.error('Failed to add room');
-      return;
-    }
-    toast.success('Room added successfully');
-    invalidateRooms();
+    addRoomMut.mutate({ name, capacity, description });
   };
-
   const updateRoom = async (id: string, name: string, capacity?: number, description?: string) => {
-    const { error } = await supabase.from('rooms').update({ name, capacity, description, updated_at: new Date().toISOString() }).eq('id', id);
-    if (error) {
-      console.error('Error updating room:', error);
-      toast.error('Failed to update room');
-      return;
-    }
-    toast.success('Room updated successfully');
-    invalidateRooms();
+    updateRoomMut.mutate({ id, name, capacity, description });
   };
-
-  const deleteRoom = async (id: string) => {
-    const { error } = await supabase.from('rooms').delete().eq('id', id);
-    if (error) {
-      console.error('Error deleting room:', error);
-      toast.error('Failed to delete room');
-      return;
-    }
-    toast.success('Room deleted successfully');
-    invalidateRooms();
-  };
+  const deleteRoom = async (id: string) => { deleteRoomMut.mutate(id); };
 
   return {
-    students,
-    weeklyTests,
-    testResults,
-    challenges,
-    studentChallenges,
-    announcements,
-    attendance,
-    fees,
-    classFees,
-    faculty,
-    subjects,
-    timetable,
-    divisions,
-    rooms,
-    loading,
-    addStudent,
-    addWeeklyTest,
-    deleteWeeklyTest,
-    addTestResult,
-    addTestResultsBatch,
-    addXp,
-    reduceXp,
-    awardXP,
-    removeStudent,
-    assignTeam,
-    buyReward,
-    useReward,
-    addChallenge,
-    completeChallenge,
-    addAnnouncement,
-    markAttendance,
-    bulkMarkAttendance,
-    addFee,
-    addFeesBatch,
-    updateFeeStatus,
-    updateClassFee,
-    addFaculty,
-    updateFaculty,
-    deleteFaculty,
-    addSubject,
-    updateSubject,
-    deleteSubject,
-    addTimetableEntry,
-    updateTimetableEntry,
-    deleteTimetableEntry,
-    addDivision,
-    updateDivision,
-    deleteDivision,
-    updateStudentDivision,
-    addRoom,
-    updateRoom,
-    deleteRoom,
-    updateStudent,
-    assignStudentEmail,
-    deleteFee,
-    fetchFees,
+    students, weeklyTests, testResults, challenges, studentChallenges, announcements,
+    attendance, fees, classFees, faculty, subjects, timetable, divisions, rooms, loading,
+    addStudent, addWeeklyTest, deleteWeeklyTest, addTestResult, addTestResultsBatch,
+    addXp, reduceXp, awardXP, removeStudent, assignTeam, buyReward, useReward,
+    addChallenge, completeChallenge, addAnnouncement, markAttendance, bulkMarkAttendance,
+    addFee, addFeesBatch, updateFeeStatus, updateClassFee, addFaculty, updateFaculty,
+    deleteFaculty, addSubject, updateSubject, deleteSubject, addTimetableEntry,
+    updateTimetableEntry, deleteTimetableEntry, addDivision, updateDivision, deleteDivision,
+    updateStudentDivision, addRoom, updateRoom, deleteRoom, updateStudent,
+    assignStudentEmail, deleteFee, fetchFees,
   };
 }
