@@ -219,7 +219,7 @@ export function useSupabaseData() {
   };
 
   const updateStudentDivision = async (studentId: string, divisionId: string | null) => {
-    updateDivisionMut.mutate({ studentId, divisionId });
+    updateStudentDivMut.mutate({ studentId, divisionId });
   };
 
   const addXp = async (studentId: string, category: XPCategory, amount: number) => {
