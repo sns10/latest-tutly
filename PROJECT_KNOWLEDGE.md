@@ -365,13 +365,30 @@ src/
 │   ├── useTuitionStatus.ts          # Derived from useTuitionData
 │   ├── useUserRole.ts               # Cached role fetch
 │   ├── useUserTuition.ts            # Profile → tuition_id
-│   ├── useSupabaseData.ts           # Main data orchestrator
+│   ├── useTermExamData.ts           # Term exam queries + mutations
+│   ├── useSupabaseData.ts           # ⚠️ DEPRECATED — do not use
 │   └── queries/                     # Domain-specific React Query hooks
+│       ├── index.ts                 # Central re-export barrel
+│       ├── useCoreDataQuery.ts      # divisions, subjects, faculty, rooms, timetable, etc.
+│       ├── useStudentsQuery.ts      # students query + add/remove mutations
+│       ├── useStudentMutations.ts   # update, assignEmail, assignTeam, updateDivision
+│       ├── useAttendanceQuery.ts    # attendance queries + mark mutations
+│       ├── useFeesQuery.ts          # fees, classFees, payments queries + mutations
+│       ├── useFeesMutations.ts      # batch fee operations
+│       ├── useTestsQuery.ts         # weekly tests + test results queries + mutations
+│       ├── useXpMutations.ts        # XP add/reduce/award, rewards buy/use
+│       ├── useChallengeMutations.ts # challenge CRUD
+│       ├── useAnnouncementMutations.ts # announcement CRUD
+│       ├── useFacultyMutations.ts   # faculty CRUD
+│       ├── useSubjectMutations.ts   # subject CRUD
+│       ├── useTimetableMutations.ts # timetable CRUD
+│       ├── useDivisionMutations.ts  # division CRUD
+│       └── useRoomMutations.ts      # room CRUD
 ├── pages/
-│   ├── Index.tsx                    # Admin dashboard with nested routes
+│   ├── Index.tsx                    # Admin dashboard (imports domain hooks directly)
 │   ├── SuperAdmin.tsx               # Platform management
 │   ├── Student.tsx                  # Student portal
-│   └── [Feature pages]             # Lazy-loaded feature pages
+│   └── [Feature pages]             # Each imports only its domain hooks
 ├── integrations/supabase/
 │   ├── client.ts                    # Auto-generated Supabase client
 │   └── types.ts                     # Auto-generated DB types
