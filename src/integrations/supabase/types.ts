@@ -1412,6 +1412,16 @@ export type Database = {
         }
         Returns: boolean
       }
+      record_fee_payment: {
+        Args: {
+          p_amount: number
+          p_fee_id: string
+          p_notes?: string
+          p_payment_method: string
+          p_reference?: string
+        }
+        Returns: Json
+      }
       setup_tuition_admin: {
         Args: { _full_name: string; _tuition_id: string; _user_id: string }
         Returns: undefined

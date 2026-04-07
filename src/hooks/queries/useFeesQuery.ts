@@ -285,54 +285,18 @@ export function useRecordPaymentMutation(tuitionId: string | null) {
       reference?: string;
       notes?: string;
     }) => {
-      // 1. Insert the payment record
-      const { error: paymentError } = await supabase
-        .from('fee_payments')
-        .insert({
-          fee_id: params.feeId,
-          amount: params.amount,
-          payment_method: params.paymentMethod,
-          payment_reference: params.reference || null,
-          notes: params.notes || null,
-        });
+      const { data, error } = await supabase.rpc('record_fee_payment', {
+        p_fee_id: params.feeId,
+        p_amount: params.amount,
+        p_payment_method: params.paymentMethod,
+        p_reference: params.reference || null,
+        p_notes: params.notes || null,
+      });
 
-      if (paymentError) throw paymentError;
+      if (error) throw error;
 
-      // 2. Re-query actual total paid from DB (no stale state)
-      const { data: allPayments, error: fetchError } = await supabase
-        .from('fee_payments')
-        .select('amount')
-        .eq('fee_id', params.feeId);
-
-      if (fetchError) throw fetchError;
-
-      const totalPaid = (allPayments || []).reduce((sum, p) => sum + Number(p.amount), 0);
-
-      // 3. Get the fee amount to compare
-      const { data: feeData, error: feeError } = await supabase
-        .from('student_fees')
-        .select('amount')
-        .eq('id', params.feeId)
-        .single();
-
-      if (feeError) throw feeError;
-
-      // 4. Update fee status based on actual DB totals
-      const feeAmount = Number(feeData.amount);
-      const newStatus = totalPaid >= feeAmount ? 'paid' : 'partial';
-      const paidDate = totalPaid >= feeAmount ? new Date().toISOString().split('T')[0] : null;
-
-      const { error: updateError } = await supabase
-        .from('student_fees')
-        .update({
-          status: newStatus,
-          paid_date: paidDate,
-        })
-        .eq('id', params.feeId);
-
-      if (updateError) throw updateError;
-
-      return { totalPaid, feeAmount, newStatus };
+      const result = data as unknown as { totalPaid: number; feeAmount: number; newStatus: string };
+      return { totalPaid: result.totalPaid, feeAmount: result.feeAmount, newStatus: result.newStatus };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
