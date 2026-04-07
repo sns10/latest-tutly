@@ -1,6 +1,6 @@
 # Tutly by UpSkillr — Project Knowledge Base
 
-> **Last updated**: 2026-04-01
+> **Last updated**: 2026-04-07
 > This file serves as the single source of truth for AI context. Update it whenever significant changes are made.
 
 ---
