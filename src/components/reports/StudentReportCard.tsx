@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Download, Printer, User, CalendarDays, BookOpen, TrendingUp } from 'lucide-react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useStudentsQuery, useDivisionsQuery, useSubjectsQuery, useWeeklyTestsQuery, useTestResultsQuery } from '@/hooks/queries';
 import { useTermExamData } from '@/hooks/useTermExamData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { useStudentAttendanceQuery } from '@/hooks/queries';
