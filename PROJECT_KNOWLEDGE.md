@@ -410,4 +410,8 @@ src/
 7. **Chunk large operations** (300 per batch for upserts, 200 for `.in()` filters)
 8. **Stay on React 18** — React 19 has breaking changes with current dependencies
 9. **Keep `react-day-picker` at v8** — v9 requires shadcn calendar component rewrite
-10. **Update this file** when making significant architectural changes
+10. **Never import `useSupabaseData`** — it is deprecated. Import domain hooks from `@/hooks/queries`
+11. **Never use `.limit()` on data queries** — always paginate with `.range()` loops to prevent silent data loss
+12. **Each page must import only its domain hooks** — never subscribe to unrelated data domains
+13. **All mutations must be React Query `useMutation` hooks** — no raw async functions with inline Supabase calls
+14. **Update this file** when making significant architectural changes
