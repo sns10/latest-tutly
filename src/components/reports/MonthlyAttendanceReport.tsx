@@ -31,7 +31,9 @@ interface StudentAttendanceStats {
 }
 
 export function MonthlyAttendanceReport() {
-  const { students, divisions } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
   const { tuition } = useTuitionInfo();
   const { tuitionId } = useUserTuition();
   const [selectedClass, setSelectedClass] = useState<string>('all');

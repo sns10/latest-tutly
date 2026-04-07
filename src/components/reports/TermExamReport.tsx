@@ -29,7 +29,10 @@ interface StudentTermResult {
 }
 
 export function TermExamReport() {
-  const { students, divisions, subjects } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');

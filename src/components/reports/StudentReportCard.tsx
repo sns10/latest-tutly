@@ -16,7 +16,12 @@ import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } fro
 import { toast } from 'sonner';
 
 export function StudentReportCard() {
-  const { students, weeklyTests, testResults, divisions, subjects } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
+  const { data: testResults = [] } = useTestResultsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { termExams, termExamSubjects, termExamResults } = useTermExamData();
   const { tuition } = useTuitionInfo();
   const { tuitionId } = useUserTuition();

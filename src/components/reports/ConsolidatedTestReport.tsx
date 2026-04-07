@@ -26,7 +26,11 @@ interface StudentTestStats {
 }
 
 export function ConsolidatedTestReport() {
-  const { students, weeklyTests, testResults, divisions } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
+  const { data: students = [] } = useStudentsQuery(tuitionId);
+  const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
+  const { data: testResults = [] } = useTestResultsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
   const { tuition } = useTuitionInfo();
   const [selectedClass, setSelectedClass] = useState<string>('all');
   const [selectedDivision, setSelectedDivision] = useState<string>('all');
