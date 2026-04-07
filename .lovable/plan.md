@@ -1,90 +1,67 @@
 
 
-# Code Cleanup: `useSupabaseData` God Hook Refactor
+# Post-Refactor Analysis & Next Refinements
 
-## Assessment — How Messy Is It?
+## Refactor Status: No Errors Found
 
-`useSupabaseData.ts` is a **972-line "god hook"** that does everything: student CRUD, XP operations, fee operations, test operations, attendance, challenges, announcements, faculty, subjects, timetable, divisions, and rooms. It returns **40+ functions and data arrays** from a single hook.
+The domain mutation hooks are correctly implemented. No runtime errors, no type errors. The facade pattern works — all 12 components importing `useSupabaseData` continue functioning.
 
-### Problems This Causes
+## Remaining Issues
 
-1. **Every page re-renders on any data change** — `Index.tsx` destructures all 40+ values from `useSupabaseData()`. Any mutation (e.g. marking attendance) triggers re-computation of the entire hook, causing unnecessary re-renders across unrelated UI sections.
+### Issue 1: Facade still causes global re-renders (HIGH IMPACT)
+`useSupabaseData()` instantiates ALL 14 queries + ALL 20 mutation hooks on every call. Every page that imports it (Index, Students, Fees, Attendance, Timetable, Classes, Tests, 4 report components) subscribes to every query. When attendance is marked, the Fees page re-renders. When a fee is added, the Timetable page re-renders.
 
-2. **Duplicate logic** — `addStudent` in `useSupabaseData` (lines 103-171) duplicates `useAddStudentMutation` in `useStudentsQuery.ts`. Same for `addWeeklyTest`, `deleteWeeklyTest`, `addFee`, `updateFeeStatus`, `deleteFee`, `updateClassFee`. Both exist and may diverge over time.
+This is the original performance problem — the refactor moved mutation logic out but didn't decouple the query subscriptions.
 
-3. **No error boundaries per domain** — A single Supabase error in any of the 12+ queries blocks the entire dashboard via the shared `loading` gate.
+### Issue 2: Raw async functions still in facade (250+ lines)
+Tests (`addWeeklyTest`, `deleteWeeklyTest`, `addTestResult`, `addTestResultsBatch`) and Fees (`addFee`, `updateFeeStatus`, `updateClassFee`, `deleteFee`) are still raw `async` functions with inline Supabase calls — not React Query mutations. These bypass error retry, optimistic updates, and deduplication.
 
-4. **Massive prop drilling** — `Index.tsx` passes 20+ props to `WeeklyTestManager` and 15+ to `StudentAlertsCard` because `useSupabaseData` centralizes everything at the top.
+### Issue 3: Duplicate `addStudent` logic
+`useSupabaseData.addStudent` (lines 155-198) has division auto-creation + roll number auto-assignment logic that `useAddStudentMutation` in `useStudentsQuery.ts` does NOT have. If a component imports the mutation directly, it would skip these.
 
-5. **`any` types everywhere** — `formatAttendance(data: any[])`, `formatFees(data: any[])`, `updateData: any = {}` — no type safety on DB responses.
+## Refinement Plan
 
-6. **Inconsistent patterns** — Some operations use React Query mutations (`useMarkAttendanceMutation`), others use raw `async` functions (`addFee`, `updateFeeStatus`). This inconsistency makes it unclear which approach is correct.
+### Step 1: Extract Test & Fee mutations into domain hooks
+Move the 4 raw test functions into `useTestsQuery.ts` as proper `useMutation` hooks and the 4 raw fee functions into `useFeesQuery.ts`. This eliminates the last raw Supabase calls from the facade.
 
-## Cleanup Plan
+### Step 2: Consolidate `addStudent` logic
+Move the division auto-creation + roll number auto-assignment into `useAddStudentMutation` in `useStudentsQuery.ts` so the mutation hook is the single source of truth.
 
-The refactor splits `useSupabaseData` into **domain-specific hooks** that components import directly, eliminating the god hook and prop drilling. Each step is safe and incremental — no behavior changes, just reorganization.
+### Step 3: Update sub-pages to import domain hooks directly
+Replace `useSupabaseData()` in each page with targeted imports:
+- `Fees.tsx` → `useStudentsQuery`, `useFeesQuery`, `useClassFeesQuery`, fee mutation hooks
+- `Attendance.tsx` → `useStudentsQuery`, `useAttendanceQuery`, attendance mutation hooks
+- `Timetable.tsx` → domain hooks for timetable, rooms, subjects, faculty, divisions
+- `Classes.tsx` → division, subject, faculty hooks
+- `Tests.tsx` → student, test, XP hooks
+- `Students.tsx` → student, attendance, test, fee, XP hooks
+- Report components → only the read queries they need
 
-### Step 1: Create Domain Mutation Hooks
+This means each page only subscribes to its own data, eliminating cross-domain re-renders.
 
-Move the raw `async` functions from `useSupabaseData` into proper React Query mutation hooks in their existing query files:
+### Step 4: Slim `useSupabaseData` to near-empty or delete
+After all consumers are migrated, the facade either becomes unused (delete it) or stays as a thin 30-line re-export for any remaining edge cases.
 
-| Domain | Functions to move | Target file |
-|--------|------------------|-------------|
-| Students | `updateStudent`, `assignStudentEmail`, `assignTeam`, `updateStudentDivision` | `useStudentsQuery.ts` |
-| XP/Rewards | `addXp`, `reduceXp`, `awardXP`, `buyReward`, `useReward` | New `useXpQuery.ts` |
-| Fees | `addFeesBatch`, `deleteFee`, `fetchFees` | `useFeesQuery.ts` |
-| Challenges | `addChallenge`, `completeChallenge` | `useCoreDataQuery.ts` |
-| Announcements | `addAnnouncement` | `useCoreDataQuery.ts` |
-| Faculty | `addFaculty`, `updateFaculty`, `deleteFaculty` | New `useFacultyMutations.ts` |
-| Subjects | `addSubject`, `updateSubject`, `deleteSubject` | New `useSubjectMutations.ts` |
-| Timetable | `addTimetableEntry`, `updateTimetableEntry`, `deleteTimetableEntry` | New `useTimetableMutations.ts` |
-| Divisions | `addDivision`, `updateDivision`, `deleteDivision` | New `useDivisionMutations.ts` |
-| Rooms | `addRoom`, `updateRoom`, `deleteRoom` | New `useRoomMutations.ts` |
+## Files Modified
 
-Each mutation hook follows the existing pattern: `useMutation` + `queryClient.invalidateQueries` + toast.
-
-### Step 2: Slim Down `useSupabaseData` to a Facade
-
-Keep `useSupabaseData` as a thin wrapper that imports from the domain hooks and re-exports for backward compatibility. This ensures **zero breakage** — all 20+ components that currently import from `useSupabaseData` continue working unchanged.
-
-```text
-useSupabaseData() {
-  // Queries (unchanged)
-  const { data: students } = useStudentsQuery(tuitionId);
-  // ...
-
-  // Mutations (now from domain hooks)
-  const { mutate: addStudent } = useAddStudentMutation(tuitionId);
-  const { mutate: updateStudent } = useUpdateStudentMutation(tuitionId);
-  // ...
-
-  return { students, addStudent, updateStudent, ... };
-}
-```
-
-### Step 3: Update `Index.tsx` — Direct Hook Imports
-
-Replace the massive `useSupabaseData()` destructure in `Index.tsx` with direct domain hook imports. Only import what the dashboard actually needs (students, tests, attendance for alerts). Sub-pages already lazy-load — they can import their own hooks.
-
-### Step 4: Remove Duplicate Functions
-
-Delete the duplicated `addStudent` from `useSupabaseData` (the one with division auto-creation logic) and consolidate into `useAddStudentMutation` in `useStudentsQuery.ts`, preserving the division auto-creation behavior.
-
-### Step 5: Type Safety Pass
-
-Replace `any[]` parameters in `formatAttendance`, `formatFees`, and `updateData` with proper types from `src/integrations/supabase/types.ts` (the auto-generated DB types).
-
-## Impact
-
-- **`useSupabaseData.ts`**: 972 lines → ~100 lines (facade only)
-- **New files**: 5-6 small mutation hook files (~50-80 lines each)
-- **Modified files**: `useStudentsQuery.ts`, `useFeesQuery.ts`, `useCoreDataQuery.ts`, `Index.tsx`
-- **Zero behavior changes** — all existing component imports continue working via the facade
-- **Performance gain** — components only subscribe to the data they need
+| File | Change |
+|------|--------|
+| `src/hooks/queries/useTestsQuery.ts` | Add mutation hooks for add/delete test, add/batch test results |
+| `src/hooks/queries/useFeesQuery.ts` | Add mutation hooks for addFee, updateFeeStatus, updateClassFee, deleteFee |
+| `src/hooks/queries/useStudentsQuery.ts` | Move division auto-creation + roll number logic into `useAddStudentMutation` |
+| `src/pages/Fees.tsx` | Import domain hooks directly |
+| `src/pages/Attendance.tsx` | Import domain hooks directly |
+| `src/pages/Timetable.tsx` | Import domain hooks directly |
+| `src/pages/Classes.tsx` | Import domain hooks directly |
+| `src/pages/Tests.tsx` | Import domain hooks directly |
+| `src/pages/Students.tsx` | Import domain hooks directly |
+| `src/pages/Index.tsx` | Import domain hooks directly |
+| `src/components/reports/*.tsx` | Import only needed queries |
+| `src/hooks/useSupabaseData.ts` | Delete or reduce to ~10 lines |
+| `src/hooks/queries/index.ts` | Export new mutation hooks |
 
 ## Risk Mitigation
-
-- Facade pattern means no component needs to change in Step 1-2
-- Each domain hook is independently testable
-- Incremental: can stop after any step and the app still works
+- Each page migration is independent — can be done one at a time
+- Types stay the same, only import paths change
+- If any component still needs the facade, it keeps working until fully migrated
 
