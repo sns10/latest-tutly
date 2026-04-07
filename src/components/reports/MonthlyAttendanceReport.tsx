@@ -430,7 +430,7 @@ export function MonthlyAttendanceReport() {
                 {sortedStats.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      No attendance data found for the selected filters
+                      {isSuccess ? 'No attendance data found for the selected filters' : 'Select filters and click "Generate Report" to load data'}
                     </TableCell>
                   </TableRow>
                 ) : (
