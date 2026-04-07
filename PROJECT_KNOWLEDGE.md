@@ -325,6 +325,11 @@ All data fetching and mutations use **domain-specific hooks** in `src/hooks/quer
 - **Report attendance**: New `useReportAttendanceQuery` with on-demand fetch (no auto-fire)
 - **Service worker**: Added cache-first strategy for static assets to prevent app hanging after WhatsApp share
 
+### April 2026 — Fee Payment Race Condition Fix
+- Created atomic `record_fee_payment` PostgreSQL function (SECURITY DEFINER)
+- Replaced 4 sequential DB calls in `useRecordPaymentMutation` with single `supabase.rpc()` call
+- Prevents concurrent payments from corrupting fee status
+
 ### April 2026 — Fee Status Persistence Fix
 - Migrated payment state from local `useState` to React Query (`usePaymentsQuery`, `useRecordPaymentMutation`)
 - Fee status recalculated from DB truth after each payment, preventing stale-state overwrites
