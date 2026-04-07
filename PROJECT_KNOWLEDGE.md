@@ -127,27 +127,54 @@ Defined in: `src/hooks/useTuitionFeatures.ts` → `ALL_FEATURES` array
 
 ## 6. Key Hooks & Data Flow
 
-### Consolidated Data Hooks (Optimized March 2026)
+### Domain Hook Architecture (Refactored April 2026)
+
+All data fetching and mutations use **domain-specific hooks** in `src/hooks/queries/`. The old monolithic `useSupabaseData` hook is deprecated and unused.
+
+| Hook File | Queries | Mutations |
+|-----------|---------|-----------|
+| `useCoreDataQuery.ts` | divisions, subjects, faculty, rooms, timetable, challenges, announcements, studentChallenges | — |
+| `useStudentsQuery.ts` | students | addStudent (with auto-division + roll number), removeStudent |
+| `useStudentMutations.ts` | — | updateStudent, assignEmail, assignTeam, updateDivision |
+| `useAttendanceQuery.ts` | attendance, todayAttendance, historicalAttendance, reportAttendance, studentAttendance | markAttendance, bulkMarkAttendance |
+| `useFeesQuery.ts` | fees (paginated), classFees, todayPayments, payments (paginated) | addFee, updateFeeStatus, deleteFee, recordPayment, updateClassFee |
+| `useFeesMutations.ts` | — | addFeesBatch |
+| `useTestsQuery.ts` | weeklyTests (paginated), testResults (paginated) | addWeeklyTest, deleteWeeklyTest, addTestResult, addTestResultsBatch |
+| `useXpMutations.ts` | — | addXp, reduceXp, awardXp, buyReward, useReward |
+| `useChallengeMutations.ts` | — | addChallenge, completeChallenge |
+| `useAnnouncementMutations.ts` | — | addAnnouncement |
+| `useFacultyMutations.ts` | — | addFaculty, updateFaculty, deleteFaculty |
+| `useSubjectMutations.ts` | — | addSubject, updateSubject, deleteSubject |
+| `useTimetableMutations.ts` | — | addTimetableEntry, updateTimetableEntry, deleteTimetableEntry |
+| `useDivisionMutations.ts` | — | addDivision, updateDivision, deleteDivision |
+| `useRoomMutations.ts` | — | addRoom, updateRoom, deleteRoom |
+
+### Tuition Data Hooks
 | Hook | Purpose | Cache |
 |------|---------|-------|
-| `useTuitionData` | **Single query** for all tuition fields (replaces 3 separate hooks) | 10 min stale |
-| `useTuitionInfo` | Derives info from useTuitionData | shared cache |
-| `useTuitionFeatures` | Derives features from useTuitionData | shared cache |
-| `useTuitionStatus` | Derives status from useTuitionData | shared cache |
+| `useTuitionData` | Single query for all tuition fields | 10 min stale |
+| `useTuitionInfo` | Derived from useTuitionData | shared cache |
+| `useTuitionFeatures` | Derived from useTuitionData | shared cache |
+| `useTuitionStatus` | Derived from useTuitionData | shared cache |
 | `useUserRole` | React Query cached role fetch | 30 min stale |
 | `useUserTuition` | Profile → tuition_id mapping | 30 min stale |
-| `useSupabaseData` | Main data orchestrator for tuition admin dashboard | per-query |
+
+### Term Exam Data
+| Hook | Purpose |
+|------|---------|
+| `useTermExamData` | All term exam queries + mutations (paginated results) |
 
 ### Query Architecture
 - Global `staleTime`: 5 minutes (set in App.tsx QueryClient)
 - Global `gcTime`: 15 minutes
 - Role/tuition data: 30 min stale (rarely changes)
 - Feature flags: derived from shared tuition query (zero extra calls)
-- Dashboard loads only essential data; deferred queries for non-visible modules
+- **All large datasets use pagination loops** (no arbitrary `.limit()` caps)
 
 ### Performance Patterns
+- Each page imports only its required domain hooks (no global re-renders)
 - Chunked `.in()` filters for arrays > 200 items
-- Paginated queries for fees and test results (no blanket limits)
+- Paginated queries for fees, test results, payments, term exam results
 - Explicit `tuition_id` filters on all queries
 - Joined queries to reduce API calls (e.g., fees + payments)
 - Fee status calculated from DB truth via `useRecordPaymentMutation`
