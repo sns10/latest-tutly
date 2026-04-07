@@ -1,7 +1,18 @@
 import { useState } from 'react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
-import { usePaymentsQuery, useRecordPaymentMutation } from '@/hooks/queries/useFeesQuery';
 import { useUserTuition } from '@/hooks/useUserTuition';
+import {
+  useStudentsQuery,
+  useDivisionsQuery,
+  useFeesQuery,
+  useClassFeesQuery,
+  usePaymentsQuery,
+  useRecordPaymentMutation,
+  useAddFeeMutation,
+  useUpdateFeeStatusMutation,
+  useUpdateClassFeeMutation,
+  useDeleteFeeMutation,
+} from '@/hooks/queries';
+import { useAddFeesBatchMutation } from '@/hooks/queries/useFeesMutations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt, Activity } from 'lucide-react';
@@ -15,56 +26,62 @@ import {
   PaymentActivityFeed
 } from '@/components/fees';
 import { FeesPageSkeleton } from '@/components/skeletons/PageSkeletons';
+import { StudentFee } from '@/types';
 import { toast } from 'sonner';
 
 export default function FeesPage() {
-  const { 
-    students, 
-    fees, 
-    classFees, 
-    divisions,
-    loading,
-    addFee,
-    addFeesBatch,
-    updateFeeStatus,
-    updateClassFee,
-    deleteFee,
-  } = useSupabaseData();
-
   const { tuitionId } = useUserTuition();
+
+  const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: fees = [], isLoading: feesLoading } = useFeesQuery(tuitionId);
+  const { data: classFees = [] } = useClassFeesQuery(tuitionId);
   const { data: payments = [], isLoading: paymentsLoading } = usePaymentsQuery(tuitionId);
+
   const recordPaymentMutation = useRecordPaymentMutation(tuitionId);
+  const addFeeMut = useAddFeeMutation(tuitionId);
+  const updateFeeStatusMut = useUpdateFeeStatusMutation(tuitionId);
+  const updateClassFeeMut = useUpdateClassFeeMutation(tuitionId);
+  const deleteFeeMut = useDeleteFeeMutation(tuitionId);
+  const addFeesBatchMut = useAddFeesBatchMutation(tuitionId);
 
   const [addFeeDialogOpen, setAddFeeDialogOpen] = useState(false);
 
+  const addFee = (newFee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => {
+    addFeeMut.mutate(newFee);
+  };
+
+  const addFeesBatch = (newFees: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>>) => {
+    addFeesBatchMut.mutate(newFees);
+  };
+
+  const updateFeeStatus = (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => {
+    updateFeeStatusMut.mutate({ feeId, status, paidDate });
+  };
+
+  const updateClassFee = (className: string, amount: number) => {
+    updateClassFeeMut.mutate({ className, amount });
+  };
+
+  const handleDeleteFee = (feeId: string) => {
+    deleteFeeMut.mutate(feeId);
+  };
+
   const handleRecordPayment = async (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => {
     try {
-      await recordPaymentMutation.mutateAsync({
-        feeId,
-        amount,
-        paymentMethod,
-        reference,
-        notes,
-      });
+      await recordPaymentMutation.mutateAsync({ feeId, amount, paymentMethod, reference, notes });
       toast.success(`Payment of ₹${amount.toLocaleString('en-IN')} recorded`);
     } catch {
       // Error handled by mutation onError
     }
   };
 
-  const handleDeleteFee = async (feeId: string) => {
-    if (deleteFee) {
-      await deleteFee(feeId);
-    }
-  };
-
-  if (loading || paymentsLoading) {
+  if (studentsLoading || feesLoading || paymentsLoading) {
     return <FeesPageSkeleton />;
   }
 
   return (
     <div className="w-full px-3 py-4 sm:px-6 space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold font-display text-primary">Fee Management</h1>
@@ -76,7 +93,6 @@ export default function FeesPage() {
         </Button>
       </div>
 
-      {/* Tabbed Interface */}
       <Tabs defaultValue="dashboard" className="w-full">
         <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto p-1 bg-white border border-slate-200 touch-pan-x">
           <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
@@ -111,11 +127,7 @@ export default function FeesPage() {
         </TabsList>
 
         <TabsContent value="dashboard" className="mt-4">
-          <FeeDashboard 
-            students={students}
-            fees={fees}
-            classFees={classFees}
-          />
+          <FeeDashboard students={students} fees={fees} classFees={classFees} />
         </TabsContent>
 
         <TabsContent value="activity" className="mt-4">
@@ -161,23 +173,14 @@ export default function FeesPage() {
         </TabsContent>
 
         <TabsContent value="structure" className="mt-4">
-          <FeeStructureManager
-            classFees={classFees}
-            students={students}
-            onUpdateClassFee={updateClassFee}
-          />
+          <FeeStructureManager classFees={classFees} students={students} onUpdateClassFee={updateClassFee} />
         </TabsContent>
 
         <TabsContent value="reports" className="mt-4">
-          <FeeReports
-            students={students}
-            fees={fees}
-            classFees={classFees}
-          />
+          <FeeReports students={students} fees={fees} classFees={classFees} />
         </TabsContent>
       </Tabs>
 
-      {/* Add Custom Fee Dialog */}
       <AddCustomFeeDialog
         open={addFeeDialogOpen}
         onOpenChange={setAddFeeDialogOpen}

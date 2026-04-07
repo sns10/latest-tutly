@@ -6,7 +6,19 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { useSupabaseData } from "@/hooks/useSupabaseData";
+import { useUserTuition } from "@/hooks/useUserTuition";
+import {
+  useStudentsQuery,
+  useDivisionsQuery,
+  useSubjectsQuery,
+  useWeeklyTestsQuery,
+  useTestResultsQuery,
+  useAddWeeklyTestMutation,
+  useDeleteWeeklyTestMutation,
+  useAddTestResultMutation,
+  useAddTestResultsBatchMutation,
+} from "@/hooks/queries";
+import { useAwardXpMutation } from "@/hooks/queries/useXpMutations";
 import { useTermExamData } from "@/hooks/useTermExamData";
 import { useTuitionFeatures } from "@/hooks/useTuitionFeatures";
 import { useTuitionInfo } from "@/hooks/useTuitionInfo";
@@ -16,39 +28,33 @@ import { TermExamManager } from "@/components/term-exams/TermExamManager";
 import { ClipboardList, GraduationCap, Trash2, Search, Filter, Loader2 } from "lucide-react";
 
 const TestsPage = () => {
+  const { tuitionId } = useUserTuition();
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
   const { tuition } = useTuitionInfo();
   const [searchQuery, setSearchQuery] = useState('');
   const [classFilter, setClassFilter] = useState<string>('all');
 
-  const {
-    students,
-    weeklyTests,
-    testResults,
-    subjects,
-    divisions,
-    loading,
-    addWeeklyTest,
-    deleteWeeklyTest,
-    addTestResult,
-    addTestResultsBatch,
-    awardXP,
-  } = useSupabaseData();
+  const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
+  const { data: weeklyTests = [], isLoading: testsLoading } = useWeeklyTestsQuery(tuitionId);
+  const { data: testResults = [] } = useTestResultsQuery(tuitionId);
+
+  const addTestMut = useAddWeeklyTestMutation(tuitionId);
+  const deleteTestMut = useDeleteWeeklyTestMutation(tuitionId);
+  const addResultMut = useAddTestResultMutation(tuitionId);
+  const addResultsBatchMut = useAddTestResultsBatchMutation(tuitionId);
+  const awardXpMut = useAwardXpMutation(tuitionId);
 
   const {
-    termExams,
-    termExamSubjects,
-    termExamResults,
+    termExams, termExamSubjects, termExamResults,
     loading: termExamLoading,
-    addTermExam,
-    deleteTermExam,
-    addTermExamResult,
-    bulkAddTermExamResults,
+    addTermExam, deleteTermExam, addTermExamResult, bulkAddTermExamResults,
   } = useTermExamData();
 
   const isTermExamsEnabled = isFeatureEnabled('term_exams');
+  const loading = studentsLoading || testsLoading;
 
-  // Filter weekly tests
   const filteredTests = weeklyTests.filter(test => {
     const matchesSearch = test.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       test.subject.toLowerCase().includes(searchQuery.toLowerCase());
@@ -56,7 +62,6 @@ const TestsPage = () => {
     return matchesSearch && matchesClass;
   });
 
-  // Get unique classes from tests
   const uniqueClasses = [...new Set(weeklyTests.map(t => t.class).filter(Boolean))];
 
   const getTestStats = (test: typeof weeklyTests[0]) => {
@@ -68,6 +73,37 @@ const TestsPage = () => {
       ? Math.round(results.reduce((sum, r) => sum + r.marks, 0) / results.length)
       : 0;
     return { completed, total, avgScore };
+  };
+
+  const addWeeklyTest = (newTest: Parameters<typeof addTestMut.mutate>[0]) => {
+    addTestMut.mutate(newTest);
+  };
+
+  const deleteWeeklyTest = (testId: string) => {
+    deleteTestMut.mutate(testId);
+  };
+
+  const addTestResult = async (result: Parameters<typeof addResultMut.mutateAsync>[0]): Promise<boolean> => {
+    try {
+      await addResultMut.mutateAsync(result);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const addTestResultsBatch = async (results: Parameters<typeof addResultsBatchMut.mutateAsync>[0]): Promise<boolean> => {
+    try {
+      await addResultsBatchMut.mutateAsync(results);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const awardXP = (studentId: string, amount: number, reason: string) => {
+    const student = students.find(s => s.id === studentId);
+    awardXpMut.mutate({ studentId, amount, reason, studentName: student?.name });
   };
 
   if (loading || termExamLoading || featuresLoading) {
@@ -106,7 +142,6 @@ const TestsPage = () => {
         </TabsList>
 
         <TabsContent value="weekly" className="space-y-4 mt-4">
-          {/* Filters */}
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -131,7 +166,6 @@ const TestsPage = () => {
             </Select>
           </div>
 
-          {/* Tests Grid */}
           {filteredTests.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center">

@@ -1,10 +1,24 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useSupabaseData } from '@/hooks/useSupabaseData';
+import { useState, useMemo, useCallback } from 'react';
+import { useUserTuition } from '@/hooks/useUserTuition';
+import {
+  useStudentsQuery,
+  useAddStudentMutation,
+  useRemoveStudentMutation,
+  useDivisionsQuery,
+  useSubjectsQuery,
+  useFacultyQuery,
+  useAttendanceQuery,
+  useFeesQuery,
+  useWeeklyTestsQuery,
+  useTestResultsQuery,
+  useStudentAttendanceQuery,
+} from '@/hooks/queries';
+import { useUpdateStudentMutation, useAssignStudentEmailMutation, useAssignTeamMutation } from '@/hooks/queries/useStudentMutations';
+import { useAddXpMutation } from '@/hooks/queries/useXpMutations';
+import { useBuyRewardMutation, useUseRewardMutation } from '@/hooks/queries/useXpMutations';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 import { useTermExamData } from '@/hooks/useTermExamData';
-import { useStudentAttendanceQuery } from '@/hooks/queries';
-import { useUserTuition } from '@/hooks/useUserTuition';
-import { Student, Division } from '@/types';
+import { Student, Division, TeamName } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -24,29 +38,28 @@ import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
 
 export default function StudentsPage() {
-  const { 
-    students, 
-    divisions,
-    attendance, // Still needed for streak calculation
-    testResults,
-    weeklyTests,
-    fees,
-    subjects,
-    faculty,
-    loading,
-    addStudent,
-    removeStudent,
-    updateStudent,
-    assignStudentEmail,
-    addXp,
-    assignTeam,
-    buyReward,
-    useReward
-  } = useSupabaseData();
+  const { tuitionId } = useUserTuition();
   
+  const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
+  const { data: divisions = [] } = useDivisionsQuery(tuitionId);
+  const { data: attendance = [] } = useAttendanceQuery(tuitionId);
+  const { data: subjects = [] } = useSubjectsQuery(tuitionId);
+  const { data: faculty = [] } = useFacultyQuery(tuitionId);
+  const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
+  const { data: testResults = [] } = useTestResultsQuery(tuitionId);
+  const { data: fees = [] } = useFeesQuery(tuitionId);
+
+  const addStudentMut = useAddStudentMutation(tuitionId);
+  const removeStudentMut = useRemoveStudentMutation(tuitionId);
+  const updateStudentMut = useUpdateStudentMutation(tuitionId);
+  const assignEmailMut = useAssignStudentEmailMutation(tuitionId);
+  const assignTeamMut = useAssignTeamMutation(tuitionId);
+  const addXpMut = useAddXpMutation(tuitionId);
+  const buyRewardMut = useBuyRewardMutation(tuitionId);
+  const useRewardMut = useUseRewardMutation(tuitionId);
+
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
   const { termExams, termExamSubjects, termExamResults, loading: termExamLoading } = useTermExamData();
-  const { tuitionId } = useUserTuition();
 
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -54,24 +67,19 @@ export default function StudentsPage() {
   const [divisionFilter, setDivisionFilter] = useState('All');
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
 
-  // Get the selected student from the current students list (so it stays updated)
   const selectedStudent = useMemo(() => {
     if (!selectedStudentId) return null;
     return students.find(s => s.id === selectedStudentId) || null;
   }, [selectedStudentId, students]);
 
-  // Fetch full attendance history for selected student (no 30-day limit)
   const { data: selectedStudentAttendance = [] } = useStudentAttendanceQuery(
-    tuitionId, 
-    selectedStudentId
+    tuitionId, selectedStudentId
   );
 
-  // Get divisions for selected class
   const availableDivisions = classFilter === "All" 
     ? divisions 
     : divisions.filter(d => d.class === classFilter);
 
-  // Filter students
   const filteredStudents = students.filter(student => {
     const searchMatch = student.name.toLowerCase().includes(searchQuery.toLowerCase());
     const classMatch = classFilter === "All" || student.class === classFilter;
@@ -79,11 +87,8 @@ export default function StudentsPage() {
     return searchMatch && classMatch && divisionMatch;
   });
 
-  // Calculate attendance streaks
   const streaks = useAttendanceStreak(attendance);
 
-  // Sort by roll number (students with roll numbers first, then alphabetically)
-  // and add attendance streak
   const sortedStudents = useMemo(() => {
     return [...filteredStudents]
       .map(s => ({ ...s, attendanceStreak: streaks[s.id] || 0 }))
@@ -94,6 +99,59 @@ export default function StudentsPage() {
         return a.name.localeCompare(b.name);
       });
   }, [filteredStudents, streaks]);
+
+  // Wrapper functions that match the component prop signatures
+  const addStudent = (newStudent: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>) => {
+    addStudentMut.mutate({
+      name: newStudent.name,
+      class: newStudent.class,
+      divisionId: newStudent.divisionId,
+      avatar: newStudent.avatar,
+      rollNo: newStudent.rollNo,
+      phone: newStudent.phone,
+      dateOfBirth: newStudent.dateOfBirth,
+      parentName: newStudent.parentName,
+      parentPhone: newStudent.fatherPhone || newStudent.parentPhone,
+      address: newStudent.address,
+      gender: newStudent.gender,
+      email: newStudent.email,
+    });
+  };
+
+  const removeStudent = (studentId: string) => {
+    removeStudentMut.mutate(studentId);
+  };
+
+  const updateStudent = (studentId: string, updates: any) => {
+    updateStudentMut.mutate({ studentId, updates });
+  };
+
+  const assignStudentEmail = async (studentId: string, email: string): Promise<boolean> => {
+    try {
+      await assignEmailMut.mutateAsync({ studentId, email });
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const addXp = (studentId: string, category: any, amount: number) => {
+    addXpMut.mutate({ studentId, category, amount });
+  };
+
+  const assignTeam = (studentId: string, team: TeamName | null) => {
+    assignTeamMut.mutate({ studentId, team });
+  };
+
+  const buyReward = (studentId: string, reward: any) => {
+    const student = students.find(s => s.id === studentId);
+    if (!student) { toast.error('Student not found'); return; }
+    buyRewardMut.mutate({ studentId, reward, currentXp: student.totalXp });
+  };
+
+  const useReward = (_studentId: string, rewardInstanceId: string) => {
+    useRewardMut.mutate(rewardInstanceId);
+  };
 
   const handleBulkImport = async (studentsToImport: Omit<Student, 'id' | 'xp' | 'totalXp' | 'purchasedRewards' | 'team' | 'badges'>[]) => {
     for (const student of studentsToImport) {
@@ -140,8 +198,7 @@ export default function StudentsPage() {
     toast.success(`Exported ${studentsToExport.length} students`);
   }, [students, filteredStudents, classFilter]);
 
-  // Show skeleton during loading
-  if (loading || featuresLoading || termExamLoading) {
+  if (studentsLoading || featuresLoading || termExamLoading) {
     return <StudentsPageSkeleton />;
   }
 
@@ -150,15 +207,9 @@ export default function StudentsPage() {
 
   return (
     <div className="w-full px-3 py-4 sm:px-6 space-y-4">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
         <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/')}
-            className="h-9 w-9 shrink-0"
-          >
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')} className="h-9 w-9 shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
@@ -191,7 +242,6 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      {/* Search and Filters */}
       <Card>
         <CardContent className="p-3 sm:p-4">
           <div className="flex flex-col sm:flex-row gap-3">
@@ -243,7 +293,6 @@ export default function StudentsPage() {
         </CardContent>
       </Card>
 
-      {/* Statistics */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <Card>
           <CardContent className="p-3 text-center">
@@ -261,7 +310,6 @@ export default function StudentsPage() {
         </Card>
       </div>
 
-      {/* Student List */}
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Students ({sortedStudents.length})</CardTitle>
@@ -328,7 +376,6 @@ export default function StudentsPage() {
         </CardContent>
       </Card>
 
-      {/* Student Details Dialog */}
       {selectedStudent && (
         <StudentDetailsDialog
           student={selectedStudent}
@@ -347,7 +394,6 @@ export default function StudentsPage() {
           onRemoveStudent={removeStudent}
           onUpdateStudent={updateStudent}
           onStudentDataUpdated={() => {
-            // Refresh student data after portal access is enabled
             setSelectedStudentId(null);
           }}
         />
