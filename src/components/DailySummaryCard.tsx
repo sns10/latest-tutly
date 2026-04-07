@@ -19,7 +19,7 @@ interface DailySummaryCardProps {
   isFeatureEnabled: (feature: string) => boolean;
 }
 
-export function DailySummaryCard({ summary, isFeatureEnabled }: DailySummaryCardProps) {
+export const DailySummaryCard = memo(function DailySummaryCard({ summary, isFeatureEnabled }: DailySummaryCardProps) {
   const navigate = useNavigate();
   const today = new Date();
   
