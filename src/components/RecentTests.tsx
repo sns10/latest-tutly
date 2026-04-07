@@ -16,7 +16,7 @@ interface RecentTestsProps {
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
 
-export function RecentTests({ 
+export const RecentTests = memo(function RecentTests({ 
   tests, 
   testResults, 
   students,
