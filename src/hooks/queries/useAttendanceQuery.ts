@@ -140,6 +140,56 @@ export function useHistoricalAttendanceQuery(tuitionId: string | null, startDate
   });
 }
 
+// On-demand report query — NO record cap, only fires when manually triggered
+export function useReportAttendanceQuery(tuitionId: string | null, startDate?: string, endDate?: string) {
+  const queryKey = ['attendance', tuitionId, 'report', startDate, endDate];
+
+  return useQuery({
+    queryKey,
+    queryFn: async () => {
+      if (!tuitionId) return [];
+
+      const allRecords: any[] = [];
+      const pageSize = 1000;
+      let offset = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        let query = supabase
+          .from('student_attendance')
+          .select('id, student_id, date, status, notes, subject_id, faculty_id, created_at, updated_at, students!inner(tuition_id)')
+          .eq('students.tuition_id', tuitionId)
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false })
+          .range(offset, offset + pageSize - 1);
+
+        if (startDate) query = query.gte('date', startDate);
+        if (endDate) query = query.lte('date', endDate);
+
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('Error fetching report attendance:', error);
+          throw error;
+        }
+
+        if (data && data.length > 0) {
+          allRecords.push(...data);
+          offset += pageSize;
+          hasMore = data.length === pageSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      return formatAttendance(allRecords);
+    },
+    enabled: false, // Only runs when refetch() is called
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+  });
+}
+
 // For student details - fetches all attendance for a specific student
 export function useStudentAttendanceQuery(tuitionId: string | null, studentId: string | null) {
   const queryKey = ['attendance', tuitionId, 'student', studentId];
