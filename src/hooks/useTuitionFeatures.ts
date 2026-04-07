@@ -1,5 +1,5 @@
 import { useTuitionData } from './useTuitionData';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
 export type FeatureKey = 
   | 'leaderboard' 
