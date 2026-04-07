@@ -5,7 +5,7 @@ export { useDivisionsQuery, useSubjectsQuery, useFacultyQuery, useRoomsQuery, us
 export { useStudentsQuery, useAddStudentMutation, useRemoveStudentMutation } from './useStudentsQuery';
 
 // Attendance queries - loaded on-demand
-export { useAttendanceQuery, useTodayAttendanceQuery, useHistoricalAttendanceQuery, useStudentAttendanceQuery, useMarkAttendanceMutation, useBulkMarkAttendanceMutation } from './useAttendanceQuery';
+export { useAttendanceQuery, useTodayAttendanceQuery, useHistoricalAttendanceQuery, useReportAttendanceQuery, useStudentAttendanceQuery, useMarkAttendanceMutation, useBulkMarkAttendanceMutation } from './useAttendanceQuery';
 
 // Fees queries - loaded on-demand
 export { useFeesQuery, useClassFeesQuery, useAddFeeMutation, useUpdateFeeStatusMutation, useDeleteFeeMutation, useUpdateClassFeeMutation, usePaymentsQuery, useRecordPaymentMutation } from './useFeesQuery';

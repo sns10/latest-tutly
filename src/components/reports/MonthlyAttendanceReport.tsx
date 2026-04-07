@@ -6,10 +6,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Download, Printer, FileSpreadsheet, ArrowUpDown, Users, TrendingUp, TrendingDown } from 'lucide-react';
+import { Download, Printer, FileSpreadsheet, ArrowUpDown, Users, TrendingUp, TrendingDown, Loader2, Search } from 'lucide-react';
 import { useSupabaseData } from '@/hooks/useSupabaseData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
-import { useHistoricalAttendanceQuery } from '@/hooks/queries';
+import { useReportAttendanceQuery } from '@/hooks/queries';
 import { useUserTuition } from '@/hooks/useUserTuition';
 import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
@@ -40,8 +40,8 @@ export function MonthlyAttendanceReport() {
   const [sortField, setSortField] = useState<'name' | 'percentage'>('percentage');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // Fetch attendance based on selected date range - this ensures historical data is loaded
-  const { data: attendance = [] } = useHistoricalAttendanceQuery(tuitionId, startDate, endDate);
+  // On-demand fetch — only runs when user clicks "Generate Report"
+  const { data: attendance = [], refetch, isFetching, isSuccess } = useReportAttendanceQuery(tuitionId, startDate, endDate);
 
   const classes = useMemo(() => 
     [...new Set(students.map(s => s.class))].sort(),
