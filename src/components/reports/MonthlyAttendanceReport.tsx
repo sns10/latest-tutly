@@ -296,6 +296,16 @@ export function MonthlyAttendanceReport() {
                 className="h-9"
               />
             </div>
+            <div className="flex items-end pt-1">
+              <Button 
+                onClick={() => refetch()} 
+                disabled={isFetching}
+                className="w-full sm:w-auto gap-2"
+              >
+                {isFetching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
+                {isFetching ? 'Fetching...' : 'Generate Report'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
