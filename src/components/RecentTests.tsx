@@ -93,4 +93,4 @@ export const RecentTests = memo(function RecentTests({
       </CardContent>
     </Card>
   );
-}
+});

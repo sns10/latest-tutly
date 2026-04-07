@@ -178,7 +178,7 @@ export const DailySummaryCard = memo(function DailySummaryCard({ summary, isFeat
       </CardContent>
     </Card>
   );
-}
+});
 
 interface SummarySectionProps {
   icon: React.ReactNode;

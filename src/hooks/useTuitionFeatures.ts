@@ -62,9 +62,9 @@ export function useTuitionFeatures() {
     return tuition.features;
   }, [tuition?.features]);
 
-  const isFeatureEnabled = (featureKey: FeatureKey): boolean => {
+  const isFeatureEnabled = useCallback((featureKey: FeatureKey): boolean => {
     return features.includes(featureKey);
-  };
+  }, [features]);
 
   return { 
     features, 

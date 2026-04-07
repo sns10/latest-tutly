@@ -144,8 +144,12 @@ export function useAttendanceNotification(
     // Check immediately
     checkForPendingAttendance();
 
-    // Check every 30 seconds
-    intervalRef.current = setInterval(checkForPendingAttendance, 30000);
+    // Check every 60 seconds, skip when tab is hidden (e.g. user is in WhatsApp)
+    intervalRef.current = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        checkForPendingAttendance();
+      }
+    }, 60000);
 
     return () => {
       if (intervalRef.current) {

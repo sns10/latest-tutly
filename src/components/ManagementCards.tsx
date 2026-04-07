@@ -65,4 +65,4 @@ export const ManagementCards = memo(function ManagementCards({
       ))}
     </div>
   );
-}
+});

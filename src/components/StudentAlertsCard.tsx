@@ -119,7 +119,7 @@ export const StudentAlertsCard = memo(function StudentAlertsCard({
       )}
     </>
   );
-}
+});
 
 function AlertRow({
   alert,
