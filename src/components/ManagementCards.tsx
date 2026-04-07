@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -15,7 +16,7 @@ interface ManagementCardsProps {
   activeChallenges: number;
 }
 
-export function ManagementCards({
+export const ManagementCards = memo(function ManagementCards({
   testsCount,
   studentsCount,
   activeChallenges,
