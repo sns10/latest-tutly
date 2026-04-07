@@ -81,7 +81,7 @@ export default function TimetablePage() {
       divisions={divisions}
       onAddEntry={handleAddEntry}
       onUpdateEntry={handleUpdateEntry}
-      onDeleteEntry={(id: string) => deleteTimetableMut.mutate(id)}
+      onDeleteEntry={async (id: string) => { deleteTimetableMut.mutate(id); }}
       onAddRoom={addRoom}
       onUpdateRoom={updateRoom}
       onDeleteRoom={deleteRoom}
