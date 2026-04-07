@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +19,7 @@ interface DailySummaryCardProps {
   isFeatureEnabled: (feature: string) => boolean;
 }
 
-export function DailySummaryCard({ summary, isFeatureEnabled }: DailySummaryCardProps) {
+export const DailySummaryCard = memo(function DailySummaryCard({ summary, isFeatureEnabled }: DailySummaryCardProps) {
   const navigate = useNavigate();
   const today = new Date();
   
@@ -177,7 +178,7 @@ export function DailySummaryCard({ summary, isFeatureEnabled }: DailySummaryCard
       </CardContent>
     </Card>
   );
-}
+});
 
 interface SummarySectionProps {
   icon: React.ReactNode;

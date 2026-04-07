@@ -1,5 +1,5 @@
 import { useTuitionData } from './useTuitionData';
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 
 export type FeatureKey = 
   | 'leaderboard' 
@@ -62,9 +62,9 @@ export function useTuitionFeatures() {
     return tuition.features;
   }, [tuition?.features]);
 
-  const isFeatureEnabled = (featureKey: FeatureKey): boolean => {
+  const isFeatureEnabled = useCallback((featureKey: FeatureKey): boolean => {
     return features.includes(featureKey);
-  };
+  }, [features]);
 
   return { 
     features, 

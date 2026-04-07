@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -15,7 +16,7 @@ interface RecentTestsProps {
   onAwardXP: (studentId: string, amount: number, reason: string) => void;
 }
 
-export function RecentTests({ 
+export const RecentTests = memo(function RecentTests({ 
   tests, 
   testResults, 
   students,
@@ -92,4 +93,4 @@ export function RecentTests({
       </CardContent>
     </Card>
   );
-}
+});
