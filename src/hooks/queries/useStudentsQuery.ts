@@ -118,9 +118,12 @@ export function useAddStudentMutation(tuitionId: string | null) {
       dateOfBirth?: string;
       parentName?: string;
       parentPhone?: string;
+      fatherPhone?: string;
+      motherPhone?: string;
       address?: string;
       gender?: string;
       email?: string;
+      schoolName?: string;
     }) => {
       if (!tuitionId) throw new Error('No tuition ID');
 
@@ -129,7 +132,7 @@ export function useAddStudentMutation(tuitionId: string | null) {
         .insert({
           name: newStudent.name,
           class: newStudent.class,
-          division_id: newStudent.divisionId,
+          division_id: newStudent.divisionId || null,
           avatar: newStudent.avatar,
           tuition_id: tuitionId,
           roll_no: newStudent.rollNo,
@@ -137,9 +140,12 @@ export function useAddStudentMutation(tuitionId: string | null) {
           date_of_birth: newStudent.dateOfBirth,
           parent_name: newStudent.parentName,
           parent_phone: newStudent.parentPhone,
+          father_phone: newStudent.fatherPhone,
+          mother_phone: newStudent.motherPhone,
           address: newStudent.address,
           gender: newStudent.gender,
           email: newStudent.email,
+          school_name: newStudent.schoolName,
         })
         .select()
         .single();

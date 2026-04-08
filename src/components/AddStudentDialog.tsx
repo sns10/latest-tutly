@@ -71,7 +71,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
       onAddStudent({ 
         name: name.trim(), 
         class: studentClass,
-        divisionId: divisionId === 'none' ? undefined : divisionId,
+        divisionId: divisionId && divisionId !== 'none' ? divisionId : undefined,
         rollNo: rollNo ? parseInt(rollNo, 10) : undefined,
         dateOfBirth: dateOfBirth || undefined,
         gender: gender as 'male' | 'female' | 'other' | undefined,
@@ -208,9 +208,20 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
                 </Label>
                 <Input
                   id="dob"
-                  type="date"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="\d{4}-\d{2}-\d{2}"
+                  placeholder="YYYY-MM-DD"
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
+                  onFocus={(e) => {
+                    try { e.currentTarget.type = 'date'; } catch {}
+                  }}
+                  onBlur={(e) => {
+                    if (!e.currentTarget.value) {
+                      try { e.currentTarget.type = 'text'; } catch {}
+                    }
+                  }}
                   className="col-span-3"
                 />
               </div>

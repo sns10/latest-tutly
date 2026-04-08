@@ -25,7 +25,22 @@ export function useUpdateStudentMutation(tuitionId: string | null) {
 
   return useMutation({
     mutationFn: async ({ studentId, updates }: { studentId: string; updates: StudentUpdates }) => {
-      const updateData: Record<string, unknown> = {};
+      const updateData: {
+        name?: string;
+        class?: ClassName;
+        division_id?: string | null;
+        email?: string | null;
+        phone?: string | null;
+        roll_no?: number | null;
+        date_of_birth?: string | null;
+        parent_name?: string | null;
+        parent_phone?: string | null;
+        father_phone?: string | null;
+        mother_phone?: string | null;
+        address?: string | null;
+        school_name?: string | null;
+        gender?: string | null;
+      } = {};
       if (updates.name !== undefined) updateData.name = updates.name;
       if (updates.class !== undefined) updateData.class = updates.class;
       if (updates.divisionId !== undefined) updateData.division_id = updates.divisionId;
