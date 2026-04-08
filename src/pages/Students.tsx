@@ -111,10 +111,13 @@ export default function StudentsPage() {
       phone: newStudent.phone,
       dateOfBirth: newStudent.dateOfBirth,
       parentName: newStudent.parentName,
-      parentPhone: newStudent.fatherPhone || newStudent.parentPhone,
+      parentPhone: newStudent.parentPhone,
+      fatherPhone: newStudent.fatherPhone,
+      motherPhone: newStudent.motherPhone,
       address: newStudent.address,
       gender: newStudent.gender,
       email: newStudent.email,
+      schoolName: newStudent.schoolName,
     });
   };
 
