@@ -127,6 +127,11 @@ export function useAddStudentMutation(tuitionId: string | null) {
     }) => {
       if (!tuitionId) throw new Error('No tuition ID');
 
+      // Validate dateOfBirth format
+      const validDob = newStudent.dateOfBirth && /^\d{4}-\d{2}-\d{2}$/.test(newStudent.dateOfBirth)
+        ? newStudent.dateOfBirth
+        : null;
+
       const { data, error } = await supabase
         .from('students')
         .insert({
@@ -137,7 +142,7 @@ export function useAddStudentMutation(tuitionId: string | null) {
           tuition_id: tuitionId,
           roll_no: newStudent.rollNo,
           phone: newStudent.phone,
-          date_of_birth: newStudent.dateOfBirth,
+          date_of_birth: validDob,
           parent_name: newStudent.parentName,
           parent_phone: newStudent.parentPhone,
           father_phone: newStudent.fatherPhone,
