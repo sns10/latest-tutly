@@ -1,49 +1,52 @@
 
 
-# Analysis: Add Student Safety & Cross-Device Compatibility
+# Fix: iPhone Login Shows "No Role Assigned" + Add Student Failures
 
-## Current Status After Previous Fixes
+## Root Causes Found
 
-### Division ID Bug — FIXED
-Line 74 of `AddStudentDialog.tsx` correctly handles empty selections: `divisionId && divisionId !== 'none' ? divisionId : undefined`. Line 135 in the mutation adds a second safety net: `division_id: newStudent.divisionId || null`. Empty strings can no longer reach PostgreSQL.
+### Issue 1: `useUserRole` silently swallows errors → caches `null` for 30 minutes
 
-### Missing Fields — FIXED
-All fields (`fatherPhone`, `motherPhone`, `schoolName`) are now passed through from dialog → `Students.tsx` wrapper → mutation → database insert. No data is dropped.
+The DB confirms `logos@gmail.com` **has** a `tuition_admin` role. The problem is in `useUserRole.ts` (lines 23-25): when the Supabase query fails (network timeout, Safari connection drop), the hook does `console.error` then `return null`. React Query treats this as a **successful** response and caches `null` for `staleTime: 30 minutes`. The user is stuck on "No Role Assigned" until the cache expires — no retry happens.
 
-### Data Safety — All Queries Paginated
-Payments, tests, term exam results, and attendance report queries all use pagination loops. No silent data caps remain.
+**Fix**: Throw the error instead of returning null. React Query will then retry automatically (3 retries by default with exponential backoff). Same fix needed in `useUserTuition.ts` which has the identical pattern.
 
-### Fee Payment Race Condition — FIXED
-Atomic `record_fee_payment` PostgreSQL function handles all payment logic in a single transaction.
+### Issue 2: `useUserTuition` has the same silent-failure pattern
 
-## Remaining Issue Found
+If `tuitionId` resolves to `null` due to a network error, the add-student mutation throws `"No tuition ID"` immediately — which is the "failed to add student" the user sees. This is a cascading failure from the same error-swallowing pattern.
 
-### DOB Input — iPhone Keyboard Problem
-The DOB field uses `inputMode="numeric"` which shows a number-only keyboard on iPhone — **no dash (-) key available**. Users typing `YYYY-MM-DD` can't enter the separators. On Android this varies by keyboard app, but iPhone's numeric pad strictly blocks non-numeric input.
+### Issue 3: DOB field on iPhone — `onFocus` switching to `type="date"` is fragile
 
-**Fix**: Change `inputMode="numeric"` to `inputMode="text"` (or remove it entirely). The `onFocus` handler already switches to `type="date"` which triggers the native date picker on both iPhone and Android. For manual typing fallback, the default keyboard with all characters is needed.
-
-### XP Initialization — Minor Non-Atomic Risk
-When adding a student, the XP rows (lines 156-160) are inserted in a separate call after the student insert. If this second call fails (network drop, RLS issue), the student exists without XP rows. This is **not a data loss issue** — `formatStudents` defaults missing XP to `0` — but it leaves orphaned state.
-
-**Fix**: Wrap in try-catch so XP failure doesn't prevent the student from being returned, and log the error for debugging.
+On iOS Safari, switching `type` from `text` to `date` on focus can cause the input to lose focus immediately (Safari re-renders the input when type changes). This creates a frustrating UX loop. Better approach: use a dedicated text input with auto-formatting, and provide a separate date picker button.
 
 ## Changes
 
+### File: `src/hooks/useUserRole.ts`
+- Change `return null` on error to `throw error` — React Query will retry automatically
+- Add `retry: 3` explicitly for clarity
+
+### File: `src/hooks/useUserTuition.ts`
+- Same fix: throw error instead of returning null
+- Add `retry: 3`
+
 ### File: `src/components/AddStudentDialog.tsx`
-- Change `inputMode="numeric"` to `inputMode="text"` on the DOB field (line 212) so iPhone users can type dashes
+- Remove the fragile `onFocus`/`onBlur` type-switching for DOB
+- Use a simple `type="text"` with `inputMode="text"` and `placeholder="YYYY-MM-DD"`
+- Add basic date validation before submit (reject obviously invalid dates)
+- This ensures iPhone users can type the date without the input fighting them
 
 ### File: `src/hooks/queries/useStudentsQuery.ts`
-- Wrap XP initialization (lines 156-160) in try-catch so a failure doesn't cause the entire mutation to error out when the student was already created successfully
+- Add `dateOfBirth` validation: if the value doesn't match `YYYY-MM-DD` pattern, send `null` instead of an invalid string to PostgreSQL
 
 ## Summary
 
-| Issue | Status |
-|-------|--------|
-| Empty divisionId → UUID error | Fixed |
-| Missing fatherPhone/motherPhone/schoolName | Fixed |
-| DOB not typeable on mobile | Fixed (previous), iPhone dash key fix needed |
-| Data pagination (no silent caps) | Fixed |
-| Fee payment race condition | Fixed (atomic DB function) |
-| XP init non-atomic | Minor — add try-catch |
+| Issue | Root Cause | Fix |
+|-------|-----------|-----|
+| "No Role Assigned" on iPhone | Query error cached as null for 30 min | Throw error → React Query retries |
+| "Failed to add student" | `tuitionId` is null from same error pattern | Same throw-on-error fix |
+| DOB input broken on iPhone | `onFocus` type switch causes focus loss | Remove type switching, use plain text input |
+
+## Risk
+- Throwing errors instead of returning null is standard React Query practice
+- React Query's built-in retry (3 attempts, exponential backoff) handles transient network failures
+- No component API changes — hooks return the same shape
 
