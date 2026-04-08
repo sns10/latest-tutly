@@ -210,18 +210,9 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
                   id="dob"
                   type="text"
                   inputMode="text"
-                  pattern="\d{4}-\d{2}-\d{2}"
                   placeholder="YYYY-MM-DD"
                   value={dateOfBirth}
                   onChange={(e) => setDateOfBirth(e.target.value)}
-                  onFocus={(e) => {
-                    try { e.currentTarget.type = 'date'; } catch {}
-                  }}
-                  onBlur={(e) => {
-                    if (!e.currentTarget.value) {
-                      try { e.currentTarget.type = 'text'; } catch {}
-                    }
-                  }}
                   className="col-span-3"
                 />
               </div>

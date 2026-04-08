@@ -18,11 +18,12 @@ export function useUserTuition() {
 
       if (error) {
         console.error('Error fetching tuition_id:', error);
-        return null;
+        throw error;
       }
       return data?.tuition_id || null;
     },
     enabled: !!user,
+    retry: 3,
     staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });

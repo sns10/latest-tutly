@@ -22,12 +22,13 @@ export function useUserRole() {
 
       if (error) {
         console.error('Error fetching user role:', error);
-        return null;
+        throw error;
       }
       return (data?.role as UserRole) ?? null;
     },
     enabled: !!user,
-    staleTime: 30 * 60 * 1000, // 30 minutes — role rarely changes
+    retry: 3,
+    staleTime: 30 * 60 * 1000,
     gcTime: 60 * 60 * 1000,
   });
 
