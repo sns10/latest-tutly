@@ -209,7 +209,7 @@ export function AddStudentDialog({ divisions, onAddStudent }: AddStudentDialogPr
                 <Input
                   id="dob"
                   type="text"
-                  inputMode="numeric"
+                  inputMode="text"
                   pattern="\d{4}-\d{2}-\d{2}"
                   placeholder="YYYY-MM-DD"
                   value={dateOfBirth}

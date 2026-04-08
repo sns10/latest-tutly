@@ -152,12 +152,16 @@ export function useAddStudentMutation(tuitionId: string | null) {
 
       if (error) throw error;
 
-      // Initialize XP
-      await supabase.from('student_xp').insert([
-        { student_id: data.id, category: 'blackout', amount: 0 },
-        { student_id: data.id, category: 'futureMe', amount: 0 },
-        { student_id: data.id, category: 'recallWar', amount: 0 },
-      ]);
+      // Initialize XP (non-critical — student already saved)
+      try {
+        await supabase.from('student_xp').insert([
+          { student_id: data.id, category: 'blackout', amount: 0 },
+          { student_id: data.id, category: 'futureMe', amount: 0 },
+          { student_id: data.id, category: 'recallWar', amount: 0 },
+        ]);
+      } catch (xpError) {
+        console.warn('XP initialization failed for student', data.id, xpError);
+      }
 
       return data;
     },
