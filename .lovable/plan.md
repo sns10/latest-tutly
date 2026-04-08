@@ -1,40 +1,36 @@
 
 
-# Fix: Payment Race Condition with Atomic Database Function
+# Fix: Add Student Failures & Mobile DOB Input
 
-## Problem Confirmed
-`useRecordPaymentMutation` in `useFeesQuery.ts` (lines 277-340) performs 4 sequential Supabase calls:
-1. Insert payment record
-2. Query all payments to sum total
-3. Query fee amount
-4. Update fee status
+## Root Causes Found
 
-Between steps 1 and 2, a concurrent payment could insert, causing both to read incomplete totals and set incorrect status (e.g. both see "partial" when combined they equal "paid").
+### Bug 1: Empty string `divisionId` sent as UUID → DB error
+In `AddStudentDialog.tsx` line 74, when no division is selected, `divisionId` is `""` (empty string). The check `divisionId === 'none'` doesn't catch empty strings, so `""` gets passed through to the mutation as `division_id`, which fails PostgreSQL's UUID type validation. This is the primary "add student failing on some devices" issue — it happens whenever the user doesn't pick a division.
 
-## Fix
+### Bug 2: Missing fields in mutation — `fatherPhone`, `motherPhone`, `schoolName` dropped
+`useAddStudentMutation` (lines 111-124) doesn't accept `fatherPhone`, `motherPhone`, or `schoolName`. The wrapper in `Students.tsx` (lines 104-118) maps `fatherPhone` → `parentPhone` but completely drops `motherPhone` and `schoolName`. So these fields are silently lost on every student add.
 
-### Step 1: Database migration — Create `record_fee_payment` function
-Create an atomic PostgreSQL function that wraps all 4 operations in a single transaction. The function:
-- Inserts the payment
-- Sums total paid atomically
-- Determines status (`paid` vs `partial`)
-- Updates `student_fees` status and `paid_date`
-- Returns `{totalPaid, feeAmount, newStatus}` as JSONB
+### Bug 3: DOB `type="date"` not typeable on mobile
+On many mobile browsers (especially older Android WebViews), `<input type="date">` only shows a date picker and doesn't allow manual keyboard entry. Users need the ability to type a date directly.
 
-Uses `SECURITY DEFINER` so it executes with owner privileges, bypassing RLS (the caller is already authenticated and authorized via the mutation context).
+## Changes
 
-### Step 2: Update `useRecordPaymentMutation` in `useFeesQuery.ts`
-Replace the 4 sequential Supabase calls with a single `supabase.rpc('record_fee_payment', {...})` call. The return shape stays identical — no changes needed in `Fees.tsx` or any component.
+### File: `src/hooks/queries/useStudentsQuery.ts`
+- Add `fatherPhone`, `motherPhone`, and `schoolName` to the `useAddStudentMutation` input type
+- Map them to `father_phone`, `mother_phone`, `school_name` in the insert object
+
+### File: `src/pages/Students.tsx`
+- In the `addStudent` wrapper, pass `fatherPhone`, `motherPhone`, and `schoolName` through to the mutation instead of dropping them
+
+### File: `src/components/AddStudentDialog.tsx`
+- Fix `divisionId` empty string: change condition to `divisionId && divisionId !== 'none' ? divisionId : undefined`
+- Replace DOB `<Input type="date">` with a dual-mode input: `type="text"` with `placeholder="YYYY-MM-DD"` and an `onFocus` handler that switches to `type="date"` on supported devices, plus a `pattern` attribute for validation. This allows typing on mobile while still showing the native picker when available.
 
 ## Files Modified
 
 | File | Change |
 |------|--------|
-| New migration | `CREATE FUNCTION record_fee_payment(...)` |
-| `src/hooks/queries/useFeesQuery.ts` | Replace lines 288-335 with single `supabase.rpc()` call |
-
-## Risk
-- Zero frontend changes beyond the mutation function body
-- Return value shape unchanged — `{ totalPaid, feeAmount, newStatus }`
-- Existing `onSuccess` invalidation logic stays the same
+| `src/hooks/queries/useStudentsQuery.ts` | Add missing fields to mutation type + insert |
+| `src/pages/Students.tsx` | Pass all fields through to mutation |
+| `src/components/AddStudentDialog.tsx` | Fix empty divisionId bug + make DOB typeable |
 
