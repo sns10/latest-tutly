@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { Home, Trophy, Clock, DollarSign, Shield, FileText } from 'lucide-react';
+import { Home, Clock, Shield, FileText } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTuitionFeatures, FeatureKey } from '@/hooks/useTuitionFeatures';
@@ -13,7 +13,7 @@ interface NavItem {
 
 const tuitionAdminItems: NavItem[] = [
   { title: 'Home', url: '/', icon: Home },
-  { title: 'Board', url: '/leaderboard', icon: Trophy, featureKey: 'leaderboard' },
+  
   { title: 'Schedule', url: '/timetable', icon: Clock, featureKey: 'timetable' },
   { title: 'Reports', url: '/reports', icon: FileText, featureKey: 'reports' },
 ];

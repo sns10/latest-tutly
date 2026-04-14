@@ -14,18 +14,26 @@ interface FeeFilters {
 }
 
 const formatFees = (data: any[]): StudentFee[] => {
-  return data.map(fee => ({
-    id: fee.id,
-    studentId: fee.student_id || '',
-    feeType: fee.fee_type || 'Monthly Fee',
-    amount: Number(fee.amount) || 0,
-    dueDate: fee.due_date,
-    paidDate: fee.paid_date || undefined,
-    status: fee.status as 'paid' | 'unpaid' | 'partial' | 'overdue',
-    notes: fee.notes || undefined,
-    createdAt: fee.created_at,
-    updatedAt: fee.updated_at,
-  }));
+  const today = new Date().toISOString().split('T')[0];
+  return data.map(fee => {
+    // Derive overdue status client-side: if unpaid and due_date has passed, treat as overdue
+    let effectiveStatus = fee.status as 'paid' | 'unpaid' | 'partial' | 'overdue';
+    if (effectiveStatus === 'unpaid' && fee.due_date && fee.due_date < today) {
+      effectiveStatus = 'overdue';
+    }
+    return {
+      id: fee.id,
+      studentId: fee.student_id || '',
+      feeType: fee.fee_type || 'Monthly Fee',
+      amount: Number(fee.amount) || 0,
+      dueDate: fee.due_date,
+      paidDate: fee.paid_date || undefined,
+      status: effectiveStatus,
+      notes: fee.notes || undefined,
+      createdAt: fee.created_at,
+      updatedAt: fee.updated_at,
+    };
+  });
 };
 
 export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {

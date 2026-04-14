@@ -66,7 +66,7 @@ import {
 } from "@/components/ui/sheet";
 
 // Lazy load sub-pages for code splitting
-const LeaderboardPage = lazy(() => import('./Leaderboard'));
+
 const MaterialsPage = lazy(() => import('./Materials'));
 const FeesPage = lazy(() => import('./Fees'));
 const AttendancePage = lazy(() => import('./Attendance'));
@@ -371,11 +371,6 @@ const Index = () => {
       } />
       <Route path="/tests" element={
         <Suspense fallback={<RouteLoader />}><TestsPage /></Suspense>
-      } />
-      <Route path="/leaderboard" element={
-        <FeatureGate featureKey="leaderboard" featureName="Leaderboard">
-          <Suspense fallback={<RouteLoader />}><LeaderboardPage /></Suspense>
-        </FeatureGate>
       } />
       <Route path="/materials" element={
         <FeatureGate featureKey="materials" featureName="Materials">

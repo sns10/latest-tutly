@@ -2,7 +2,6 @@ import { useTuitionData } from './useTuitionData';
 import { useMemo, useCallback } from 'react';
 
 export type FeatureKey = 
-  | 'leaderboard' 
   | 'materials' 
   | 'timetable' 
   | 'attendance' 
@@ -38,7 +37,6 @@ export const ALL_FEATURES: FeatureConfig[] = [
   { key: 'materials', label: 'Materials', tier: 'standard', description: 'Upload study materials' },
   { key: 'homework', label: 'Homework', tier: 'standard', description: 'Assign homework to students' },
   { key: 'announcements', label: 'Announcements', tier: 'standard', description: 'Post announcements' },
-  { key: 'leaderboard', label: 'Leaderboard', tier: 'standard', description: 'Student rankings' },
   { key: 'gamification', label: 'Gamification (XP)', tier: 'standard', description: 'XP points & attendance streaks' },
   
   // Premium Features

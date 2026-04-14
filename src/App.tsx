@@ -57,7 +57,7 @@ const Reports = lazyWithRetry(() => import("./pages/Reports"));
 const Timetable = lazyWithRetry(() => import("./pages/Timetable"));
 const Materials = lazyWithRetry(() => import("./pages/Materials"));
 const Classes = lazyWithRetry(() => import("./pages/Classes"));
-const Leaderboard = lazyWithRetry(() => import("./pages/Leaderboard"));
+
 const StudentRegistration = lazyWithRetry(() => import("./pages/StudentRegistration"));
 
 // Optimized Query Client with production-ready defaults

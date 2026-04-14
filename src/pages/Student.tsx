@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useStudentData } from '@/hooks/useStudentData';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
-import { useStudentLeaderboard } from '@/hooks/useStudentLeaderboard';
+
 import { useTuitionFeaturesById } from '@/hooks/useTuitionFeaturesById';
 import { useAuth } from '@/components/AuthProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,14 +10,14 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { StudentPortalLeaderboard } from '@/components/StudentPortalLeaderboard';
+
 import { StudentPortalAuth } from '@/components/StudentPortalAuth';
 import { StudentPortalSelector } from '@/components/StudentPortalSelector';
 import { AttendanceCalendar } from '@/components/student-portal/AttendanceCalendar';
 import { HomeworkSection } from '@/components/student-portal/HomeworkSection';
 import { StudentStats } from '@/components/student-portal/StudentStats';
 import { TuitionBranding } from '@/components/TuitionBranding';
-import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, LogOut, Trophy, ArrowLeft, Flame } from 'lucide-react';
+import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, LogOut, ArrowLeft, Flame } from 'lucide-react';
 
 export default function Student() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -44,9 +44,6 @@ export default function Student() {
   const { tuition } = useTuitionInfo();
   const studentTuitionId = student?.tuition_id || sharedTuition?.id || null;
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeaturesById(studentTuitionId);
-  const { leaderboardStudents, loading: leaderboardLoading } = useStudentLeaderboard(
-    studentTuitionId
-  );
 
   // Calculate attendance streak - must be before any returns
   const attendanceStreak = useMemo(() => {
@@ -388,12 +385,6 @@ export default function Student() {
           {isFeatureEnabled('fees') && (
             <TabsTrigger value="fees" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">Fees</TabsTrigger>
           )}
-          {isFeatureEnabled('leaderboard') && (
-            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">
-              <Trophy className="h-3 w-3 sm:hidden" />
-              <span className="hidden sm:inline">Rank</span>
-            </TabsTrigger>
-          )}
           {isFeatureEnabled('announcements') && (
             <TabsTrigger value="announcements" className="text-xs sm:text-sm px-2 sm:px-3 py-1.5">News</TabsTrigger>
           )}
@@ -585,31 +576,6 @@ export default function Student() {
           </TabsContent>
         )}
 
-        {/* Leaderboard Tab */}
-        {isFeatureEnabled('leaderboard') && (
-          <TabsContent value="leaderboard">
-            {leaderboardLoading ? (
-              <div className="flex justify-center py-8">
-                <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              </div>
-            ) : (
-              <StudentPortalLeaderboard
-                students={leaderboardStudents.map(s => ({
-                  id: s.id,
-                  name: s.name,
-                  class: s.class,
-                  avatar: s.avatar,
-                  totalXp: s.totalXp,
-                  attendanceStreak: s.attendanceStreak,
-                  division: s.division ? { id: s.division.id, name: s.division.name, class: s.class, createdAt: '' } : undefined,
-                  divisionId: s.division?.id,
-                }))}
-                currentStudentId={student.id}
-                classFilter={student.class}
-              />
-            )}
-          </TabsContent>
-        )}
 
         {/* Announcements Tab */}
         {isFeatureEnabled('announcements') && (
