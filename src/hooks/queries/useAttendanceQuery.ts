@@ -204,19 +204,30 @@ export function useStudentAttendanceQuery(tuitionId: string | null, studentId: s
     queryFn: async () => {
       if (!tuitionId || !studentId) return [];
 
-      const { data, error } = await supabase
-        .from('student_attendance')
-        .select('*, students!inner(tuition_id)')
-        .eq('students.tuition_id', tuitionId)
-        .eq('student_id', studentId)
-        .order('date', { ascending: false });
+      const allData: any[] = [];
+      const PAGE_SIZE = 1000;
+      let from = 0;
 
-      if (error) {
-        console.error('Error fetching student attendance:', error);
-        throw error;
+      while (true) {
+        const { data, error } = await supabase
+          .from('student_attendance')
+          .select('*, students!inner(tuition_id)')
+          .eq('students.tuition_id', tuitionId)
+          .eq('student_id', studentId)
+          .order('date', { ascending: false })
+          .range(from, from + PAGE_SIZE - 1);
+
+        if (error) {
+          console.error('Error fetching student attendance:', error);
+          throw error;
+        }
+
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      return formatAttendance(data || []);
+      return formatAttendance(allData);
     },
     enabled: !!tuitionId && !!studentId,
     staleTime: 5 * 60 * 1000,
