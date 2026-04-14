@@ -41,41 +41,46 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
       
-      // Explicit tuition_id filter via student join to reduce DB scan
-      let query = supabase
-        .from('student_attendance')
-        .select('*, students!inner(tuition_id)')
-        .eq('students.tuition_id', tuitionId)
-        .order('date', { ascending: false })
-        .order('created_at', { ascending: false });
+      // Paginated fetch to avoid silent data truncation
+      const allData: any[] = [];
+      const PAGE_SIZE = 1000;
+      const MAX_RECORDS = 10000;
+      let from = 0;
 
-      // Apply date filters
-      if (filters?.date) {
-        // Single date - most efficient
-        query = query.eq('date', filters.date);
-      } else if (filters?.startDate && filters?.endDate) {
-        query = query.gte('date', filters.startDate).lte('date', filters.endDate);
-      } else {
-        // Default: last 30 days only
-        query = query.gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
+      while (allData.length < MAX_RECORDS) {
+        let query = supabase
+          .from('student_attendance')
+          .select('*, students!inner(tuition_id)')
+          .eq('students.tuition_id', tuitionId)
+          .order('date', { ascending: false })
+          .order('created_at', { ascending: false });
+
+        // Apply date filters
+        if (filters?.date) {
+          query = query.eq('date', filters.date);
+        } else if (filters?.startDate && filters?.endDate) {
+          query = query.gte('date', filters.startDate).lte('date', filters.endDate);
+        } else {
+          query = query.gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
+        }
+
+        if (filters?.studentId) {
+          query = query.eq('student_id', filters.studentId);
+        }
+
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+
+        if (error) {
+          console.error('Error fetching attendance:', error);
+          throw error;
+        }
+
+        allData.push(...(data || []));
+        if (!data || data.length < PAGE_SIZE) break;
+        from += PAGE_SIZE;
       }
 
-      // Apply student filter if provided
-      if (filters?.studentId) {
-        query = query.eq('student_id', filters.studentId);
-      }
-
-      // Limit to prevent over-fetching
-      query = query.limit(1000);
-
-      const { data, error } = await query;
-
-      if (error) {
-        console.error('Error fetching attendance:', error);
-        throw error;
-      }
-
-      return formatAttendance(data || []);
+      return formatAttendance(allData);
     },
     enabled: !!tuitionId,
     staleTime: STALE_TIME,
