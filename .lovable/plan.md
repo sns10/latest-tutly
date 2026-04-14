@@ -1,52 +1,46 @@
 
 
-# Fix: iPhone Login Shows "No Role Assigned" + Add Student Failures
+# Fix: Wrong Fee/Attendance Data + Remove Leaderboard
 
-## Root Causes Found
+## Problem 1: Wrong Fee Due Counts
+`formatFees` in `useFeesQuery.ts` returns the raw `status` from the database. If a fee has `status='unpaid'` but its `due_date` has passed, it still shows as "unpaid" instead of "overdue." There is no automatic status update — the DB stores whatever was set at creation. Different devices see different cached states depending on when they last fetched.
 
-### Issue 1: `useUserRole` silently swallows errors → caches `null` for 30 minutes
+**Fix**: In `formatFees`, derive the effective status client-side: if `status` is `unpaid` and `due_date < today`, treat it as `overdue`. This ensures all devices show correct counts regardless of cache timing.
 
-The DB confirms `logos@gmail.com` **has** a `tuition_admin` role. The problem is in `useUserRole.ts` (lines 23-25): when the Supabase query fails (network timeout, Safari connection drop), the hook does `console.error` then `return null`. React Query treats this as a **successful** response and caches `null` for `staleTime: 30 minutes`. The user is stuck on "No Role Assigned" until the cache expires — no retry happens.
+## Problem 2: Wrong Attendance Counts
+`useAttendanceQuery` (line 69) uses `.limit(1000)` with no pagination. For a tuition with 100+ students across 5 subjects/day over 30 days, that's potentially 15,000+ records. The 1000 limit silently truncates data, causing the dashboard to show wrong present/absent counts.
 
-**Fix**: Throw the error instead of returning null. React Query will then retry automatically (3 retries by default with exponential backoff). Same fix needed in `useUserTuition.ts` which has the identical pattern.
+**Fix**: Replace `.limit(1000)` with the same pagination loop pattern used in `useFeesQuery` and `useHistoricalAttendanceQuery`. Cap at a reasonable max (e.g., 10,000) for the default 30-day window.
 
-### Issue 2: `useUserTuition` has the same silent-failure pattern
+## Problem 3: Remove Leaderboard Feature
 
-If `tuitionId` resolves to `null` due to a network error, the add-student mutation throws `"No tuition ID"` immediately — which is the "failed to add student" the user sees. This is a cascading failure from the same error-swallowing pattern.
+Remove all leaderboard UI and routing while keeping the XP/gamification data intact in the database.
 
-### Issue 3: DOB field on iPhone — `onFocus` switching to `type="date"` is fragile
+### Files to modify:
+| File | Change |
+|------|--------|
+| `src/hooks/queries/useFeesQuery.ts` | Derive overdue status in `formatFees` |
+| `src/hooks/queries/useAttendanceQuery.ts` | Replace `.limit(1000)` with pagination loop |
+| `src/pages/Index.tsx` | Remove `LeaderboardPage` lazy import and `/leaderboard` route |
+| `src/App.tsx` | Remove `Leaderboard` lazy import (if used at top level) |
+| `src/components/AppSidebar.tsx` | Remove leaderboard nav item |
+| `src/components/BottomNav.tsx` | Remove "Board" nav item |
+| `src/pages/Student.tsx` | Remove leaderboard tab + `useStudentLeaderboard` import |
+| `src/hooks/useTuitionFeatures.ts` | Remove `'leaderboard'` from `FeatureKey` type and `ALL_FEATURES` |
 
-On iOS Safari, switching `type` from `text` to `date` on focus can cause the input to lose focus immediately (Safari re-renders the input when type changes). This creates a frustrating UX loop. Better approach: use a dedicated text input with auto-formatting, and provide a separate date picker button.
+### Files to delete:
+- `src/pages/Leaderboard.tsx`
+- `src/components/Leaderboard.tsx`
+- `src/components/StudentPortalLeaderboard.tsx`
+- `src/hooks/useStudentLeaderboard.ts`
 
-## Changes
-
-### File: `src/hooks/useUserRole.ts`
-- Change `return null` on error to `throw error` — React Query will retry automatically
-- Add `retry: 3` explicitly for clarity
-
-### File: `src/hooks/useUserTuition.ts`
-- Same fix: throw error instead of returning null
-- Add `retry: 3`
-
-### File: `src/components/AddStudentDialog.tsx`
-- Remove the fragile `onFocus`/`onBlur` type-switching for DOB
-- Use a simple `type="text"` with `inputMode="text"` and `placeholder="YYYY-MM-DD"`
-- Add basic date validation before submit (reject obviously invalid dates)
-- This ensures iPhone users can type the date without the input fighting them
-
-### File: `src/hooks/queries/useStudentsQuery.ts`
-- Add `dateOfBirth` validation: if the value doesn't match `YYYY-MM-DD` pattern, send `null` instead of an invalid string to PostgreSQL
-
-## Summary
-
-| Issue | Root Cause | Fix |
-|-------|-----------|-----|
-| "No Role Assigned" on iPhone | Query error cached as null for 30 min | Throw error → React Query retries |
-| "Failed to add student" | `tuitionId` is null from same error pattern | Same throw-on-error fix |
-| DOB input broken on iPhone | `onFocus` type switch causes focus loss | Remove type switching, use plain text input |
+### What stays untouched:
+- XP system (`student_xp`, `useXpMutations`) — still used by gamification
+- Badges, rewards, challenges — independent features
+- `useAttendanceStreak` — used elsewhere
 
 ## Risk
-- Throwing errors instead of returning null is standard React Query practice
-- React Query's built-in retry (3 attempts, exponential backoff) handles transient network failures
-- No component API changes — hooks return the same shape
+- Fee status fix is read-only derivation — no DB changes needed
+- Attendance pagination is a proven pattern already used in 3 other queries
+- Leaderboard removal is clean — no other feature depends on it
 
