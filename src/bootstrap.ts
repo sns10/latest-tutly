@@ -42,3 +42,8 @@ function bootstrapAuthStorage() {
 }
 
 bootstrapAuthStorage();
+
+// Global safety net for stuck Radix Dialog pointer-events on mobile after
+// returning from WhatsApp / Print / share sheets.
+import { installDialogSafetyNet } from '@/lib/dialogSafety';
+installDialogSafetyNet();
