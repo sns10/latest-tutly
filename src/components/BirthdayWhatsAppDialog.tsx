@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Copy, MessageCircle, Check, Cake } from 'lucide-react';
 import { toast } from 'sonner';
 import { BirthdayStudent } from '@/hooks/useBirthdayStudents';
+import { safelyOpenExternal } from '@/lib/dialogSafety';
 
 interface BirthdayWhatsAppDialogProps {
   student: BirthdayStudent | null;
@@ -72,9 +73,9 @@ ${tuitionName} 🎈`;
     
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/${formattedPhone.replace('+', '')}?text=${encodedMessage}`;
-    
-    window.open(whatsappUrl, '_blank');
+
     toast.success('Opening WhatsApp...');
+    safelyOpenExternal(whatsappUrl, onClose);
   };
 
   if (!student) return null;

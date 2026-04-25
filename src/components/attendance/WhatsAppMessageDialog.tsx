@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Copy, Check, MessageCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, StudentAttendance, Subject, Faculty } from '@/types';
+import { safelyOpenExternal } from '@/lib/dialogSafety';
 
 interface WhatsAppMessageDialogProps {
   open: boolean;
@@ -95,8 +96,9 @@ export function WhatsAppMessageDialog({
 
   const handleOpenWhatsApp = () => {
     const encodedMessage = encodeURIComponent(message);
-    // Opens WhatsApp with prefilled message (user pastes into group)
-    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
+    // Opens WhatsApp with prefilled message (user pastes into group).
+    // Close dialog FIRST so Radix unlocks <body> pointer-events.
+    safelyOpenExternal(`https://wa.me/?text=${encodedMessage}`, () => onOpenChange(false));
   };
 
   return (

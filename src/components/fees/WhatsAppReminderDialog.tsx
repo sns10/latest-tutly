@@ -15,6 +15,7 @@ import { MessageSquare, Send, Copy, Languages } from 'lucide-react';
 import { toast } from 'sonner';
 import { sanitizeString } from '@/lib/validation';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { safelyOpenExternal } from '@/lib/dialogSafety';
 
 // WhatsApp message limit
 const MAX_MESSAGE_LENGTH = 4096;
@@ -120,9 +121,10 @@ export function WhatsAppReminderDialog({
       ? `https://wa.me/${phoneNumber.replace(/[^0-9]/g, '')}?text=${encodedMessage}`
       : `https://wa.me/?text=${encodedMessage}`;
     
-    window.open(whatsappUrl, '_blank');
     toast.success('WhatsApp opened with reminder message');
-    onOpenChange(false);
+    // Close dialog FIRST, then open WhatsApp on next frame so Radix
+    // can finish its cleanup and the page doesn't get stuck.
+    safelyOpenExternal(whatsappUrl, () => onOpenChange(false));
   };
 
   const handleCopyMessage = () => {
