@@ -1,60 +1,120 @@
-# Fix: Site Freezes After PDF Download / WhatsApp Reminder
+# Scalability Audit: Tutly — Production Readiness for Growing Data
 
-## Root Cause
+## Honest verdict
 
-Two distinct bugs combine to lock the UI after the user clicks **PDF**, **Print**, or **WhatsApp** inside the Fee Receipt / WhatsApp Reminder dialogs.
+**Today: Production-ready for current load.** Largest tuition has ~1,200 students and ~77K attendance rows. The app handles that fine.
 
-### Bug 1: Radix Dialog leaves `pointer-events: none` on `<body>`
+**12–24 months out: Will degrade in 3 specific places** unless we change the loading strategy. The architecture is sound (multi-tenant, RLS, batched mutations, paginated reads, proper indexes), but several queries fetch **the entire history of a tuition into the browser on every dashboard load**. That works at 1,200 students and breaks at 5,000+.
 
-Radix UI's Dialog (used by `FeeReceipt`, `WhatsAppReminderDialog`, `PaymentHistoryDialog`, `RecordPaymentDialog`) sets `style="pointer-events: none"` on `<body>` while open. When the user clicks the WhatsApp / PDF / Print button:
+This plan fixes only the parts that genuinely won't scale. Nothing else.
 
-- `window.open(...)` (WhatsApp share, Print iframe) immediately moves focus away from the page.
-- iOS/Android Safari does **not** fire the dialog's `onOpenChange(false)` cleanup reliably when focus is stolen mid-gesture.
-- The body keeps `pointer-events: none` → **every click on the page is dead**, even though it visually looks normal. This is exactly the "stuck, can't click anything" symptom the user reported. It is a well-documented Radix issue (#1241).
+## What's already industry-grade ✅
 
-### Bug 2: html2canvas blocks the main thread for 5–15 s on mobile
+These are real strengths we keep:
 
-`handleDownloadPDF` in `src/components/fees/FeeReceipt.tsx` calls `html2canvas(receiptElement, { scale: 2 })` synchronously on the visible receipt **inside an open dialog**. On a mid-range phone this freezes the UI for many seconds. If the user taps anything during that freeze, the gesture is queued and fires after html2canvas finishes — sometimes after the dialog has been closed by user, leaving stale state.
+- **Multi-tenant isolation**: Every table has `tuition_id` + RLS policies enforcing it. Verified across 25+ tables.
+- **Database indexes**: Critical hot paths are indexed — `student_attendance(student_id, date)`, `student_fees(student_id, status)`, `fee_payments(fee_id)`, `students(tuition_id)`, `timetable(class, day, dates)`.
+- **Pagination loops** in 6 hooks already (`useFeesQuery`, `useAttendanceQuery`, `useTestsQuery`, `useStudentData`, `useTermExamData`) — bypasses Supabase's silent 1,000-row cap.
+- **Batched mutations** for marks entry and fee generation (chunks of 300).
+- **Atomic fee payment** via `record_fee_payment` SQL function (no race conditions).
+- **Optimistic updates** for attendance marking.
+- **React Query caching** with 5–10 min stale time → drastically reduces DB hits.
+- **Code-splitting + lazy loading** on every route.
+- **Virtual scrolling** for large student lists (`@tanstack/react-virtual`).
+- **Backups** via `tuition_backups` + edge function.
+- **Edge functions** with JWT verification.
 
-### Bug 3: Print iframe never gets cleaned up if `onload` doesn't fire
+## What will break under growth ⚠️
 
-In `handlePrint`, the cleanup `setTimeout` only runs **inside** the `onload` handler. On iOS Safari, `iframe.onload` for a `document.write`'d iframe sometimes never fires → the hidden iframe lingers in DOM forever, holding focus and blocking interactions.
+### Problem 1: `useFeesQuery` and `useAttendanceQuery` load the whole tuition's history into the browser
 
-## Changes
+`useFeesQuery` paginates correctly **but has no upper bound** — it fetches every fee row ever created for the tuition (currently 2,500 rows fine; at 5,000 students × 24 months = 120,000 rows it will OOM mobile devices). Same for `useTestsQuery` and `useStudentData`.
 
-### 1. `src/components/fees/FeeReceipt.tsx`
-- **Wrap heavy operations in `requestAnimationFrame` + `setTimeout(0)`** so the click handler returns immediately and the loading toast actually paints before html2canvas blocks the thread.
-- **Always clean up the print iframe** with a guaranteed `setTimeout` outside the `onload` path (5 s safety net) and remove the duplicate inline trigger.
-- **Force-restore `document.body.style.pointerEvents = ''`** in a `finally` block after `handleDownloadPDF`, `handlePrint`, and `handleWhatsAppShare` complete, as a safety net against the Radix bug.
-- **Close the receipt dialog before opening WhatsApp**: call `onOpenChange(false)` first, then `window.open` in a `setTimeout(0)` so Radix can finish its cleanup.
+`useAttendanceQuery` defaults to "last 30 days" which is good, BUT has a `MAX_RECORDS = 10000` hard cap that silently truncates data for large tuitions (a tuition with 1,500 students × 30 days × 5 subjects = 225K rows → only the most recent 10K returned).
 
-### 2. `src/components/fees/WhatsAppReminderDialog.tsx`
-- Close dialog **before** `window.open` (currently closes after, which is when the freeze happens).
-- Add `document.body.style.pointerEvents = ''` safety reset after the open.
+### Problem 2: Dashboard loading gate fetches everything before showing UI
 
-### 3. `src/components/BirthdayWhatsAppDialog.tsx` and `src/components/attendance/WhatsAppMessageDialog.tsx`
-- Same fix: close dialog → next tick → `window.open` → restore body pointer-events. Same bug class.
+`Index.tsx` waits for students + fees + attendance + tests + announcements + challenges before rendering. At scale this becomes 500ms → 8 s on 4G mobile.
 
-### 4. New helper `src/lib/dialogSafety.ts`
-- Tiny utility `safelyOpenExternal(url: string, closeDialog?: () => void)` that:
-  1. Calls `closeDialog?.()`
-  2. `requestAnimationFrame(() => { window.open(url, '_blank'); document.body.style.pointerEvents = ''; })`
-- Reuse from all 4 call sites above to keep the pattern consistent.
+### Problem 3: No server-side aggregation for dashboard counters
 
-### 5. (Optional safety) `src/App.tsx` or `src/bootstrap.ts`
-- Add a global `visibilitychange` listener that resets `document.body.style.pointerEvents = ''` when the tab becomes visible again. This catches any future regression where a dialog's cleanup is interrupted by an external app switch (WhatsApp, share sheet, etc.).
+Counters like "Total fees collected this month", "Attendance %", "Pending fees" are computed client-side by summing the entire dataset. This is the same root cause as Problem 1 — we ship raw rows when we only need aggregates.
 
-## What stays untouched
-- Receipt rendering / template HTML (works fine — the rendering isn't the bug).
-- `FeesList`, `useFeesQuery`, mutations — no data-layer changes needed.
-- Birthday card PDF generator (uses same html2canvas pattern but runs in its own dialog without follow-up `window.open`, so not affected by the same trap; we'll keep eyes on it but no change needed).
+### Problem 4: No DB-side scheduled job to mark fees overdue
+
+Currently we derive `overdue` status client-side. That works but means every device repeats the same computation, and the `status` column in DB is permanently stale for reporting/exports.
+
+### Problem 5: Edge function PDF/report generation is single-shot
+
+`generate-report` and `backup-tuition-data` build everything in one synchronous request. At 10,000+ students an edge function will hit its 150 s wall-clock limit.
+
+## The fix plan (phased — only do what we need now)
+
+### Phase 1 — Do now (the only must-haves before next 6 months)
+
+**1.1. Time-window the heavy reads.** Change `useFeesQuery`, `useTestsQuery`, `useStudentData` to default to **current academic year** (configurable). Older data only loads when a user explicitly opens "Fee history" / "All tests" / "Year-over-year" view. Files: `src/hooks/queries/useFeesQuery.ts`, `useTestsQuery.ts`, `useStudentData.ts`.
+
+**1.2. Remove the silent `MAX_RECORDS = 10000` cap** in `useAttendanceQuery`. Replace with the same time-window approach (default last 60 days; explicit "load older" trigger).
+
+**1.3. Add server-side aggregate RPCs** for dashboard cards:
+- `get_tuition_dashboard_stats(_tuition_id, _month)` returns `{ totalCollected, totalPending, overdueCount, presentToday, absentToday }` in a single round-trip instead of shipping 100K rows.
+- Wire `DailySummaryCard` and `FeeDashboard` to call these RPCs first; only fetch raw rows when the user drills in.
+
+**1.4. Nightly cron job to flip `unpaid → overdue`** in `student_fees` so DB status matches reality. Single SQL function + `pg_cron` schedule. Keeps reports accurate even when generated server-side.
+
+**1.5. Composite index audit.** Add 2 missing indexes the linter doesn't flag but matter at scale:
+- `student_fees(tuition_id, due_date)` — sort+filter on dashboard.
+- `student_attendance(date, student_id)` — date-range scans.
+
+### Phase 2 — Do when largest tuition crosses 3,000 students (estimated 6–12 months out)
+
+**2.1. Chunk reports/backups.** Refactor `generate-report` and `backup-tuition-data` edge functions to stream/chunk per-class instead of one giant query. Use `Response.body` ReadableStream for the PDF case.
+
+**2.2. Materialized monthly summaries.** Create `monthly_attendance_summary` and `monthly_fee_summary` tables refreshed nightly. Reports query these instead of recomputing across years.
+
+**2.3. Cursor-based pagination for student lists.** Replace `range()` with keyset pagination on `students` table for tuitions over 5,000 students.
+
+### Phase 3 — Do when platform hits 50+ tuitions or any single tuition crosses 10,000 students
+
+**3.1. Read replicas / Supabase compute upgrade.** Move analytics-heavy reads to a read replica, push the primary to a larger Cloud instance.
+
+**3.2. Background job queue** for backups, bulk imports, mass WhatsApp generation (currently runs in-request).
+
+**3.3. CDN for tuition logos and material files.**
+
+## What we don't need to change
+
+- Schema design — solid.
+- RLS policies — correct multi-tenant pattern.
+- Batched insert/upsert pattern — already in use.
+- React Query setup — already optimal stale times.
+- Auth + role system — separate `user_roles` table, security definer functions, audit logs. Industry standard.
+- Mobile bootstrap (auth token cleanup, service worker, defensive try/catch) — already hardened.
+
+## Files touched in Phase 1
+
+| File | Change |
+|------|--------|
+| `src/hooks/queries/useFeesQuery.ts` | Default to current academic year; expose `loadHistory` flag |
+| `src/hooks/queries/useAttendanceQuery.ts` | Remove `MAX_RECORDS` cap; default to 60-day window |
+| `src/hooks/queries/useTestsQuery.ts` | Same time-window pattern |
+| `src/hooks/useStudentData.ts` | Same time-window pattern (student portal) |
+| `src/components/DailySummaryCard.tsx` | Use new RPC instead of summing client-side |
+| `src/components/fees/FeeDashboard.tsx` | Use new aggregate RPC for headline numbers |
+| New SQL migration | `get_tuition_dashboard_stats` RPC + `mark_overdue_fees` function + pg_cron schedule + 2 composite indexes |
+
+## Honest answer to "is this industry-grade?"
+
+**Yes for 1–50 tuitions of 500–2,000 students each.** That's already a real SaaS scale. The patterns (RLS, batched writes, paginated reads, atomic SQL functions, RBAC, audit logs, backups, lazy routes, virtual lists) are all what you'd find at a Series-A B2B SaaS.
+
+**Phase 1 of this plan extends that headroom to ~5,000 students per tuition** with no architectural rewrite — just disciplined query scoping and a few RPCs. That's where you want to be before adding paying customers heavily.
+
+**Phase 2 + 3 are the playbook for when you actually hit those limits** — not work to do speculatively today.
 
 ## Risk
-- Low. All changes are defensive (close dialog earlier, restore body style, deferred external opens). No API or data changes.
-- The `body.pointerEvents` reset is a documented workaround used by hundreds of Radix consumers.
 
-## Expected Result
-After this fix, on every device:
-- Clicking **PDF** → loading toast appears immediately, receipt downloads, page stays interactive.
-- Clicking **WhatsApp** / **Print** → dialog closes, WhatsApp opens in new tab, returning to the app the page is **fully clickable**.
-- The `visibilitychange` safety net catches any future regression invisibly.
+Low. Phase 1 is additive (new RPC, new indexes, narrower default queries with opt-in "load history"). No data migrations, no breaking API changes, no UI rewrites. Each step is independently revertible.
+
+## Recommendation
+
+Approve **Phase 1 only**. Ship it before onboarding more tuitions. Revisit Phase 2 when telemetry shows a tuition crossing 2,500 students or any single dashboard load >3 s.
