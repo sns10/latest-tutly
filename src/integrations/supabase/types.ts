@@ -1403,6 +1403,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_tuition_dashboard_stats: {
+        Args: {
+          _month_end?: string
+          _month_start?: string
+          _today?: string
+          _tuition_id: string
+        }
+        Returns: Json
+      }
       get_user_email: { Args: never; Returns: string }
       get_user_tuition_id: { Args: { _user_id: string }; Returns: string }
       has_role: {
@@ -1412,6 +1421,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      mark_overdue_fees: { Args: never; Returns: number }
       record_fee_payment: {
         Args: {
           p_amount: number
