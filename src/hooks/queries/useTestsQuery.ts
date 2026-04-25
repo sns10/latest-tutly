@@ -2,21 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { WeeklyTest, StudentTestResult, ClassName } from '@/types';
 import { toast } from 'sonner';
+import { getCurrentAcademicYearStart } from '@/lib/dateWindows';
 
 const STALE_TIME = 10 * 60 * 1000; // 10 minutes
 const GC_TIME = 45 * 60 * 1000; // 45 minutes
 
-export function useWeeklyTestsQuery(tuitionId: string | null) {
+export function useWeeklyTestsQuery(tuitionId: string | null, opts?: { loadHistory?: boolean }) {
   return useQuery({
-    queryKey: ['weeklyTests', tuitionId],
+    queryKey: ['weeklyTests', tuitionId, opts?.loadHistory ? 'all' : 'year'],
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      const baseQuery = supabase
+      let baseQuery = supabase
         .from('weekly_tests')
         .select('*')
         .eq('tuition_id', tuitionId)
         .order('test_date', { ascending: false });
+
+      // Default scope: tests from current academic year only.
+      if (!opts?.loadHistory) {
+        baseQuery = baseQuery.gte('test_date', getCurrentAcademicYearStart());
+      }
 
       const allData: any[] = [];
       let from = 0;
