@@ -11,6 +11,7 @@ import { Printer, MessageCircle, Download, Copy } from 'lucide-react';
 import { toast } from 'sonner';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { safelyOpenExternal, restoreBodyPointerEvents } from '@/lib/dialogSafety';
 
 interface FeePayment {
   id: string;
@@ -350,6 +351,7 @@ export function FeeReceipt({
     if (!iframeDoc) {
       toast.error('Unable to print. Please try downloading the PDF instead.');
       document.body.removeChild(iframe);
+      restoreBodyPointerEvents();
       return;
     }
 
@@ -357,32 +359,31 @@ export function FeeReceipt({
     iframeDoc.write(htmlContent);
     iframeDoc.close();
 
-    // Wait for content to load then print
-    iframe.onload = () => {
+    let printed = false;
+    const triggerPrint = () => {
+      if (printed) return;
+      printed = true;
       try {
         iframe.contentWindow?.focus();
         iframe.contentWindow?.print();
       } catch (e) {
         toast.error('Print failed. Please try downloading the PDF instead.');
       }
-      // Clean up after a delay
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
     };
 
-    // Trigger load if already complete
-    if (iframe.contentDocument?.readyState === 'complete') {
+    iframe.onload = triggerPrint;
+    // Fallback if onload never fires (iOS Safari quirk with document.write)
+    setTimeout(triggerPrint, 400);
+
+    // GUARANTEED cleanup regardless of onload firing
+    setTimeout(() => {
       try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch (e) {
-        toast.error('Print failed. Please try downloading the PDF instead.');
+        if (iframe.parentNode) document.body.removeChild(iframe);
+      } catch {
+        /* ignore */
       }
-      setTimeout(() => {
-        document.body.removeChild(iframe);
-      }, 1000);
-    }
+      restoreBodyPointerEvents();
+    }, 5000);
   };
 
   // Download as PDF
@@ -395,6 +396,12 @@ export function FeeReceipt({
 
     const loadingToast = toast.loading('Generating PDF...');
 
+    // Defer the heavy html2canvas work so the loading toast paints first
+    // and the click handler returns immediately (prevents perceived freeze).
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => setTimeout(resolve, 0));
+    });
+
     try {
       const canvas = await html2canvas(receiptElement, {
         scale: 2,
@@ -405,28 +412,33 @@ export function FeeReceipt({
 
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF('p', 'mm', 'a4');
-      
+
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      
+
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      
+
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
       const imgY = 10;
-      
+
       pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      
+
       const fileName = `Receipt_${studentName.replace(/\s+/g, '_')}_${generatedReceiptNumber}.pdf`;
       pdf.save(fileName);
-      
+
       toast.dismiss(loadingToast);
       toast.success('PDF downloaded successfully!');
     } catch (error) {
       toast.dismiss(loadingToast);
       toast.error('Failed to generate PDF. Please try again.');
       console.error('PDF generation error:', error);
+    } finally {
+      // Belt-and-braces: ensure the page stays interactive even if Radix
+      // left a stuck pointer-events lock during the long sync block.
+      restoreBodyPointerEvents();
+      setTimeout(restoreBodyPointerEvents, 200);
     }
   };
 
@@ -484,7 +496,7 @@ ${tuition?.name || 'Tuition Center'}
 Thank you for your payment!`;
 
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(receiptText)}`;
-    window.open(whatsappUrl, '_blank');
+    safelyOpenExternal(whatsappUrl, () => onOpenChange(false));
   };
 
   return (
