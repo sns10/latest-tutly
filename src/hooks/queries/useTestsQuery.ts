@@ -2,21 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { WeeklyTest, StudentTestResult, ClassName } from '@/types';
 import { toast } from 'sonner';
+import { getCurrentAcademicYearStart } from '@/lib/dateWindows';
 
 const STALE_TIME = 10 * 60 * 1000; // 10 minutes
 const GC_TIME = 45 * 60 * 1000; // 45 minutes
 
-export function useWeeklyTestsQuery(tuitionId: string | null) {
+export function useWeeklyTestsQuery(tuitionId: string | null, opts?: { loadHistory?: boolean }) {
   return useQuery({
-    queryKey: ['weeklyTests', tuitionId],
+    queryKey: ['weeklyTests', tuitionId, opts?.loadHistory ? 'all' : 'year'],
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      const baseQuery = supabase
+      let baseQuery = supabase
         .from('weekly_tests')
         .select('*')
         .eq('tuition_id', tuitionId)
         .order('test_date', { ascending: false });
+
+      // Default scope: tests from current academic year only.
+      if (!opts?.loadHistory) {
+        baseQuery = baseQuery.gte('test_date', getCurrentAcademicYearStart());
+      }
 
       const allData: any[] = [];
       let from = 0;
@@ -47,19 +53,22 @@ export function useWeeklyTestsQuery(tuitionId: string | null) {
   });
 }
 
-export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
+export function useTestResultsQuery(tuitionId: string | null, testId?: string, opts?: { loadHistory?: boolean }) {
   return useQuery({
-    queryKey: ['testResults', tuitionId, testId],
+    queryKey: ['testResults', tuitionId, testId, opts?.loadHistory ? 'all' : 'year'],
     queryFn: async () => {
       if (!tuitionId) return [];
 
       let query = supabase
         .from('student_test_results')
-        .select('test_id, student_id, marks, weekly_tests!inner(tuition_id)')
+        .select('test_id, student_id, marks, weekly_tests!inner(tuition_id, test_date)')
         .eq('weekly_tests.tuition_id', tuitionId);
 
       if (testId) {
         query = query.eq('test_id', testId);
+      } else if (!opts?.loadHistory) {
+        // Default scope: only results for tests in the current academic year.
+        query = query.gte('weekly_tests.test_date', getCurrentAcademicYearStart());
       }
 
       // Paginate to get ALL results (no blanket limit)
