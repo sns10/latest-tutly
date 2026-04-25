@@ -53,19 +53,22 @@ export function useWeeklyTestsQuery(tuitionId: string | null, opts?: { loadHisto
   });
 }
 
-export function useTestResultsQuery(tuitionId: string | null, testId?: string) {
+export function useTestResultsQuery(tuitionId: string | null, testId?: string, opts?: { loadHistory?: boolean }) {
   return useQuery({
-    queryKey: ['testResults', tuitionId, testId],
+    queryKey: ['testResults', tuitionId, testId, opts?.loadHistory ? 'all' : 'year'],
     queryFn: async () => {
       if (!tuitionId) return [];
 
       let query = supabase
         .from('student_test_results')
-        .select('test_id, student_id, marks, weekly_tests!inner(tuition_id)')
+        .select('test_id, student_id, marks, weekly_tests!inner(tuition_id, test_date)')
         .eq('weekly_tests.tuition_id', tuitionId);
 
       if (testId) {
         query = query.eq('test_id', testId);
+      } else if (!opts?.loadHistory) {
+        // Default scope: only results for tests in the current academic year.
+        query = query.gte('weekly_tests.test_date', getCurrentAcademicYearStart());
       }
 
       // Paginate to get ALL results (no blanket limit)
