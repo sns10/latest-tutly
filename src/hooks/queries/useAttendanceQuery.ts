@@ -44,10 +44,11 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
       // Paginated fetch to avoid silent data truncation
       const allData: any[] = [];
       const PAGE_SIZE = 1000;
-      const MAX_RECORDS = 10000;
       let from = 0;
 
-      while (allData.length < MAX_RECORDS) {
+      // Loop until the page is short (no silent record cap).
+      // Bounded by the date filter applied below (default: last 30 days).
+      while (true) {
         let query = supabase
           .from('student_attendance')
           .select('*, students!inner(tuition_id)')
