@@ -104,8 +104,8 @@ export function useHistoricalAttendanceQuery(tuitionId: string | null, startDate
       let offset = 0;
       let hasMore = true;
 
-      const MAX_RECORDS = 5000;
-      while (hasMore && allRecords.length < MAX_RECORDS) {
+      // Bounded by required date range (this hook only runs when start+end are set).
+      while (hasMore) {
         let query = supabase
           .from('student_attendance')
           .select('*, students!inner(tuition_id)')
