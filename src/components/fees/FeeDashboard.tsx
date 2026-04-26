@@ -32,13 +32,23 @@ interface FeeDashboardProps {
   students: Student[];
   fees: StudentFee[];
   classFees: ClassFee[];
+  payments?: Array<{ id: string; feeId: string; amount: number; paymentDate: string }>;
 }
 
-export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
+export function FeeDashboard({ students, fees, classFees, payments = [] }: FeeDashboardProps) {
   const currentMonth = useMemo(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }, []);
+
+  // Map fee_id -> total paid (from actual payment records)
+  const paidByFee = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const p of payments) {
+      map[p.feeId] = (map[p.feeId] || 0) + (Number(p.amount) || 0);
+    }
+    return map;
+  }, [payments]);
 
   const stats = useMemo(() => {
     const currentMonthFees = fees.filter(f => 
@@ -46,10 +56,21 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
     );
     
     const totalAmount = currentMonthFees.reduce((sum, f) => sum + f.amount, 0);
-    const paidAmount = currentMonthFees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
-    const unpaidAmount = currentMonthFees.filter(f => f.status === 'unpaid').reduce((sum, f) => sum + f.amount, 0);
-    const overdueAmount = currentMonthFees.filter(f => f.status === 'overdue').reduce((sum, f) => sum + f.amount, 0);
-    const partialAmount = currentMonthFees.filter(f => f.status === 'partial').reduce((sum, f) => sum + f.amount, 0);
+    // Collected = sum of actual payments tied to current-month fees (handles partial properly)
+    const paidAmount = currentMonthFees.reduce(
+      (sum, f) => sum + Math.min(paidByFee[f.id] || 0, f.amount),
+      0
+    );
+    // Outstanding per fee = amount - paid; split into unpaid vs overdue based on status
+    const unpaidAmount = currentMonthFees
+      .filter(f => f.status === 'unpaid' || f.status === 'partial')
+      .reduce((sum, f) => sum + Math.max(0, f.amount - (paidByFee[f.id] || 0)), 0);
+    const overdueAmount = currentMonthFees
+      .filter(f => f.status === 'overdue')
+      .reduce((sum, f) => sum + Math.max(0, f.amount - (paidByFee[f.id] || 0)), 0);
+    const partialAmount = currentMonthFees
+      .filter(f => f.status === 'partial')
+      .reduce((sum, f) => sum + Math.max(0, f.amount - (paidByFee[f.id] || 0)), 0);
     
     const paidCount = currentMonthFees.filter(f => f.status === 'paid').length;
     const unpaidCount = currentMonthFees.filter(f => f.status === 'unpaid').length;
@@ -64,7 +85,10 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
     const lastMonthFees = fees.filter(f => 
       f.feeType?.includes(lastMonthStr) || f.dueDate?.startsWith(lastMonthStr)
     );
-    const lastMonthPaid = lastMonthFees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
+    const lastMonthPaid = lastMonthFees.reduce(
+      (sum, f) => sum + Math.min(paidByFee[f.id] || 0, f.amount),
+      0
+    );
     const lastMonthTotal = lastMonthFees.reduce((sum, f) => sum + f.amount, 0);
     const lastMonthRate = lastMonthTotal > 0 ? (lastMonthPaid / lastMonthTotal) * 100 : 0;
     const rateChange = collectionRate - lastMonthRate;
@@ -82,7 +106,7 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
       rateChange,
       totalStudents: students.length
     };
-  }, [fees, students, currentMonth]);
+  }, [fees, students, currentMonth, paidByFee]);
 
   // Monthly trend data (last 6 months)
   const monthlyTrend = useMemo(() => {
@@ -98,7 +122,10 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
       );
       
       const total = monthFees.reduce((sum, f) => sum + f.amount, 0);
-      const paid = monthFees.filter(f => f.status === 'paid').reduce((sum, f) => sum + f.amount, 0);
+      const paid = monthFees.reduce(
+        (sum, f) => sum + Math.min(paidByFee[f.id] || 0, f.amount),
+        0
+      );
       
       months.push({
         month: monthName,
@@ -107,7 +134,7 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
       });
     }
     return months;
-  }, [fees]);
+  }, [fees, paidByFee]);
 
   // Pie chart data
   // Safe division helper to prevent NaN/Infinity
@@ -135,9 +162,7 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
             classData[student.class] = { total: 0, collected: 0 };
           }
           classData[student.class].total += fee.amount;
-          if (fee.status === 'paid') {
-            classData[student.class].collected += fee.amount;
-          }
+          classData[student.class].collected += Math.min(paidByFee[fee.id] || 0, fee.amount);
         }
       });
 
@@ -149,20 +174,21 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
         rate: data.total > 0 ? Math.round((data.collected / data.total) * 100) : 0
       }))
       .sort((a, b) => a.class.localeCompare(b.class));
-  }, [fees, students, currentMonth]);
+  }, [fees, students, currentMonth, paidByFee]);
 
   // Top defaulters
   const topDefaulters = useMemo(() => {
     const defaulterMap: Record<string, { student: Student; unpaidAmount: number; unpaidCount: number }> = {};
     
-    fees.filter(f => f.status === 'unpaid' || f.status === 'overdue')
+    fees.filter(f => f.status === 'unpaid' || f.status === 'overdue' || f.status === 'partial')
       .forEach(fee => {
         const student = students.find(s => s.id === fee.studentId);
-        if (student) {
+        const outstanding = Math.max(0, fee.amount - (paidByFee[fee.id] || 0));
+        if (student && outstanding > 0) {
           if (!defaulterMap[student.id]) {
             defaulterMap[student.id] = { student, unpaidAmount: 0, unpaidCount: 0 };
           }
-          defaulterMap[student.id].unpaidAmount += fee.amount;
+          defaulterMap[student.id].unpaidAmount += outstanding;
           defaulterMap[student.id].unpaidCount += 1;
         }
       });
@@ -170,7 +196,7 @@ export function FeeDashboard({ students, fees, classFees }: FeeDashboardProps) {
     return Object.values(defaulterMap)
       .sort((a, b) => b.unpaidAmount - a.unpaidAmount)
       .slice(0, 5);
-  }, [fees, students]);
+  }, [fees, students, paidByFee]);
 
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
 
