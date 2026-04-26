@@ -1,6 +1,6 @@
 # Tutly by UpSkillr — Project Knowledge Base
 
-> **Last updated**: 2026-04-07
+> **Last updated**: 2026-04-26
 > This file serves as the single source of truth for AI context. Update it whenever significant changes are made.
 
 ---
@@ -252,12 +252,15 @@ All data fetching and mutations use **domain-specific hooks** in `src/hooks/quer
 - Subject-wise breakdown, 30-day window
 
 ### Fees
-- Dashboard with charts/statistics
+- Tabs: **Activity** (default), Fees, Custom, Structure, Reports. The legacy **Dashboard** tab was removed (felt congested); `FeeDashboard` component still exists for reuse.
 - Fee structure: types, templates, late fees, discounts
-- Partial/full payments, multiple methods
-- Receipt generation, WhatsApp reminders
+- Partial/full payments, multiple methods (cash/UPI/bank/cheque)
+- Receipt generation, WhatsApp reminders (with Malayalam toggle)
 - Class-wise/monthly/defaulter reports with Excel export
-- Payment tracking via `fee_payments` table
+- Payment tracking via `fee_payments` table; status updated atomically by `record_fee_payment` RPC
+- **Critical correctness rule — fee summaries:** "Paid" / "Pending" / "Collected" must always be derived from real `fee_payments` records, NOT from `fee.status === 'paid'`. A fee can be `partial` with payments recorded, and using status alone hides partial payments and shows wrong totals.
+  - All consumers (`StudentDetailsDialog`, `StudentAlertsCard`, `FeeDashboard`, dashboard cards on `Index.tsx` and `Students.tsx`) receive `feePayments` / `payments` via `usePaymentsQuery` and compute: `paid = sum(payments.amount per fee, capped at fee.amount)`, `pending = max(0, fee.amount - paid)`.
+  - When passing payments into `StudentDetailsDialog`, map camelCase query shape (`feeId`, `paymentDate`) → snake_case props (`fee_id`, `payment_date`) the dialog expects.
 
 ### Timetable & Scheduling
 - Weekly regular + special class scheduling
@@ -436,3 +439,6 @@ src/
 12. **Each page must import only its domain hooks** — never subscribe to unrelated data domains
 13. **All mutations must be React Query `useMutation` hooks** — no raw async functions with inline Supabase calls
 14. **Update this file** when making significant architectural changes
+15. **Always read this file before making changes** — especially for fees, payments, and multi-tenant scoping rules
+16. **Fee/payment math = payments table, not fee.status** — see §8 Fees for the rule. Re-applying status-only math is a regression.
+17. **Default fee/test/attendance queries are scoped to the current academic year** (see `src/lib/dateWindows.ts` + `useFeesQuery` / `useTestsQuery` / `useAttendanceQuery`). Pass `loadHistory: true` or `studentId` for full history. Do not remove this scope — it's what keeps the app fast at 1000+ students.
