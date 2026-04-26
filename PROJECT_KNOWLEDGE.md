@@ -252,12 +252,15 @@ All data fetching and mutations use **domain-specific hooks** in `src/hooks/quer
 - Subject-wise breakdown, 30-day window
 
 ### Fees
-- Dashboard with charts/statistics
+- Tabs: **Activity** (default), Fees, Custom, Structure, Reports. The legacy **Dashboard** tab was removed (felt congested); `FeeDashboard` component still exists for reuse.
 - Fee structure: types, templates, late fees, discounts
-- Partial/full payments, multiple methods
-- Receipt generation, WhatsApp reminders
+- Partial/full payments, multiple methods (cash/UPI/bank/cheque)
+- Receipt generation, WhatsApp reminders (with Malayalam toggle)
 - Class-wise/monthly/defaulter reports with Excel export
-- Payment tracking via `fee_payments` table
+- Payment tracking via `fee_payments` table; status updated atomically by `record_fee_payment` RPC
+- **Critical correctness rule — fee summaries:** "Paid" / "Pending" / "Collected" must always be derived from real `fee_payments` records, NOT from `fee.status === 'paid'`. A fee can be `partial` with payments recorded, and using status alone hides partial payments and shows wrong totals.
+  - All consumers (`StudentDetailsDialog`, `StudentAlertsCard`, `FeeDashboard`, dashboard cards on `Index.tsx` and `Students.tsx`) receive `feePayments` / `payments` via `usePaymentsQuery` and compute: `paid = sum(payments.amount per fee, capped at fee.amount)`, `pending = max(0, fee.amount - paid)`.
+  - When passing payments into `StudentDetailsDialog`, map camelCase query shape (`feeId`, `paymentDate`) → snake_case props (`fee_id`, `payment_date`) the dialog expects.
 
 ### Timetable & Scheduling
 - Weekly regular + special class scheduling
