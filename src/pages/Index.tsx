@@ -49,7 +49,7 @@ import { SubscriptionExpiryAlert } from "@/components/SubscriptionExpiryAlert";
 import { BirthdayWishesBanner } from "@/components/BirthdayWishesBanner";
 import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
 import { useDailySummary } from "@/hooks/useDailySummary";
-import { useTodayPaymentsQuery } from "@/hooks/queries/useFeesQuery";
+import { useTodayPaymentsQuery, usePaymentsQuery } from "@/hooks/queries/useFeesQuery";
 import { Student, WeeklyTest, StudentTestResult, XPCategory, Challenge, Announcement, StudentFee, TeamName } from "@/types";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -100,6 +100,7 @@ const Index = () => {
   const { data: attendance = [] } = useAttendanceQuery(tuitionId);
   const { data: timetable = [] } = useTimetableQuery(tuitionId);
   const { data: fees = [] } = useFeesQuery(tuitionId);
+  const { data: allPayments = [] } = usePaymentsQuery(tuitionId);
   const { data: classFees = [] } = useClassFeesQuery(tuitionId);
   const { data: challenges = [] } = useChallengesQuery(tuitionId);
   const { data: announcements = [] } = useAnnouncementsQuery(tuitionId);
@@ -305,6 +306,16 @@ const Index = () => {
             testResults={testResults}
             attendance={attendance}
             fees={fees}
+            feePayments={allPayments.map(p => ({
+              id: p.id,
+              fee_id: p.feeId,
+              amount: p.amount,
+              payment_date: p.paymentDate,
+              payment_method: p.paymentMethod ?? null,
+              payment_reference: p.paymentReference ?? null,
+              notes: p.notes ?? null,
+              created_at: p.createdAt,
+            }))}
             termExams={termExams}
             termExamSubjects={termExamSubjects}
             termExamResults={termExamResults}
