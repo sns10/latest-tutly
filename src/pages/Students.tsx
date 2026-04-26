@@ -388,6 +388,23 @@ export default function StudentsPage() {
           testResults={testResults.filter(r => r.studentId === selectedStudent.id)}
           tests={weeklyTests}
           fees={fees.filter(f => f.studentId === selectedStudent.id)}
+          feePayments={(() => {
+            const studentFeeIds = new Set(
+              fees.filter(f => f.studentId === selectedStudent.id).map(f => f.id)
+            );
+            return payments
+              .filter(p => studentFeeIds.has(p.feeId))
+              .map(p => ({
+                id: p.id,
+                fee_id: p.feeId,
+                amount: p.amount,
+                payment_date: p.paymentDate,
+                payment_method: p.paymentMethod ?? null,
+                payment_reference: p.paymentReference ?? null,
+                notes: p.notes ?? null,
+                created_at: p.createdAt,
+              }));
+          })()}
           subjects={subjects}
           faculty={faculty}
           divisions={divisions}
