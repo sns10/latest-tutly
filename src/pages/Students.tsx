@@ -13,6 +13,7 @@ import {
   useTestResultsQuery,
   useStudentAttendanceQuery,
 } from '@/hooks/queries';
+import { usePaymentsQuery } from '@/hooks/queries/useFeesQuery';
 import { useUpdateStudentMutation, useAssignStudentEmailMutation, useAssignTeamMutation } from '@/hooks/queries/useStudentMutations';
 import { useAddXpMutation } from '@/hooks/queries/useXpMutations';
 import { useBuyRewardMutation, useUseRewardMutation } from '@/hooks/queries/useXpMutations';
@@ -48,6 +49,7 @@ export default function StudentsPage() {
   const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
   const { data: testResults = [] } = useTestResultsQuery(tuitionId);
   const { data: fees = [] } = useFeesQuery(tuitionId);
+  const { data: payments = [] } = usePaymentsQuery(tuitionId);
 
   const addStudentMut = useAddStudentMutation(tuitionId);
   const removeStudentMut = useRemoveStudentMutation(tuitionId);
