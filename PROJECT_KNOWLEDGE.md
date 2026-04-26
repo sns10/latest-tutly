@@ -439,3 +439,6 @@ src/
 12. **Each page must import only its domain hooks** — never subscribe to unrelated data domains
 13. **All mutations must be React Query `useMutation` hooks** — no raw async functions with inline Supabase calls
 14. **Update this file** when making significant architectural changes
+15. **Always read this file before making changes** — especially for fees, payments, and multi-tenant scoping rules
+16. **Fee/payment math = payments table, not fee.status** — see §8 Fees for the rule. Re-applying status-only math is a regression.
+17. **Default fee/test/attendance queries are scoped to the current academic year** (see `src/lib/dateWindows.ts` + `useFeesQuery` / `useTestsQuery` / `useAttendanceQuery`). Pass `loadHistory: true` or `studentId` for full history. Do not remove this scope — it's what keeps the app fast at 1000+ students.
