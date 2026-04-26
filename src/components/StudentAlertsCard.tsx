@@ -17,6 +17,16 @@ interface StudentAlertsCardProps {
   testResults: StudentTestResult[];
   attendance: StudentAttendance[];
   fees: StudentFee[];
+  feePayments?: Array<{
+    id: string;
+    fee_id: string;
+    amount: number;
+    payment_date: string;
+    payment_method: string | null;
+    payment_reference: string | null;
+    notes: string | null;
+    created_at: string;
+  }>;
   termExams: TermExam[];
   termExamSubjects: TermExamSubject[];
   termExamResults: TermExamResult[];
@@ -36,6 +46,7 @@ export const StudentAlertsCard = memo(function StudentAlertsCard({
   testResults,
   attendance,
   fees,
+  feePayments,
   termExams,
   termExamSubjects,
   termExamResults,
@@ -105,6 +116,7 @@ export const StudentAlertsCard = memo(function StudentAlertsCard({
           testResults={testResults}
           attendance={attendance}
           fees={fees}
+          feePayments={feePayments}
           termExams={termExams}
           termExamSubjects={termExamSubjects}
           termExamResults={termExamResults}
