@@ -13,6 +13,7 @@ import {
   useTestResultsQuery,
   useStudentAttendanceQuery,
 } from '@/hooks/queries';
+import { usePaymentsQuery } from '@/hooks/queries/useFeesQuery';
 import { useUpdateStudentMutation, useAssignStudentEmailMutation, useAssignTeamMutation } from '@/hooks/queries/useStudentMutations';
 import { useAddXpMutation } from '@/hooks/queries/useXpMutations';
 import { useBuyRewardMutation, useUseRewardMutation } from '@/hooks/queries/useXpMutations';
@@ -48,6 +49,7 @@ export default function StudentsPage() {
   const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
   const { data: testResults = [] } = useTestResultsQuery(tuitionId);
   const { data: fees = [] } = useFeesQuery(tuitionId);
+  const { data: payments = [] } = usePaymentsQuery(tuitionId);
 
   const addStudentMut = useAddStudentMutation(tuitionId);
   const removeStudentMut = useRemoveStudentMutation(tuitionId);
@@ -386,6 +388,23 @@ export default function StudentsPage() {
           testResults={testResults.filter(r => r.studentId === selectedStudent.id)}
           tests={weeklyTests}
           fees={fees.filter(f => f.studentId === selectedStudent.id)}
+          feePayments={(() => {
+            const studentFeeIds = new Set(
+              fees.filter(f => f.studentId === selectedStudent.id).map(f => f.id)
+            );
+            return payments
+              .filter(p => studentFeeIds.has(p.feeId))
+              .map(p => ({
+                id: p.id,
+                fee_id: p.feeId,
+                amount: p.amount,
+                payment_date: p.paymentDate,
+                payment_method: p.paymentMethod ?? null,
+                payment_reference: p.paymentReference ?? null,
+                notes: p.notes ?? null,
+                created_at: p.createdAt,
+              }));
+          })()}
           subjects={subjects}
           faculty={faculty}
           divisions={divisions}
