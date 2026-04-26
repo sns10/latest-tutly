@@ -15,9 +15,8 @@ import {
 import { useAddFeesBatchMutation } from '@/hooks/queries/useFeesMutations';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { LayoutDashboard, List, Settings, FileText, PlusCircle, Receipt, Activity } from 'lucide-react';
+import { List, Settings, FileText, PlusCircle, Receipt, Activity } from 'lucide-react';
 import { 
-  FeeDashboard, 
   FeesList, 
   FeeStructureManager, 
   FeeReports,
@@ -93,13 +92,8 @@ export default function FeesPage() {
         </Button>
       </div>
 
-      <Tabs defaultValue="dashboard" className="w-full">
+      <Tabs defaultValue="activity" className="w-full">
         <TabsList className="flex w-full overflow-x-auto scrollbar-hide h-auto p-1 bg-white border border-slate-200 touch-pan-x">
-          <TabsTrigger value="dashboard" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
-            <LayoutDashboard className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden xs:inline">Dashboard</span>
-            <span className="xs:hidden">Dash</span>
-          </TabsTrigger>
           <TabsTrigger value="activity" className="flex items-center gap-1.5 text-xs sm:text-sm py-2 px-3 shrink-0 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
             <Activity className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             <span className="hidden xs:inline">Activity</span>
@@ -125,10 +119,6 @@ export default function FeesPage() {
             <span className="xs:hidden">Rpt</span>
           </TabsTrigger>
         </TabsList>
-
-        <TabsContent value="dashboard" className="mt-4">
-          <FeeDashboard students={students} fees={fees} classFees={classFees} />
-        </TabsContent>
 
         <TabsContent value="activity" className="mt-4">
           <PaymentActivityFeed
