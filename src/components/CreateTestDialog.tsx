@@ -186,7 +186,11 @@ export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps)
                 <FormItem>
                   <FormLabel>Max Marks</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} />
+                    <Input
+                      type="number"
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.valueAsNumber || 0)}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
