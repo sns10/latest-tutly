@@ -1422,16 +1422,28 @@ export type Database = {
         Returns: boolean
       }
       mark_overdue_fees: { Args: never; Returns: number }
-      record_fee_payment: {
-        Args: {
-          p_amount: number
-          p_fee_id: string
-          p_notes?: string
-          p_payment_method: string
-          p_reference?: string
-        }
-        Returns: Json
-      }
+      record_fee_payment:
+        | {
+            Args: {
+              p_amount: number
+              p_fee_id: string
+              p_notes?: string
+              p_payment_method: string
+              p_reference?: string
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_amount: number
+              p_fee_id: string
+              p_notes?: string
+              p_payment_date?: string
+              p_payment_method: string
+              p_reference?: string
+            }
+            Returns: Json
+          }
       setup_tuition_admin: {
         Args: { _full_name: string; _tuition_id: string; _user_id: string }
         Returns: undefined
