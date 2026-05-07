@@ -74,7 +74,7 @@ interface FeesListProps {
   onAddFee: (fee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => void;
   onAddFeesBatch?: (fees: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
-  onRecordPayment: (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => void;
+  onRecordPayment: (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string, paymentDate?: string) => void;
 }
 
 export function FeesList({
@@ -827,13 +827,13 @@ export function FeesList({
           fee={selectedFeeForPayment}
           studentName={getStudentName(selectedFeeForPayment.studentId)}
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
-          onRecordPayment={(amount, method, reference, notes) => {
+          onRecordPayment={(amount, method, reference, notes, paymentDate) => {
             // Create a temporary payment object for receipt
             const newPayment: FeePayment = {
               id: `temp-${Date.now()}`,
               feeId: selectedFeeForPayment.id,
               amount: amount,
-              paymentDate: new Date().toISOString().split('T')[0],
+              paymentDate: paymentDate || new Date().toISOString().split('T')[0],
               paymentMethod: method,
               paymentReference: reference,
               notes: notes,
@@ -841,7 +841,7 @@ export function FeesList({
             };
             
             // Record the payment
-            onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes);
+            onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes, paymentDate);
             
             // Show receipt automatically
             setReceiptFee(selectedFeeForPayment);
