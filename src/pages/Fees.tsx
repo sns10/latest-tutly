@@ -66,9 +66,9 @@ export default function FeesPage() {
     deleteFeeMut.mutate(feeId);
   };
 
-  const handleRecordPayment = async (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string) => {
+  const handleRecordPayment = async (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string, paymentDate?: string) => {
     try {
-      await recordPaymentMutation.mutateAsync({ feeId, amount, paymentMethod, reference, notes });
+      await recordPaymentMutation.mutateAsync({ feeId, amount, paymentMethod, reference, notes, paymentDate });
       toast.success(`Payment of ₹${amount.toLocaleString('en-IN')} recorded`);
     } catch {
       // Error handled by mutation onError
