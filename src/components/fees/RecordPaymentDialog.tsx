@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { StudentFee } from '@/types';
+import { format } from 'date-fns';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Dialog,
   DialogContent,
@@ -34,7 +39,7 @@ interface RecordPaymentDialogProps {
   fee: StudentFee;
   studentName: string;
   existingPayments?: FeePayment[];
-  onRecordPayment: (amount: number, paymentMethod: string, reference?: string, notes?: string) => void;
+  onRecordPayment: (amount: number, paymentMethod: string, reference?: string, notes?: string, paymentDate?: string) => void;
 }
 
 const PAYMENT_METHODS = [
@@ -66,6 +71,7 @@ export function RecordPaymentDialog({
   const [reference, setReference] = useState('');
   const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<{ amount?: string; reference?: string; notes?: string }>({});
+  const [paymentDate, setPaymentDate] = useState<Date>(new Date());
 
   // Reset amount when dialog opens or fee changes
   useEffect(() => {
@@ -76,6 +82,7 @@ export function RecordPaymentDialog({
       setReference('');
       setNotes('');
       setErrors({});
+      setPaymentDate(new Date());
     }
   }, [open, fee, existingPayments]);
 
@@ -131,8 +138,9 @@ export function RecordPaymentDialog({
     const paymentAmount = parseFloat(amount);
     const sanitizedReference = reference ? sanitizeString(reference) : undefined;
     const sanitizedNotes = notes ? sanitizeString(notes) : undefined;
+    const dateStr = format(paymentDate, 'yyyy-MM-dd');
 
-    onRecordPayment(paymentAmount, paymentMethod, sanitizedReference, sanitizedNotes);
+    onRecordPayment(paymentAmount, paymentMethod, sanitizedReference, sanitizedNotes, dateStr);
     onOpenChange(false);
   };
 
@@ -220,6 +228,36 @@ export function RecordPaymentDialog({
                 Partial payment. After this: ₹{newRemaining.toLocaleString('en-IN')} remaining
               </p>
             )}
+          </div>
+
+          {/* Payment Date */}
+          <div className="space-y-2">
+            <Label>Payment Date</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal",
+                    !paymentDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {format(paymentDate, 'PPP')}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={paymentDate}
+                  onSelect={(date) => date && setPaymentDate(date)}
+                  disabled={(date) => date > new Date()}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
+            <p className="text-xs text-muted-foreground">Select the actual date payment was received</p>
           </div>
 
           {/* Payment Method */}
