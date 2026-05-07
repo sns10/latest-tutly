@@ -1,68 +1,32 @@
-# Fix: "Total Paid ₹0" when fee is actually paid
 
-## What you're seeing
-On the **Students** page, opening a student → **Fees** tab shows:
-- Fee record: **₹2,000 — Paid** ✅ (correct)
-- Summary: **Total Paid ₹0**, **Pending ₹2,000** ❌ (wrong)
+## Changes
 
-## Root cause
-The fee summary cards ("Total Paid" / "Pending") in `StudentDetailsDialog` are computed from a `feePayments` prop:
+### 1. Add "Payment Date" field to Record Payment dialog
 
-```ts
-feePayments.reduce((sum, p) => sum + p.amount, 0)
-```
+When recording a fee payment, add a date picker so admins can backdate the payment (e.g., fee received yesterday but marked today). Defaults to today.
 
-But `src/pages/Students.tsx` **never passes** `feePayments` when rendering the dialog (line 382–402). The prop defaults to `[]`, so the math is always `Total - 0 = full amount pending`, even when the fee row itself is marked Paid.
+**Files to change:**
 
-The dialog already supports it — `feePayments?: FeePayment[]` is declared (line 41) and used by `getPaymentsForFee` / `getTotalPaidForFee`. It's just not being supplied.
+- **`src/components/fees/RecordPaymentDialog.tsx`** — Add a date picker field (using Popover + Calendar) between the amount and payment method sections. State defaults to today. Pass the selected date through `onRecordPayment` callback. Update the prop signature to include `paymentDate?: string`.
 
-A secondary issue: `pendingFees` (used elsewhere in the dialog summary) filters by `status === 'unpaid' | 'overdue'` only — partially-paid fees aren't counted as pending. We'll align the math to use payments as the source of truth.
+- **`src/components/fees/FeeCard.tsx`** / **`src/components/fees/FeesList.tsx`** — Update `onRecordPayment` callback signatures to accept the new `paymentDate` parameter and pass it through.
 
-## The fix
+- **`src/pages/Fees.tsx`** — Update `handleRecordPayment` to accept and forward the `paymentDate` parameter.
 
-### 1. Fetch payments on the Students page
-In `src/pages/Students.tsx`, use the existing `usePaymentsQuery(tuitionId)` hook (already used by `Fees.tsx`) to load all fee payments for the tuition.
+- **`src/hooks/queries/useFeesQuery.ts`** — Update `useRecordPaymentMutation` to accept `paymentDate` and pass it to the `record_fee_payment` RPC.
 
-### 2. Pass them to the dialog
-Filter payments to those belonging to the selected student's fees, and pass as the `feePayments` prop:
+- **Database migration** — Alter the `record_fee_payment` function to accept an optional `p_payment_date` parameter (defaults to `CURRENT_DATE`). Use it when inserting into `fee_payments` and when setting `paid_date` on the fee.
 
-```tsx
-const studentFeeIds = fees.filter(f => f.studentId === selectedStudent.id).map(f => f.id);
-const studentPayments = payments.filter(p => studentFeeIds.includes(p.feeId));
+### 2. Allow WhatsApp message when all students are present
 
-<StudentDetailsDialog
-  ...
-  fees={fees.filter(f => f.studentId === selectedStudent.id)}
-  feePayments={studentPayments}  // <-- new
-  ...
-/>
-```
+Currently the WhatsApp button only shows when `stats.absent > 0`. Change this so the button appears whenever attendance has been marked for the selected class (even if everyone is present). The dialog already handles the all-present case with a "All students present on time!" message.
 
-### 3. Map field name correctly
-`usePaymentsQuery` returns `{ feeId, amount, ... }` (camelCase), but the dialog reads `p.fee_id` and the type uses snake_case. Map to the shape the dialog expects (or update the dialog to use camelCase consistently — pick one). Lowest-risk option: map at the call site:
+**File to change:**
 
-```ts
-const studentPayments = payments
-  .filter(p => studentFeeIds.includes(p.feeId))
-  .map(p => ({ id: p.id, fee_id: p.feeId, amount: p.amount, payment_date: p.paymentDate, /* ...other fields needed */ }));
-```
+- **`src/components/AttendanceTracker.tsx`** — Change the condition on line 587 from `stats.absent > 0` to `stats.total > 0` (or `stats.present + stats.absent + stats.late > 0`). Update button text to show "All Present" when no absentees, otherwise show the count as before.
 
-### 4. Also fix `StudentAlertsCard.tsx` (same issue)
-It also renders `StudentDetailsDialog` without `feePayments`. Same fix — fetch payments via `usePaymentsQuery` and pass through.
+### Data consistency
 
-## Files to change
-| File | Change |
-|---|---|
-| `src/pages/Students.tsx` | Add `usePaymentsQuery`, derive per-student payments, pass to dialog |
-| `src/components/StudentAlertsCard.tsx` | Same pattern |
-| `src/components/StudentDetailsDialog.tsx` | (Optional) standardize on `feeId` camelCase to remove the field-name mapping step |
-
-## Risk
-- Low. Only adds a query that's already used elsewhere and a prop the dialog already accepts.
-- No DB / RLS changes.
-- "Pending Fees" summary at line 560–561 will keep working (it sums fee.amount for unpaid/overdue), but consider switching it to `totalFees - totalPaid` for full consistency. Optional, can be a follow-up.
-
-## What stays the same
-- Fee data, payment data, RLS, and database schema are all correct.
-- The fee row status badge ("Paid") was already accurate.
-- Admin Fees page is unaffected (already passes payments correctly).
+- The `record_fee_payment` RPC is `SECURITY DEFINER` and handles status calculation atomically — no risk of inconsistency from adding a date parameter.
+- The date picker will be constrained to not allow future dates.
+- Default remains today, so existing behavior is preserved if the admin doesn't change the date.
