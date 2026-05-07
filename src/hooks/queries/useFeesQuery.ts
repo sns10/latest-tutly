@@ -303,6 +303,7 @@ export function useRecordPaymentMutation(tuitionId: string | null) {
       paymentMethod: string;
       reference?: string;
       notes?: string;
+      paymentDate?: string;
     }) => {
       const { data, error } = await supabase.rpc('record_fee_payment', {
         p_fee_id: params.feeId,
@@ -310,6 +311,7 @@ export function useRecordPaymentMutation(tuitionId: string | null) {
         p_payment_method: params.paymentMethod,
         p_reference: params.reference || null,
         p_notes: params.notes || null,
+        p_payment_date: params.paymentDate || new Date().toISOString().split('T')[0],
       });
 
       if (error) throw error;

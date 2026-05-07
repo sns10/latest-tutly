@@ -584,13 +584,15 @@ export function AttendanceTracker({
         </div>
 
         {/* Prepare WhatsApp Message - Show when class selected, attendance marked, and feature enabled */}
-        {isFeatureEnabled('whatsapp_alerts') && selectedClass && stats.absent > 0 && (
+        {isFeatureEnabled('whatsapp_alerts') && selectedClass && (stats.present + stats.absent + stats.late) > 0 && (
           <Button
             onClick={() => setWhatsappDialogOpen(true)}
             className="w-full h-10 gap-2 bg-green-600 hover:bg-green-700"
           >
             <MessageCircle className="h-4 w-4" />
-            Prepare Group Message ({stats.absent} absent)
+            {stats.absent > 0
+              ? `Prepare Group Message (${stats.absent} absent)`
+              : 'Share Attendance Report ✅'}
           </Button>
         )}
 
