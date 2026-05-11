@@ -93,9 +93,12 @@ export function WeeklyTestManager({
 
   const getTestStats = (test: WeeklyTest) => {
     // Filter students by test class
-    const eligibleStudents = test.class === "All" 
+    let eligibleStudents = test.class === "All" 
       ? students 
       : students.filter(s => s.class === test.class);
+    if (test.divisionId) {
+      eligibleStudents = eligibleStudents.filter(s => s.divisionId === test.divisionId);
+    }
     
     const results = testResults.filter(r => r.testId === test.id);
     const totalStudents = eligibleStudents.length;
@@ -127,13 +130,19 @@ export function WeeklyTestManager({
               <span>{selectedTest.name}</span>
               <Badge variant="outline">{selectedTest.subject}</Badge>
               <Badge variant="secondary">{selectedTest.class === "All" ? "All Classes" : `${selectedTest.class} Grade`}</Badge>
+              {selectedTest.divisionId && (
+                <Badge variant="outline">
+                  Div {divisions.find(d => d.id === selectedTest.divisionId)?.name || ''}
+                </Badge>
+              )}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <TestResultsView 
               tests={[selectedTest]} 
               testResults={testResults.filter(r => r.testId === selectedTest.id)} 
-              students={selectedTest.class === "All" ? students : students.filter(s => s.class === selectedTest.class)} 
+              students={(selectedTest.class === "All" ? students : students.filter(s => s.class === selectedTest.class))
+                .filter(s => !selectedTest.divisionId || s.divisionId === selectedTest.divisionId)} 
             />
           </CardContent>
         </Card>
@@ -149,7 +158,7 @@ export function WeeklyTestManager({
           <h2 className="text-2xl font-bold font-display text-primary">School Management</h2>
           <p className="text-muted-foreground">Manage tests, challenges, announcements and track progress</p>
         </div>
-        <CreateTestDialog onAddTest={onAddTest} subjects={subjects} />
+        <CreateTestDialog onAddTest={onAddTest} subjects={subjects} divisions={divisions} />
       </div>
 
       <Tabs defaultValue="tests" className="w-full">
@@ -191,7 +200,7 @@ export function WeeklyTestManager({
                 <TestTube2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">No tests created yet</h3>
                 <p className="text-muted-foreground mb-4">Create your first weekly test to get started</p>
-                <CreateTestDialog onAddTest={onAddTest} subjects={subjects} />
+                <CreateTestDialog onAddTest={onAddTest} subjects={subjects} divisions={divisions} />
               </CardContent>
             </Card>
           ) : (
@@ -209,6 +218,11 @@ export function WeeklyTestManager({
                             <Badge variant="secondary" className="bg-blue-100 text-blue-800 text-xs">
                               {test.class === "All" ? "All Classes" : `${test.class} Grade`}
                             </Badge>
+                            {test.divisionId && (
+                              <Badge variant="outline" className="text-xs">
+                                Div {divisions.find(d => d.id === test.divisionId)?.name || ''}
+                              </Badge>
+                            )}
                             <span className="text-xs sm:text-sm text-muted-foreground">
                               {new Date(test.date).toLocaleDateString()}
                             </span>

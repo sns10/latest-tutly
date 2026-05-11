@@ -1,32 +1,51 @@
+## Add Division Selection to Weekly Tests
 
-## Changes
+Currently a weekly test is tied to a `class` only. When two divisions of the same class write different tests on the same day, there's no way to separate them. We'll let each test optionally target a specific division (defaulting to "All Divisions" for backward compatibility).
 
-### 1. Add "Payment Date" field to Record Payment dialog
+### 1. Database
+New migration on `weekly_tests`:
+- Add nullable `division_id uuid` column.
+- `NULL` = test applies to all divisions of that class (existing rows stay valid — zero-impact backfill).
+- No FK constraint needed (matches the project's existing pattern where `students.division_id` is unconstrained).
 
-When recording a fee payment, add a date picker so admins can backdate the payment (e.g., fee received yesterday but marked today). Defaults to today.
+### 2. Types
+- `src/types.ts` → `WeeklyTest` gains `divisionId?: string`.
 
-**Files to change:**
+### 3. Create Test Dialog (`src/components/CreateTestDialog.tsx`)
+- Accept `divisions: Division[]` prop.
+- Add a **Division** select between Class and Subject:
+  - Options: "All Divisions" + divisions filtered by selected class.
+  - Hidden / forced to "All" when `class === "All"`.
+  - Resets when class changes (prevents stale division from another class).
+- Include `divisionId` in submitted payload.
 
-- **`src/components/fees/RecordPaymentDialog.tsx`** — Add a date picker field (using Popover + Calendar) between the amount and payment method sections. State defaults to today. Pass the selected date through `onRecordPayment` callback. Update the prop signature to include `paymentDate?: string`.
+### 4. Data layer (`src/hooks/queries/useTestsQuery.ts`)
+- `useWeeklyTestsQuery`: map `division_id` → `divisionId` in the returned object.
+- `useAddWeeklyTestMutation`: insert `division_id: newTest.divisionId ?? null`.
 
-- **`src/components/fees/FeeCard.tsx`** / **`src/components/fees/FeesList.tsx`** — Update `onRecordPayment` callback signatures to accept the new `paymentDate` parameter and pass it through.
+### 5. Weekly Test Manager (`src/components/WeeklyTestManager.tsx`)
+- Pass `divisions` to `CreateTestDialog`.
+- `getTestStats`: when `test.divisionId` is set, also filter `eligibleStudents` by `s.divisionId === test.divisionId`.
+- Show a Division badge on each test card (e.g. "Div A") when set.
+- Pass division-filtered student list to `TestResultsView` and `EnterMarksDialog`.
 
-- **`src/pages/Fees.tsx`** — Update `handleRecordPayment` to accept and forward the `paymentDate` parameter.
+### 6. Enter Marks Dialog (`src/components/EnterMarksDialog.tsx`)
+- If `test.divisionId` is set: pre-filter students to that division and hide the division filter dropdown (already exists as a client-side filter, so we just lock it).
+- If unset: behave exactly as today.
 
-- **`src/hooks/queries/useFeesQuery.ts`** — Update `useRecordPaymentMutation` to accept `paymentDate` and pass it to the `record_fee_payment` RPC.
+### 7. Backward compatibility & safety
+- All existing tests have `division_id = NULL` → they continue to include all students of the class. No data migration needed, no breakage in marks already entered (results are linked by `test_id` + `student_id`).
+- Reports (`ConsolidatedTestReport`, `TestResultsView`) keep working: students list is already passed in from the parent, which we'll narrow correctly.
+- RLS unchanged (still scoped by `tuition_id`).
 
-- **Database migration** — Alter the `record_fee_payment` function to accept an optional `p_payment_date` parameter (defaults to `CURRENT_DATE`). Use it when inserting into `fee_payments` and when setting `paid_date` on the fee.
+### Files touched
+```
+supabase migration             (add weekly_tests.division_id)
+src/types.ts
+src/components/CreateTestDialog.tsx
+src/components/WeeklyTestManager.tsx
+src/components/EnterMarksDialog.tsx
+src/hooks/queries/useTestsQuery.ts
+```
 
-### 2. Allow WhatsApp message when all students are present
-
-Currently the WhatsApp button only shows when `stats.absent > 0`. Change this so the button appears whenever attendance has been marked for the selected class (even if everyone is present). The dialog already handles the all-present case with a "All students present on time!" message.
-
-**File to change:**
-
-- **`src/components/AttendanceTracker.tsx`** — Change the condition on line 587 from `stats.absent > 0` to `stats.total > 0` (or `stats.present + stats.absent + stats.late > 0`). Update button text to show "All Present" when no absentees, otherwise show the count as before.
-
-### Data consistency
-
-- The `record_fee_payment` RPC is `SECURITY DEFINER` and handles status calculation atomically — no risk of inconsistency from adding a date parameter.
-- The date picker will be constrained to not allow future dates.
-- Default remains today, so existing behavior is preserved if the admin doesn't change the date.
+Approve to implement.

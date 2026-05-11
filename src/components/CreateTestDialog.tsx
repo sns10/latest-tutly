@@ -34,7 +34,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar as CalendarIcon, TestTube2 } from "lucide-react";
-import { WeeklyTest, ClassName, Subject } from "@/types";
+import { WeeklyTest, ClassName, Subject, Division } from "@/types";
 
 const formSchema = z.object({
   name: z.string().min(2, "Test name must be at least 2 characters."),
@@ -42,14 +42,16 @@ const formSchema = z.object({
   maxMarks: z.number().int().positive("Max marks must be a positive number."),
   date: z.date(),
   class: z.enum(["4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th", "All"]),
+  divisionId: z.string().optional(),
 });
 
 interface CreateTestDialogProps {
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   subjects: Subject[];
+  divisions?: Division[];
 }
 
-export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps) {
+export function CreateTestDialog({ onAddTest, subjects, divisions = [] }: CreateTestDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -59,6 +61,7 @@ export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps)
       maxMarks: 100,
       date: new Date(),
       class: "All",
+      divisionId: "all",
     },
   });
 
@@ -79,13 +82,20 @@ export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps)
     return subjects.filter(s => s.class === selectedClass);
   }, [subjects, selectedClass]);
 
+  // Divisions available for the selected class
+  const availableDivisions = useMemo(() => {
+    if (selectedClass === "All") return [];
+    return divisions.filter(d => d.class === selectedClass);
+  }, [divisions, selectedClass]);
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     onAddTest({
       name: values.name,
       subject: values.subject,
       maxMarks: values.maxMarks,
       date: values.date.toISOString(),
-      class: values.class
+      class: values.class,
+      divisionId: values.divisionId && values.divisionId !== "all" ? values.divisionId : undefined,
     });
     form.reset();
     setIsOpen(false);
@@ -126,7 +136,14 @@ export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps)
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Class</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select
+                    onValueChange={(v) => {
+                      field.onChange(v);
+                      // Reset division when class changes to prevent stale selection
+                      form.setValue("divisionId", "all");
+                    }}
+                    defaultValue={field.value}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a class" />
@@ -149,6 +166,33 @@ export function CreateTestDialog({ onAddTest, subjects }: CreateTestDialogProps)
                 </FormItem>
               )}
             />
+            {selectedClass !== "All" && availableDivisions.length > 0 && (
+              <FormField
+                control={form.control}
+                name="divisionId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Division</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value || "all"}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="All Divisions" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="all">All Divisions</SelectItem>
+                        {availableDivisions.map(div => (
+                          <SelectItem key={div.id} value={div.id}>
+                            Division {div.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             <FormField
               control={form.control}
               name="subject"

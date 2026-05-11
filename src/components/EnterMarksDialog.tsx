@@ -103,15 +103,18 @@ export function EnterMarksDialog({
   }, [clearDraft]);
 
   // Filter students by class if test has a specific class
-  const classFilteredStudents = test.class && test.class !== "All" 
+  let classFilteredStudents = test.class && test.class !== "All" 
     ? students.filter(student => student.class === test.class)
     : students;
+  if (test.divisionId) {
+    classFilteredStudents = classFilteredStudents.filter(s => s.divisionId === test.divisionId);
+  }
 
   // Get available divisions for the test class
   const availableDivisions = useMemo(() => {
-    if (!test.class || test.class === "All") return [];
+    if (!test.class || test.class === "All" || test.divisionId) return [];
     return divisions.filter(d => d.class === test.class);
-  }, [divisions, test.class]);
+  }, [divisions, test.class, test.divisionId]);
 
   // Filter by division and search query
   const filteredStudents = useMemo(() => {

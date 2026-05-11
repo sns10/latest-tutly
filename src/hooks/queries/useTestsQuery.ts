@@ -45,6 +45,7 @@ export function useWeeklyTestsQuery(tuitionId: string | null, opts?: { loadHisto
         maxMarks: test.max_marks,
         date: test.test_date,
         class: test.class as ClassName,
+        divisionId: test.division_id ?? undefined,
       })) as WeeklyTest[];
     },
     enabled: !!tuitionId,
@@ -115,6 +116,7 @@ export function useAddWeeklyTestMutation(tuitionId: string | null) {
           max_marks: newTest.maxMarks,
           test_date: newTest.date,
           class: newTest.class,
+          division_id: newTest.divisionId ?? null,
           tuition_id: tuitionId,
         });
 
