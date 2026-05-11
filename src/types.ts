@@ -73,6 +73,7 @@ export interface WeeklyTest {
   maxMarks: number;
   date: string; // ISO date string
   class: ClassName; // Added class field
+  divisionId?: string; // Optional: target a specific division
 }
 
 export interface StudentTestResult {
