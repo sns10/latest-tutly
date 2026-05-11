@@ -125,7 +125,7 @@ const TestsPage = () => {
           <p className="text-sm text-muted-foreground">Manage weekly tests and term examinations</p>
         </div>
         <div className="flex gap-2">
-          <CreateTestDialog onAddTest={addWeeklyTest} subjects={subjects} />
+          <CreateTestDialog onAddTest={addWeeklyTest} subjects={subjects} divisions={divisions} />
         </div>
       </div>
 
@@ -176,7 +176,7 @@ const TestsPage = () => {
                     ? 'Try adjusting your filters' 
                     : 'Create your first test to get started'}
                 </p>
-                <CreateTestDialog onAddTest={addWeeklyTest} subjects={subjects} />
+                <CreateTestDialog onAddTest={addWeeklyTest} subjects={subjects} divisions={divisions} />
               </CardContent>
             </Card>
           ) : (

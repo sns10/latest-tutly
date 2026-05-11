@@ -48,4 +48,10 @@ src/components/EnterMarksDialog.tsx
 src/hooks/queries/useTestsQuery.ts
 ```
 
-Approve to implement.
+### Follow-up fix
+The Division selector was not appearing on the `/tests` page because `src/pages/Tests.tsx` (and `QuickActions` on the dashboard) instantiated `CreateTestDialog` without passing the `divisions` prop. Fixed by forwarding `divisions` from both call sites — `CreateTestDialog` already filters divisions by the selected class and shows the dropdown.
+
+Files additionally touched:
+- src/pages/Tests.tsx
+- src/components/QuickActions.tsx
+- src/pages/Index.tsx
