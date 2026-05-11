@@ -2,16 +2,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, Clock, FileText, DollarSign } from 'lucide-react';
 import { CreateTestDialog } from './CreateTestDialog';
-import { WeeklyTest, Subject } from '@/types';
+import { WeeklyTest, Subject, Division } from '@/types';
 import { useNavigate } from 'react-router-dom';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
 
 interface QuickActionsProps {
   onAddTest: (test: Omit<WeeklyTest, 'id'>) => void;
   subjects: Subject[];
+  divisions?: Division[];
 }
 
-export function QuickActions({ onAddTest, subjects }: QuickActionsProps) {
+export function QuickActions({ onAddTest, subjects, divisions = [] }: QuickActionsProps) {
   const navigate = useNavigate();
   const { isFeatureEnabled } = useTuitionFeatures();
 
@@ -42,7 +43,7 @@ export function QuickActions({ onAddTest, subjects }: QuickActionsProps) {
           </Button>
         )}
         <div className="w-full">
-          <CreateTestDialog onAddTest={onAddTest} subjects={subjects} />
+          <CreateTestDialog onAddTest={onAddTest} subjects={subjects} divisions={divisions} />
         </div>
         {isFeatureEnabled('fees') && (
           <Button 
