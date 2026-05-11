@@ -51,7 +51,11 @@ src/hooks/queries/useTestsQuery.ts
 ### Follow-up fix
 The Division selector was not appearing on the `/tests` page because `src/pages/Tests.tsx` (and `QuickActions` on the dashboard) instantiated `CreateTestDialog` without passing the `divisions` prop. Fixed by forwarding `divisions` from both call sites — `CreateTestDialog` already filters divisions by the selected class and shows the dropdown.
 
+### Final fix
+Selecting a specific class in `CreateTestDialog` was still crashing the page before the Division field could appear. The cause was the dialog re-render path around the conditional Radix Select mount/unmount for Division while the Class select state changed. Fixed by making the Class select fully controlled, resetting dependent fields safely (`subject`, `divisionId`), and keeping the Division field mounted while only hiding/disabling it when class is `All` or no divisions exist.
+
 Files additionally touched:
 - src/pages/Tests.tsx
 - src/components/QuickActions.tsx
 - src/pages/Index.tsx
+- src/components/CreateTestDialog.tsx
