@@ -53,16 +53,18 @@ interface CreateTestDialogProps {
 
 export function CreateTestDialog({ onAddTest, subjects, divisions = [] }: CreateTestDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const defaultValues: z.infer<typeof formSchema> = {
+    name: "",
+    subject: "",
+    maxMarks: 100,
+    date: new Date(),
+    class: "All",
+    divisionId: "all",
+  };
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      subject: "",
-      maxMarks: 100,
-      date: new Date(),
-      class: "All",
-      divisionId: "all",
-    },
+    defaultValues,
   });
 
   const selectedClass = form.watch("class");
@@ -97,7 +99,7 @@ export function CreateTestDialog({ onAddTest, subjects, divisions = [] }: Create
       class: values.class,
       divisionId: values.divisionId && values.divisionId !== "all" ? values.divisionId : undefined,
     });
-    form.reset();
+    form.reset(defaultValues);
     setIsOpen(false);
   }
 
@@ -137,12 +139,12 @@ export function CreateTestDialog({ onAddTest, subjects, divisions = [] }: Create
                 <FormItem>
                   <FormLabel>Class</FormLabel>
                   <Select
+                    value={field.value}
                     onValueChange={(v) => {
                       field.onChange(v);
-                      // Reset division when class changes to prevent stale selection
+                      form.setValue("subject", "", { shouldValidate: true });
                       form.setValue("divisionId", "all");
                     }}
-                    defaultValue={field.value}
                   >
                     <FormControl>
                       <SelectTrigger>
@@ -166,14 +168,18 @@ export function CreateTestDialog({ onAddTest, subjects, divisions = [] }: Create
                 </FormItem>
               )}
             />
-            {selectedClass !== "All" && availableDivisions.length > 0 && (
+            <div className={selectedClass === "All" ? "hidden" : "block"}>
               <FormField
                 control={form.control}
                 name="divisionId"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Division</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value || "all"}>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || "all"}
+                      disabled={selectedClass === "All" || availableDivisions.length === 0}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="All Divisions" />
@@ -192,7 +198,7 @@ export function CreateTestDialog({ onAddTest, subjects, divisions = [] }: Create
                   </FormItem>
                 )}
               />
-            )}
+            </div>
             <FormField
               control={form.control}
               name="subject"
