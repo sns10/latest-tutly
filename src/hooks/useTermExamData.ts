@@ -82,6 +82,7 @@ export function useTermExamData() {
       return allData.map((result: any) => ({
         id: result.id, termExamId: result.term_exam_id, studentId: result.student_id,
         subjectId: result.subject_id, marks: result.marks, grade: result.grade,
+        isAbsent: !!result.is_absent,
         createdAt: result.created_at, updatedAt: result.updated_at,
       })) as TermExamResult[];
     },
@@ -128,15 +129,15 @@ export function useTermExamData() {
     toast.success('Term exam deleted successfully!');
   };
 
-  const addTermExamResult = async (result: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string }) => {
+  const addTermExamResult = async (result: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string; isAbsent?: boolean }) => {
     const { error } = await supabase.from('term_exam_results')
-      .upsert({ term_exam_id: result.termExamId, student_id: result.studentId, subject_id: result.subjectId, marks: result.marks, grade: result.grade }, { onConflict: 'term_exam_id,student_id,subject_id' });
+      .upsert({ term_exam_id: result.termExamId, student_id: result.studentId, subject_id: result.subjectId, marks: result.marks, grade: result.grade, is_absent: result.isAbsent ?? false }, { onConflict: 'term_exam_id,student_id,subject_id' });
     if (error) { toast.error('Failed to save result'); return; }
     queryClient.invalidateQueries({ queryKey: ['termExamResults', tuitionId] });
   };
 
-  const bulkAddTermExamResults = async (results: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string }[]) => {
-    const toInsert = results.map(r => ({ term_exam_id: r.termExamId, student_id: r.studentId, subject_id: r.subjectId, marks: r.marks, grade: r.grade }));
+  const bulkAddTermExamResults = async (results: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string; isAbsent?: boolean }[]) => {
+    const toInsert = results.map(r => ({ term_exam_id: r.termExamId, student_id: r.studentId, subject_id: r.subjectId, marks: r.marks, grade: r.grade, is_absent: r.isAbsent ?? false }));
     for (let i = 0; i < toInsert.length; i += CHUNK_SIZE) {
       const { error } = await supabase.from('term_exam_results').upsert(toInsert.slice(i, i + CHUNK_SIZE), { onConflict: 'term_exam_id,student_id,subject_id' });
       if (error) { toast.error('Failed to save results'); return false; }
