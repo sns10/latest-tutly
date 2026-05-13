@@ -681,6 +681,8 @@ export function EnterMarksDialog({
                   const existingMark = getExistingMark(student.id);
                   const currentMark = marks[student.id];
                   const hasResult = existingMark !== undefined;
+                  const existingAbsent = getExistingAbsent(student.id);
+                  const isAbsentChecked = absentMap[student.id] ?? (hasResult && existingAbsent);
                   
                   return (
                     <div key={student.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
@@ -691,12 +693,20 @@ export function EnterMarksDialog({
                       
                       {hasResult && (
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-xs">
-                            {existingMark}/{test.maxMarks}
-                          </Badge>
-                          <span className="text-xs sm:text-sm text-green-600">
-                            {Math.round((existingMark / test.maxMarks) * 100)}%
-                          </span>
+                          {existingAbsent ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">
+                              Absent
+                            </Badge>
+                          ) : (
+                            <>
+                              <Badge variant="outline" className="bg-green-50 text-xs">
+                                {existingMark}/{test.maxMarks}
+                              </Badge>
+                              <span className="text-xs sm:text-sm text-green-600">
+                                {Math.round((existingMark / test.maxMarks) * 100)}%
+                              </span>
+                            </>
+                          )}
                         </div>
                       )}
                       
@@ -709,15 +719,24 @@ export function EnterMarksDialog({
                           type="text"
                           inputMode="decimal"
                           pattern="[0-9]*\.?[0-9]*"
-                          placeholder={hasResult ? existingMark.toString() : "0"}
-                          value={getInputValue(student.id)}
+                          placeholder={hasResult && !existingAbsent ? existingMark.toString() : "0"}
+                          value={isAbsentChecked ? '' : getInputValue(student.id)}
                           onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                          className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
+                          disabled={isAbsentChecked}
+                          className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center disabled:opacity-50"
                         />
                         <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
                       </div>
+
+                      <label className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer select-none">
+                        <Checkbox
+                          checked={isAbsentChecked}
+                          onCheckedChange={(v) => toggleAbsent(student.id, v === true)}
+                        />
+                        <span className="text-muted-foreground">Absent</span>
+                      </label>
                       
-                      {currentMark !== undefined && (
+                      {currentMark !== undefined && !isAbsentChecked && (
                         <div className="flex items-center gap-1">
                           {(currentMark / test.maxMarks) * 100 >= 80 && (
                             <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
