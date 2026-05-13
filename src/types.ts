@@ -80,6 +80,7 @@ export interface StudentTestResult {
   testId: string;
   studentId: string;
   marks: number;
+  isAbsent?: boolean;
 }
 
 // New types for challenges and announcements
@@ -175,6 +176,7 @@ export interface TermExamResult {
   subjectId: string;
   marks?: number;
   grade?: string;
+  isAbsent?: boolean;
   createdAt: string;
   updatedAt: string;
 }
