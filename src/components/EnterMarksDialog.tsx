@@ -764,7 +764,7 @@ export function EnterMarksDialog({
                   Download Template
                 </Button>
                 <span className="text-xs sm:text-sm text-muted-foreground">
-                  Student IDs pre-filled. Enter marks (e.g., 85) OR grades (A+, A, B+, B, C+, C, D, F)
+                  Student IDs pre-filled. Enter marks (e.g., 85), grades (A+, A, B+, …, F), or "AB" for absent.
                 </span>
               </div>
 
