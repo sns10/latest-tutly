@@ -602,6 +602,8 @@ export function EnterTermExamMarksDialog({
                   {filteredStudents.map(student => {
                     const existingMark = getExistingMark(student.id);
                     const maxMarks = selectedExamSubject?.maxMarks || 100;
+                    const existingAbsent = getExistingAbsent(student.id);
+                    const isAbsentChecked = (absentBySubject[selectedSubjectId]?.[student.id]) ?? (existingMark !== undefined && existingAbsent);
 
                     return (
                       <div key={student.id} className="flex items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
@@ -613,9 +615,13 @@ export function EnterTermExamMarksDialog({
                         </div>
 
                         {existingMark !== undefined && (
-                          <Badge variant="outline" className="bg-green-50">
-                            {existingMark}/{maxMarks}
-                          </Badge>
+                          existingAbsent ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700">Absent</Badge>
+                          ) : (
+                            <Badge variant="outline" className="bg-green-50">
+                              {existingMark}/{maxMarks}
+                            </Badge>
+                          )
                         )}
 
                         <div className="flex items-center gap-1 shrink-0">
@@ -623,13 +629,22 @@ export function EnterTermExamMarksDialog({
                             type="text"
                             inputMode="decimal"
                             pattern="[0-9]*\.?[0-9]*"
-                            placeholder={existingMark?.toString() || "0"}
-                            value={getInputValue(student.id)}
+                            placeholder={!existingAbsent ? (existingMark?.toString() || "0") : "0"}
+                            value={isAbsentChecked ? '' : getInputValue(student.id)}
                             onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                            className="w-16 h-10 text-base text-center"
+                            disabled={isAbsentChecked}
+                            className="w-16 h-10 text-base text-center disabled:opacity-50"
                           />
                           <span className="text-sm text-muted-foreground">/{maxMarks}</span>
                         </div>
+
+                        <label className="flex items-center gap-1.5 text-xs cursor-pointer select-none shrink-0">
+                          <Checkbox
+                            checked={isAbsentChecked}
+                            onCheckedChange={(v) => toggleAbsent(student.id, v === true)}
+                          />
+                          <span className="text-muted-foreground">Absent</span>
+                        </label>
                       </div>
                     );
                   })}
