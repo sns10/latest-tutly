@@ -235,6 +235,9 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
                         </div>
                         <div className="text-right shrink-0">
                           {result ? (
+                            result.isAbsent ? (
+                              <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">Absent</Badge>
+                            ) : (
                             <>
                               <div className="font-semibold text-sm">
                                 {result.marks}/{test.maxMarks}
@@ -243,6 +246,7 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
                                 {Math.round(percentage!)}%
                               </Badge>
                             </>
+                            )
                           ) : (
                             <Badge variant="outline" className="text-xs">Not taken</Badge>
                           )}
