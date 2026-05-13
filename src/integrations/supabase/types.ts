@@ -801,6 +801,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_absent: boolean
           marks: number
           student_id: string | null
           test_id: string | null
@@ -808,6 +809,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_absent?: boolean
           marks: number
           student_id?: string | null
           test_id?: string | null
@@ -815,6 +817,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_absent?: boolean
           marks?: number
           student_id?: string | null
           test_id?: string | null
@@ -992,6 +995,7 @@ export type Database = {
           created_at: string
           grade: string | null
           id: string
+          is_absent: boolean
           marks: number | null
           student_id: string
           subject_id: string
@@ -1002,6 +1006,7 @@ export type Database = {
           created_at?: string
           grade?: string | null
           id?: string
+          is_absent?: boolean
           marks?: number | null
           student_id: string
           subject_id: string
@@ -1012,6 +1017,7 @@ export type Database = {
           created_at?: string
           grade?: string | null
           id?: string
+          is_absent?: boolean
           marks?: number | null
           student_id?: string
           subject_id?: string
