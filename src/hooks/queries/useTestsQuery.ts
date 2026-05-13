@@ -62,7 +62,7 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string, o
 
       let query = supabase
         .from('student_test_results')
-        .select('test_id, student_id, marks, weekly_tests!inner(tuition_id, test_date)')
+        .select('test_id, student_id, marks, is_absent, weekly_tests!inner(tuition_id, test_date)')
         .eq('weekly_tests.tuition_id', tuitionId);
 
       if (testId) {
@@ -93,6 +93,7 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string, o
         testId: r.test_id,
         studentId: r.student_id,
         marks: Number(r.marks),
+        isAbsent: !!r.is_absent,
       })) as StudentTestResult[];
     },
     enabled: !!tuitionId,
@@ -165,6 +166,7 @@ export function useAddTestResultMutation(tuitionId: string | null) {
           test_id: result.testId,
           student_id: result.studentId,
           marks: result.marks,
+          is_absent: result.isAbsent ?? false,
         }, { onConflict: 'test_id,student_id' });
 
       if (error) throw error;
@@ -190,6 +192,7 @@ export function useAddTestResultsBatchMutation(tuitionId: string | null) {
         test_id: result.testId,
         student_id: result.studentId,
         marks: result.marks,
+        is_absent: result.isAbsent ?? false,
       }));
 
       const { error } = await supabase
