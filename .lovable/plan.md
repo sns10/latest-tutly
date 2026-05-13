@@ -1,61 +1,83 @@
-## Add Division Selection to Weekly Tests
+# Fix decimal marks + add "Absent" marking for tests
 
-Currently a weekly test is tied to a `class` only. When two divisions of the same class write different tests on the same day, there's no way to separate them. We'll let each test optionally target a specific division (defaulting to "All Divisions" for backward compatibility).
+## Part 1 — Bug fix: decimal marks (e.g. 19.5) silently fail to save
 
-### 1. Database
-New migration on `weekly_tests`:
-- Add nullable `division_id uuid` column.
-- `NULL` = test applies to all divisions of that class (existing rows stay valid — zero-impact backfill).
-- No FK constraint needed (matches the project's existing pattern where `students.division_id` is unconstrained).
-
-### 2. Types
-- `src/types.ts` → `WeeklyTest` gains `divisionId?: string`.
-
-### 3. Create Test Dialog (`src/components/CreateTestDialog.tsx`)
-- Accept `divisions: Division[]` prop.
-- Add a **Division** select between Class and Subject:
-  - Options: "All Divisions" + divisions filtered by selected class.
-  - Hidden / forced to "All" when `class === "All"`.
-  - Resets when class changes (prevents stale division from another class).
-- Include `divisionId` in submitted payload.
-
-### 4. Data layer (`src/hooks/queries/useTestsQuery.ts`)
-- `useWeeklyTestsQuery`: map `division_id` → `divisionId` in the returned object.
-- `useAddWeeklyTestMutation`: insert `division_id: newTest.divisionId ?? null`.
-
-### 5. Weekly Test Manager (`src/components/WeeklyTestManager.tsx`)
-- Pass `divisions` to `CreateTestDialog`.
-- `getTestStats`: when `test.divisionId` is set, also filter `eligibleStudents` by `s.divisionId === test.divisionId`.
-- Show a Division badge on each test card (e.g. "Div A") when set.
-- Pass division-filtered student list to `TestResultsView` and `EnterMarksDialog`.
-
-### 6. Enter Marks Dialog (`src/components/EnterMarksDialog.tsx`)
-- If `test.divisionId` is set: pre-filter students to that division and hide the division filter dropdown (already exists as a client-side filter, so we just lock it).
-- If unset: behave exactly as today.
-
-### 7. Backward compatibility & safety
-- All existing tests have `division_id = NULL` → they continue to include all students of the class. No data migration needed, no breakage in marks already entered (results are linked by `test_id` + `student_id`).
-- Reports (`ConsolidatedTestReport`, `TestResultsView`) keep working: students list is already passed in from the parent, which we'll narrow correctly.
-- RLS unchanged (still scoped by `tuition_id`).
-
-### Files touched
+Database logs show:
 ```
-supabase migration             (add weekly_tests.division_id)
+ERROR: invalid input syntax for type integer: "19.5"
+```
+
+`student_test_results.marks` and `term_exam_results.marks` are `integer`, but the UI accepts decimals via `parseFloat`. Half-marks are common (19.5 / 4.5) and currently get rejected with only a generic "Failed to save" toast.
+
+**Fix:** widen marks/max-marks columns to `numeric(6,2)`:
+- `student_test_results.marks`
+- `term_exam_results.marks`
+- `weekly_tests.max_marks`
+- `term_exam_subjects.max_marks`
+
+Integer → numeric is a safe widening cast. No code change needed in queries (already uses `Number(...)` / `parseFloat`).
+
+## Part 2 — New feature: mark a student as Absent for a test
+
+Today the only way to "skip" a student is to leave the field blank, which means "not entered yet" — indistinguishable from absent. Teachers want an explicit Absent state for accurate reports/averages.
+
+### Database
+Add nullable column to both result tables:
+- `student_test_results.is_absent boolean DEFAULT false`
+- `term_exam_results.is_absent boolean DEFAULT false`
+
+When `is_absent = true`, `marks` is forced to `0` server-side via a trigger (so existing reports keep summing correctly without crashing on NULL). Reports/averages will treat absentees as 0 — same as today's behaviour for missing entries — but now it's explicit and visible.
+
+### Types
+- `StudentTestResult` gains `isAbsent?: boolean` in `src/types.ts`.
+
+### EnterMarksDialog (`src/components/EnterMarksDialog.tsx`)
+Per student row, add a small **"Absent"** toggle/checkbox next to the marks input:
+- When ticked: input is disabled and greyed out, marks set to 0, `isAbsent = true`.
+- When unticked: input enabled, behave as today.
+- Existing absent results show with the toggle pre-checked and an "AB" badge.
+- Bulk Excel import: accept `"AB"` / `"Absent"` / `"A"` (case-insensitive) in the Marks/Grade column → `isAbsent = true, marks = 0`.
+- Template download includes a note explaining "AB" usage.
+
+### EnterTermExamMarksDialog (`src/components/term-exams/EnterTermExamMarksDialog.tsx` + `StudentWiseMarksEntry.tsx`)
+Same Absent toggle for each subject row.
+
+### Mutations (`useTestsQuery.ts`, `useTermExamData.ts`)
+- `useAddTestResultMutation` / `useAddTestResultsBatchMutation`: include `is_absent` in upsert.
+- Term exam equivalents: same.
+
+### Display
+- `TestResultsView` and Student Portal results: render "Absent" badge instead of "0" when `is_absent = true`.
+- Reports (`ConsolidatedTestReport`, `TermExamReport`, `StudentReportCard`): show "AB" in the marks cell for absent entries; still count as 0 in totals/averages (no behaviour change vs. today, just clearer labelling).
+- Class average computation: unchanged (absent = 0). If the user later wants "exclude absentees from average" we can add it as a follow-up.
+
+## Files touched
+
+```
+supabase migration (alter columns + add is_absent + trigger)
 src/types.ts
-src/components/CreateTestDialog.tsx
-src/components/WeeklyTestManager.tsx
-src/components/EnterMarksDialog.tsx
 src/hooks/queries/useTestsQuery.ts
+src/hooks/useTermExamData.ts
+src/components/EnterMarksDialog.tsx
+src/components/term-exams/EnterTermExamMarksDialog.tsx
+src/components/term-exams/StudentWiseMarksEntry.tsx
+src/components/TestResultsView.tsx
+src/components/reports/ConsolidatedTestReport.tsx
+src/components/reports/TermExamReport.tsx
+src/components/reports/StudentReportCard.tsx
+src/components/student-portal/* (results view)
+.lovable/plan.md (update context)
 ```
 
-### Follow-up fix
-The Division selector was not appearing on the `/tests` page because `src/pages/Tests.tsx` (and `QuickActions` on the dashboard) instantiated `CreateTestDialog` without passing the `divisions` prop. Fixed by forwarding `divisions` from both call sites — `CreateTestDialog` already filters divisions by the selected class and shows the dropdown.
+## Backward compatibility
 
-### Final fix
-Selecting a specific class in `CreateTestDialog` was still crashing the page before the Division field could appear. The cause was the dialog re-render path around the conditional Radix Select mount/unmount for Division while the Class select state changed. Fixed by making the Class select fully controlled, resetting dependent fields safely (`subject`, `divisionId`), and keeping the Division field mounted while only hiding/disabling it when class is `All` or no divisions exist.
+- All existing rows get `is_absent = false` by default → zero behavioural change for entered marks.
+- Decimal widening is a superset of integer → all existing values remain valid.
+- RLS policies unchanged.
 
-Files additionally touched:
-- src/pages/Tests.tsx
-- src/components/QuickActions.tsx
-- src/pages/Index.tsx
-- src/components/CreateTestDialog.tsx
+## Verification
+
+1. Enter `19.5` → saves successfully (previously failed).
+2. Toggle a student to Absent → input disables, "AB" persists, reload shows AB.
+3. Bulk import row with `AB` → student saved as absent.
+4. Reports list shows AB for that student; class average unchanged.

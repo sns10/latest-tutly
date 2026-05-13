@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Trophy, TrendingUp, Upload, Download, Search, Loader2, WifiOff, FileWarning } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -53,6 +54,7 @@ export function EnterMarksDialog({
   const [isOpen, setIsOpen] = useState(false);
   const [marks, setMarks] = useState<{ [studentId: string]: number }>({});
   const [rawInputs, setRawInputs] = useState<{ [studentId: string]: string }>({});
+  const [absentMap, setAbsentMap] = useState<{ [studentId: string]: boolean }>({});
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreviewData, setBulkPreviewData] = useState<any[]>([]);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
@@ -136,6 +138,13 @@ export function EnterMarksDialog({
   }, [classFilteredStudents, selectedDivision, searchQuery]);
 
   const handleMarkChange = (studentId: string, value: string) => {
+    // Editing marks clears absent flag
+    if (absentMap[studentId]) {
+      setAbsentMap(prev => {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      });
+    }
     // Always update raw input to allow free typing
     setRawInputs(prev => ({ ...prev, [studentId]: value }));
     
@@ -151,6 +160,27 @@ export function EnterMarksDialog({
     const numValue = parseFloat(value);
     if (!isNaN(numValue) && numValue >= 0 && numValue <= test.maxMarks) {
       setMarks(prev => ({ ...prev, [studentId]: numValue }));
+    }
+  };
+
+  const toggleAbsent = (studentId: string, value: boolean) => {
+    setAbsentMap(prev => {
+      const next = { ...prev };
+      if (value) next[studentId] = true; else delete next[studentId];
+      return next;
+    });
+    if (value) {
+      // Mark as absent: store 0 marks, clear raw input
+      setMarks(prev => ({ ...prev, [studentId]: 0 }));
+      setRawInputs(prev => {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      });
+    } else {
+      setMarks(prev => {
+        const { [studentId]: _, ...rest } = prev;
+        return rest;
+      });
     }
   };
 
@@ -195,11 +225,13 @@ export function EnterMarksDialog({
     const resultsToAdd: StudentTestResult[] = [];
     
     Object.entries(marks).forEach(([studentId, markValue]) => {
-      if (markValue >= 0 && markValue <= test.maxMarks) {
+      const isAbsent = !!absentMap[studentId];
+      if (isAbsent || (markValue >= 0 && markValue <= test.maxMarks)) {
         resultsToAdd.push({
           testId: test.id,
           studentId,
-          marks: markValue
+          marks: isAbsent ? 0 : markValue,
+          isAbsent,
         });
       }
     });
@@ -311,6 +343,13 @@ export function EnterMarksDialog({
     return -1; // Invalid grade
   };
 
+  // Detect "absent" tokens in bulk import (AB / A / Absent, case-insensitive)
+  const isAbsentToken = (input: string | number): boolean => {
+    if (typeof input === 'number') return false;
+    const t = String(input).trim().toUpperCase();
+    return t === 'AB' || t === 'A' || t === 'ABSENT';
+  };
+
   // Parse marks or grade from input
   const parseMarksOrGrade = (input: string | number): number => {
     if (typeof input === 'number') {
@@ -324,6 +363,9 @@ export function EnterMarksDialog({
     if (!isNaN(numValue)) {
       return numValue;
     }
+
+    // Absent token → 0 marks (handled separately as is_absent)
+    if (isAbsentToken(trimmedInput)) return 0;
     
     // Try parsing as grade
     return gradeToMarks(trimmedInput);
@@ -383,9 +425,10 @@ export function EnterMarksDialog({
       if (marksOrGrade === undefined || marksOrGrade === null || marksOrGrade === "") {
         newErrors.push(`Row ${rowNum}: Marks/Grade field is required`);
       } else {
+        if (isAbsentToken(marksOrGrade)) return;
         const markValue = parseMarksOrGrade(marksOrGrade);
         if (markValue < 0 || markValue > test.maxMarks) {
-          newErrors.push(`Row ${rowNum}: Invalid marks/grade - must be a number between 0 and ${test.maxMarks} or a valid grade (A+, A, B+, B, C+, C, D, F)`);
+          newErrors.push(`Row ${rowNum}: Invalid marks/grade - must be a number between 0 and ${test.maxMarks}, a valid grade (A+, A, B+, B, C+, C, D, F), or "AB" for absent`);
         }
       }
     });
@@ -409,12 +452,22 @@ export function EnterMarksDialog({
 
       const marksOrGrade = row["Marks/Grade"] || row["Marks"] || row["Grade"];
       if (student && marksOrGrade !== undefined && marksOrGrade !== "") {
+        if (isAbsentToken(marksOrGrade)) {
+          resultsToAdd.push({
+            testId: test.id,
+            studentId: student.id,
+            marks: 0,
+            isAbsent: true,
+          });
+          return;
+        }
         const markValue = parseMarksOrGrade(marksOrGrade);
         if (markValue >= 0 && markValue <= test.maxMarks) {
           resultsToAdd.push({
             testId: test.id,
             studentId: student.id,
-            marks: markValue
+            marks: markValue,
+            isAbsent: false,
           });
         }
       }
@@ -491,6 +544,11 @@ export function EnterMarksDialog({
   const getExistingMark = (studentId: string) => {
     const existing = existingResults.find(r => r.studentId === studentId && r.testId === test.id);
     return existing ? existing.marks : undefined;
+  };
+
+  const getExistingAbsent = (studentId: string): boolean => {
+    const existing = existingResults.find(r => r.studentId === studentId && r.testId === test.id);
+    return !!existing?.isAbsent;
   };
 
   const completedCount = existingResults.filter(r => 
@@ -623,6 +681,8 @@ export function EnterMarksDialog({
                   const existingMark = getExistingMark(student.id);
                   const currentMark = marks[student.id];
                   const hasResult = existingMark !== undefined;
+                  const existingAbsent = getExistingAbsent(student.id);
+                  const isAbsentChecked = absentMap[student.id] ?? (hasResult && existingAbsent);
                   
                   return (
                     <div key={student.id} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 p-2 sm:p-3 rounded-lg border">
@@ -633,12 +693,20 @@ export function EnterMarksDialog({
                       
                       {hasResult && (
                         <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-xs">
-                            {existingMark}/{test.maxMarks}
-                          </Badge>
-                          <span className="text-xs sm:text-sm text-green-600">
-                            {Math.round((existingMark / test.maxMarks) * 100)}%
-                          </span>
+                          {existingAbsent ? (
+                            <Badge variant="outline" className="bg-red-50 text-red-700 text-xs">
+                              Absent
+                            </Badge>
+                          ) : (
+                            <>
+                              <Badge variant="outline" className="bg-green-50 text-xs">
+                                {existingMark}/{test.maxMarks}
+                              </Badge>
+                              <span className="text-xs sm:text-sm text-green-600">
+                                {Math.round((existingMark / test.maxMarks) * 100)}%
+                              </span>
+                            </>
+                          )}
                         </div>
                       )}
                       
@@ -651,15 +719,24 @@ export function EnterMarksDialog({
                           type="text"
                           inputMode="decimal"
                           pattern="[0-9]*\.?[0-9]*"
-                          placeholder={hasResult ? existingMark.toString() : "0"}
-                          value={getInputValue(student.id)}
+                          placeholder={hasResult && !existingAbsent ? existingMark.toString() : "0"}
+                          value={isAbsentChecked ? '' : getInputValue(student.id)}
                           onChange={(e) => handleMarkChange(student.id, e.target.value)}
-                          className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center"
+                          disabled={isAbsentChecked}
+                          className="w-16 sm:w-20 h-10 text-base sm:text-sm text-center disabled:opacity-50"
                         />
                         <span className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">/{test.maxMarks}</span>
                       </div>
+
+                      <label className="flex items-center gap-1.5 text-xs sm:text-sm cursor-pointer select-none">
+                        <Checkbox
+                          checked={isAbsentChecked}
+                          onCheckedChange={(v) => toggleAbsent(student.id, v === true)}
+                        />
+                        <span className="text-muted-foreground">Absent</span>
+                      </label>
                       
-                      {currentMark !== undefined && (
+                      {currentMark !== undefined && !isAbsentChecked && (
                         <div className="flex items-center gap-1">
                           {(currentMark / test.maxMarks) * 100 >= 80 && (
                             <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-500" />
@@ -687,7 +764,7 @@ export function EnterMarksDialog({
                   Download Template
                 </Button>
                 <span className="text-xs sm:text-sm text-muted-foreground">
-                  Student IDs pre-filled. Enter marks (e.g., 85) OR grades (A+, A, B+, B, C+, C, D, F)
+                  Student IDs pre-filled. Enter marks (e.g., 85), grades (A+, A, B+, …, F), or "AB" for absent.
                 </span>
               </div>
 
