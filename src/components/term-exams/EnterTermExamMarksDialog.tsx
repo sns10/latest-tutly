@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Edit, Upload, Download, FileText, Loader2, WifiOff, FileWarning } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from 'xlsx';
@@ -59,12 +60,14 @@ export function EnterTermExamMarksDialog({
   // Subject-scoped marks and raw inputs to prevent wrong-subject save bug
   const [marksBySubject, setMarksBySubject] = useState<{ [subjectId: string]: { [studentId: string]: number } }>({});
   const [rawInputsBySubject, setRawInputsBySubject] = useState<{ [subjectId: string]: { [studentId: string]: string } }>({});
+  // Track which students are marked absent per subject (only for the current edit session)
+  const [absentBySubject, setAbsentBySubject] = useState<{ [subjectId: string]: { [studentId: string]: boolean } }>({});
   
   const [bulkFile, setBulkFile] = useState<File | null>(null);
   const [bulkPreviewData, setBulkPreviewData] = useState<any[]>([]);
   const [bulkErrors, setBulkErrors] = useState<string[]>([]);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
-  const [pendingResults, setPendingResults] = useState<{ termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string }[]>([]);
+  const [pendingResults, setPendingResults] = useState<{ termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string; isAbsent?: boolean }[]>([]);
   const [isBulkConfirm, setIsBulkConfirm] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [showDraftBanner, setShowDraftBanner] = useState(false);
@@ -142,6 +145,16 @@ export function EnterTermExamMarksDialog({
 
   const handleMarkChange = (studentId: string, value: string) => {
     if (!selectedSubjectId) return;
+
+    // Editing marks clears absent flag for this student/subject
+    setAbsentBySubject(prev => {
+      const subj = { ...(prev[selectedSubjectId] || {}) };
+      if (subj[studentId]) {
+        delete subj[studentId];
+        return { ...prev, [selectedSubjectId]: subj };
+      }
+      return prev;
+    });
     
     // Always update raw input to allow free typing
     setRawInputsBySubject(prev => ({
@@ -178,6 +191,33 @@ export function EnterTermExamMarksDialog({
     }
   };
 
+  const toggleAbsent = (studentId: string, value: boolean) => {
+    if (!selectedSubjectId) return;
+    setAbsentBySubject(prev => {
+      const subj = { ...(prev[selectedSubjectId] || {}) };
+      if (value) subj[studentId] = true; else delete subj[studentId];
+      return { ...prev, [selectedSubjectId]: subj };
+    });
+    if (value) {
+      // Force marks to 0 so it gets included in submit
+      setMarksBySubject(prev => ({
+        ...prev,
+        [selectedSubjectId]: { ...(prev[selectedSubjectId] || {}), [studentId]: 0 },
+      }));
+      setRawInputsBySubject(prev => {
+        const subj = { ...(prev[selectedSubjectId] || {}) };
+        delete subj[studentId];
+        return { ...prev, [selectedSubjectId]: subj };
+      });
+    } else {
+      setMarksBySubject(prev => {
+        const subj = { ...(prev[selectedSubjectId] || {}) };
+        delete subj[studentId];
+        return { ...prev, [selectedSubjectId]: subj };
+      });
+    }
+  };
+
   // Get display value for input - prefer raw input for typing, fall back to marks
   const getInputValue = (studentId: string): string => {
     if (rawInputs[studentId] !== undefined) {
@@ -194,23 +234,33 @@ export function EnterTermExamMarksDialog({
     return existing?.marks;
   };
 
+  const getExistingAbsent = (studentId: string): boolean => {
+    const existing = existingResults.find(
+      r => r.studentId === studentId && r.subjectId === selectedSubjectId
+    );
+    return !!existing?.isAbsent;
+  };
+
   const handleSubmit = () => {
     if (!selectedSubjectId) {
       toast.error("Please select a subject");
       return;
     }
 
-    const resultsToAdd: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string }[] = [];
+    const resultsToAdd: { termExamId: string; studentId: string; subjectId: string; marks?: number; grade?: string; isAbsent?: boolean }[] = [];
     const currentMarks = marksBySubject[selectedSubjectId] || {};
+    const currentAbsent = absentBySubject[selectedSubjectId] || {};
     
     Object.entries(currentMarks).forEach(([studentId, markValue]) => {
       const maxMarks = selectedExamSubject?.maxMarks || 100;
-      if (markValue >= 0 && markValue <= maxMarks) {
+      const isAbsent = !!currentAbsent[studentId];
+      if (isAbsent || (markValue >= 0 && markValue <= maxMarks)) {
         resultsToAdd.push({
           termExamId: exam.id,
           studentId,
-          subjectId: selectedSubjectId, // Always use the subject ID that was selected when marks were entered
-          marks: markValue,
+          subjectId: selectedSubjectId,
+          marks: isAbsent ? 0 : markValue,
+          isAbsent,
         });
       }
     });
