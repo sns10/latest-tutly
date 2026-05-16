@@ -1,10 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, AlertTriangle, CheckCircle, XCircle } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 
 export function TermsOfService() {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
+      <SEO
+        title="Terms of Service — Upskillr Tutly"
+        description="The terms governing use of Upskillr Tutly, the tuition center management platform for admins, faculty, students, and parents."
+        path="/terms"
+      />
       <Card>
         <CardHeader className="text-center">
           <div className="mx-auto p-3 rounded-full bg-primary/10 w-fit mb-4">
