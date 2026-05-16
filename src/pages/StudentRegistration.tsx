@@ -18,6 +18,7 @@ import { ClassName } from "@/types";
 import { Loader2, CheckCircle, GraduationCap, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
+import { SEO } from "@/components/SEO";
 
 const classNames: ClassName[] = ["4th", "5th", "6th", "7th", "8th", "9th", "10th", "11th", "12th"];
 const genders = ["Male", "Female", "Other"];
@@ -277,6 +278,11 @@ export default function StudentRegistration() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 to-primary/10 py-8 px-4">
+      <SEO
+        title={tuition?.name ? `${tuition.name} — Student Registration` : "Student Registration"}
+        description={`Register as a new student at ${tuition?.name ?? "our tuition center"} on Upskillr Tutly. Quick online enrollment for parents and students.`}
+        path={`/register/${tuitionSlug ?? ""}`}
+      />
       <div className="max-w-2xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
