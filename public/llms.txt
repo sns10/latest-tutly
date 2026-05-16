@@ -1,0 +1,16 @@
+# Upskillr Tutly
+
+> Multi-tenant SaaS platform for tuition and coaching centers to manage students, attendance, fees, tests, term exams, timetables, materials, and parent communication.
+
+Tutly by Upskillr gives tuition admins a single dashboard to run their center, students and parents a portal to track progress, and super admins tools to onboard new centers. The platform covers attendance, fee collection, weekly tests, term exams, reports, scheduling, and gamification.
+
+## Pages
+
+- [Home](/): Product overview and sign-in entry point for tuition admins, students, and parents.
+- [Sign in](/auth): Authentication for tuition admins and student/parent portal accounts.
+- [Privacy Policy](/privacy): How student, parent, and tuition data is collected, used, and protected.
+- [Terms of Service](/terms): Terms governing use of the Upskillr Tutly platform.
+
+## Optional
+
+- [Student Registration](/register/): Public per-tuition registration links — each center has its own slug used by parents to enroll students.
