@@ -1,10 +1,16 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Shield, Lock, Eye, FileText, Mail } from 'lucide-react';
+import { SEO } from '@/components/SEO';
 
 export function PrivacyPolicy() {
   return (
     <div className="w-full max-w-4xl mx-auto px-4 py-8">
+      <SEO
+        title="Privacy Policy — Upskillr Tutly"
+        description="How Upskillr Tutly collects, uses, and protects your tuition center, student, and parent data. Read our complete privacy policy."
+        path="/privacy"
+      />
       <Card>
         <CardHeader className="text-center">
           <div className="mx-auto p-3 rounded-full bg-primary/10 w-fit mb-4">
