@@ -442,18 +442,26 @@ export function EnterMarksDialog({
       return;
     }
 
-    const resultsToAdd: StudentTestResult[] = [];
+    const resultsToAdd = new Map<string, StudentTestResult>();
+    let mergedDuplicateRows = 0;
 
     bulkPreviewData.forEach(row => {
-      // Find student by ID (primary) or name (fallback)
-      const student = classFilteredStudents.find(s => 
-        s.id === row["Student ID"] || s.name === row["Student Name"]
-      );
+      const studentId = row["Student ID"];
+      const studentName = row["Student Name"];
+
+      const studentById = studentId
+        ? classFilteredStudents.find(s => s.id === studentId)
+        : undefined;
+      const studentByName = !studentById && studentName
+        ? classFilteredStudents.find(s => s.name === studentName)
+        : undefined;
+      const student = studentById ?? studentByName;
 
       const marksOrGrade = row["Marks/Grade"] || row["Marks"] || row["Grade"];
       if (student && marksOrGrade !== undefined && marksOrGrade !== "") {
         if (isAbsentToken(marksOrGrade)) {
-          resultsToAdd.push({
+          if (resultsToAdd.has(student.id)) mergedDuplicateRows += 1;
+          resultsToAdd.set(student.id, {
             testId: test.id,
             studentId: student.id,
             marks: 0,
@@ -463,7 +471,8 @@ export function EnterMarksDialog({
         }
         const markValue = parseMarksOrGrade(marksOrGrade);
         if (markValue >= 0 && markValue <= test.maxMarks) {
-          resultsToAdd.push({
+          if (resultsToAdd.has(student.id)) mergedDuplicateRows += 1;
+          resultsToAdd.set(student.id, {
             testId: test.id,
             studentId: student.id,
             marks: markValue,
@@ -473,13 +482,19 @@ export function EnterMarksDialog({
       }
     });
 
-    if (resultsToAdd.length === 0) {
+    const dedupedResults = Array.from(resultsToAdd.values());
+
+    if (dedupedResults.length === 0) {
       toast.error("No valid marks found to import");
       return;
     }
 
+    if (mergedDuplicateRows > 0) {
+      toast.info(`${mergedDuplicateRows} duplicate student row(s) were merged. Kept the last value.`);
+    }
+
     // Show confirmation dialog
-    setPendingResults(resultsToAdd);
+    setPendingResults(dedupedResults);
     setIsBulkConfirm(true);
     setShowConfirmDialog(true);
   };

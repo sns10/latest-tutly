@@ -188,16 +188,23 @@ export function useAddTestResultsBatchMutation(tuitionId: string | null) {
     mutationFn: async (results: StudentTestResult[]) => {
       if (results.length === 0) return;
 
-      const records = results.map(result => ({
-        test_id: result.testId,
-        student_id: result.studentId,
-        marks: result.marks,
-        is_absent: result.isAbsent ?? false,
-      }));
+      const dedupedRecords = Array.from(
+        new Map(
+          results.map((result) => [
+            `${result.testId}:${result.studentId}`,
+            {
+              test_id: result.testId,
+              student_id: result.studentId,
+              marks: result.marks,
+              is_absent: result.isAbsent ?? false,
+            },
+          ])
+        ).values()
+      );
 
       const { error } = await supabase
         .from('student_test_results')
-        .upsert(records, { onConflict: 'test_id,student_id' });
+        .upsert(dedupedRecords, { onConflict: 'test_id,student_id' });
 
       if (error) throw error;
     },
