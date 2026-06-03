@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { WeeklyTest, StudentTestResult, ClassName } from '@/types';
 import { toast } from 'sonner';
-import { getCurrentAcademicYearStart } from '@/lib/dateWindows';
+import { getPreviousAcademicYearStart } from '@/lib/dateWindows';
 
 const STALE_TIME = 10 * 60 * 1000; // 10 minutes
 const GC_TIME = 45 * 60 * 1000; // 45 minutes
@@ -21,7 +21,7 @@ export function useWeeklyTestsQuery(tuitionId: string | null, opts?: { loadHisto
 
       // Default scope: tests from current academic year only.
       if (!opts?.loadHistory) {
-        baseQuery = baseQuery.gte('test_date', getCurrentAcademicYearStart());
+        baseQuery = baseQuery.gte('test_date', getPreviousAcademicYearStart());
       }
 
       const allData: any[] = [];
@@ -68,8 +68,9 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string, o
       if (testId) {
         query = query.eq('test_id', testId);
       } else if (!opts?.loadHistory) {
-        // Default scope: only results for tests in the current academic year.
-        query = query.gte('weekly_tests.test_date', getCurrentAcademicYearStart());
+        // Default scope: include previous academic year so tests from the
+        // year that just ended remain visible right after a new year starts.
+        query = query.gte('weekly_tests.test_date', getPreviousAcademicYearStart());
       }
 
       // Paginate to get ALL results (no blanket limit)
