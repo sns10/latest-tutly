@@ -18,6 +18,17 @@ export function getCurrentAcademicYearStart(today: Date = new Date()): string {
   return `${startYear}-06-01`;
 }
 
+/**
+ * Start of the *previous* academic year. Used as a softer default so that
+ * tests / results from the year that just ended remain visible right after
+ * the new academic year begins (otherwise everything appears empty on June 1).
+ */
+export function getPreviousAcademicYearStart(today: Date = new Date()): string {
+  const current = getCurrentAcademicYearStart(today);
+  const startYear = parseInt(current.slice(0, 4), 10) - 1;
+  return `${startYear}-06-01`;
+}
+
 export function getDefaultAttendanceWindowStart(days = 60, today: Date = new Date()): string {
   const d = new Date(today);
   d.setDate(d.getDate() - days);
