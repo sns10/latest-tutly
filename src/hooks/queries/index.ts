@@ -17,7 +17,11 @@ export { useAttendanceQuery, useTodayAttendanceQuery, useHistoricalAttendanceQue
 export { useFeesQuery, useClassFeesQuery, useAddFeeMutation, useUpdateFeeStatusMutation, useDeleteFeeMutation, useUpdateClassFeeMutation, usePaymentsQuery, useRecordPaymentMutation } from './useFeesQuery';
 
 // Fees batch mutations
-export { useAddFeesBatchMutation } from './useFeesMutations';
+export {
+  useAddFeesBatchMutation,
+  useVoidFeePaymentsMutation,
+  useVoidFeePaymentMutation,
+} from './useFeesMutations';
 
 // Tests queries - loaded on-demand
 export { useWeeklyTestsQuery, useTestResultsQuery, useAddWeeklyTestMutation, useDeleteWeeklyTestMutation, useAddTestResultMutation, useAddTestResultsBatchMutation } from './useTestsQuery';
