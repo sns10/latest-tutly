@@ -200,23 +200,31 @@ export function FeesList({
     const [yearPart, monthPart] = monthStr.split('-').map(Number);
     const dueDate = new Date(yearPart, monthPart - 1, 5);
     const feesToCreate: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>> = [];
+    const targetFeeType = `Monthly Fee - ${monthStr}`;
 
-    students.forEach(student => {
-      const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${monthStr}`);
-      if (!existingFee) {
-        const classFee = classFees.find(cf => cf.class === student.class);
-        const feeAmount = classFee ? classFee.amount : 0;
-        if (feeAmount > 0) {
-          feesToCreate.push({
-            studentId: student.id,
-            feeType: `Monthly Fee - ${monthStr}`,
-            amount: feeAmount,
-            dueDate: dueDate.toISOString().split('T')[0],
-            status: 'unpaid'
-          });
-        }
+    // Pre-build lookup structures so the loop is O(N) instead of O(students × fees).
+    // Prevents UI freeze on tuitions with hundreds of students × months of history.
+    const existingForMonth = new Set<string>();
+    for (const f of fees) {
+      if (f.feeType === targetFeeType) existingForMonth.add(f.studentId);
+    }
+    const classFeeByClass = new Map<string, number>();
+    for (const cf of classFees) classFeeByClass.set(cf.class, cf.amount);
+    const dueDateStr = dueDate.toISOString().split('T')[0];
+
+    for (const student of students) {
+      if (existingForMonth.has(student.id)) continue;
+      const feeAmount = classFeeByClass.get(student.class) || 0;
+      if (feeAmount > 0) {
+        feesToCreate.push({
+          studentId: student.id,
+          feeType: targetFeeType,
+          amount: feeAmount,
+          dueDate: dueDateStr,
+          status: 'unpaid'
+        });
       }
-    });
+    }
 
     if (feesToCreate.length > 0) {
       if (onAddFeesBatch) {
