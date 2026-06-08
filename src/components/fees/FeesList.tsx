@@ -626,7 +626,7 @@ export function FeesList({
                 </SheetDescription>
               </SheetHeader>
               <div className="mt-6">
-                <FilterContent />
+                {filterContent}
               </div>
             </SheetContent>
           </Sheet>
