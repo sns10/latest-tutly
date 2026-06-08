@@ -35,6 +35,14 @@ interface AddCustomFeeDialogProps {
     status: 'unpaid';
     notes?: string;
   }) => void;
+  onAddFeesBatch?: (fees: Array<{
+    studentId: string;
+    feeType: string;
+    amount: number;
+    dueDate: string;
+    status: 'unpaid';
+    notes?: string;
+  }>) => void;
 }
 
 const FEE_TYPES = [
@@ -53,8 +61,10 @@ export function AddCustomFeeDialog({
   open,
   onOpenChange,
   students,
-  onAddFee
+  onAddFee,
+  onAddFeesBatch,
 }: AddCustomFeeDialogProps) {
+  const [submitting, setSubmitting] = useState(false);
   const [applyToClass, setApplyToClass] = useState(false);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedStudent, setSelectedStudent] = useState('');
@@ -77,6 +87,9 @@ export function AddCustomFeeDialog({
   }, [students, selectedClass]);
 
   const handleSubmit = async () => {
+    if (submitting) return;
+    setSubmitting(true);
+    try {
     // Validate fee type
     const finalFeeType = feeType === 'Custom' ? sanitizeString(customFeeType) : feeType;
     if (!finalFeeType) {
@@ -122,18 +135,20 @@ export function AddCustomFeeDialog({
         return;
       }
 
-      for (const student of classStudents) {
-        await onAddFee({
-          studentId: student.id,
-          feeType: finalFeeType,
-          amount: feeAmount,
-          dueDate,
-          status: 'unpaid',
-          notes: notes ? sanitizeString(notes) : undefined
-        });
+      const batch = classStudents.map(student => ({
+        studentId: student.id,
+        feeType: finalFeeType,
+        amount: feeAmount,
+        dueDate,
+        status: 'unpaid' as const,
+        notes: notes ? sanitizeString(notes) : undefined,
+      }));
+      if (onAddFeesBatch) {
+        onAddFeesBatch(batch);
+      } else {
+        batch.forEach(b => onAddFee(b));
+        toast.success(`Fee added for ${classStudents.length} students in ${selectedClass}`);
       }
-
-      toast.success(`Fee added for ${classStudents.length} students in ${selectedClass}`);
     } else {
       if (!selectedStudent) {
         toast.error('Please select a student');
@@ -162,6 +177,9 @@ export function AddCustomFeeDialog({
     setDueDate('');
     setNotes('');
     onOpenChange(false);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const getDefaultDueDate = () => {
@@ -324,11 +342,11 @@ export function AddCustomFeeDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit}>
-            {applyToClass ? `Add Fee to Class` : 'Add Fee'}
+          <Button onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Saving...' : (applyToClass ? `Add Fee to Class` : 'Add Fee')}
           </Button>
         </DialogFooter>
       </DialogContent>
