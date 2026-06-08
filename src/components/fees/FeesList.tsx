@@ -456,6 +456,12 @@ export function FeesList({
     return divisions.filter(d => d.class === selectedClass);
   }, [divisions, selectedClass]);
 
+  // Memoize the unpaid-fees list passed to the WhatsApp reminder dialog.
+  const reminderUnpaidFees = useMemo(() => {
+    if (!selectedStudentForReminder) return [] as StudentFee[];
+    return fees.filter(f => f.studentId === selectedStudentForReminder.id && f.status !== 'paid');
+  }, [fees, selectedStudentForReminder]);
+
   const clearFilters = () => {
     setSelectedMonth(getCurrentMonth());
     setSelectedClass('All');
