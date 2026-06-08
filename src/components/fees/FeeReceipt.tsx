@@ -610,10 +610,22 @@ Thank you for your payment!`;
                   </td>
                   <td className="border p-2 text-right">₹{fee.amount.toLocaleString('en-IN')}</td>
                 </tr>
+                {priorPaid > 0 && (
+                  <tr>
+                    <td className="border p-2 text-muted-foreground">Previously Paid</td>
+                    <td className="border p-2 text-right text-muted-foreground">- ₹{priorPaid.toLocaleString('en-IN')}</td>
+                  </tr>
+                )}
                 <tr className="amount-row font-bold text-base">
-                  <td className="border p-2 bg-muted/50">Amount Paid</td>
+                  <td className="border p-2 bg-muted/50">This Payment</td>
                   <td className="border p-2 text-right bg-muted/50">₹{payment.amount.toLocaleString('en-IN')}</td>
                 </tr>
+                {(priorPaid > 0 || balanceAfter > 0) && (
+                  <tr>
+                    <td className="border p-2 text-yellow-700">Balance After</td>
+                    <td className="border p-2 text-right text-yellow-700">₹{balanceAfter.toLocaleString('en-IN')}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
