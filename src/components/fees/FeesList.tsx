@@ -471,8 +471,11 @@ export function FeesList({
     setSearchQuery('');
   };
 
-  // Filter component (reusable)
-  const FilterContent = () => (
+  // Filter panel JSX — assembled as a memoized node (NOT a component) so React
+  // does not unmount/remount the entire subtree on every render of FeesList.
+  // Defining a component inside another component's body would change the
+  // component type identity on each render and tear down all child Selects.
+  const filterContent = (
     <div className="space-y-4">
       <div className="space-y-3">
         <div>
