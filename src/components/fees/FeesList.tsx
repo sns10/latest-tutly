@@ -169,26 +169,26 @@ export function FeesList({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  function generateMonthlyFees() {
+  function generateMonthlyFees(targetMonth?: string) {
     if (classFees.length === 0 || classFees.every(cf => cf.amount === 0)) {
       toast.error('Please set class fees first');
       return;
     }
 
-    const currentMonth = getCurrentMonth();
-    const currentYear = new Date().getFullYear();
+    const monthStr = targetMonth || getCurrentMonth();
+    const [yearPart, monthPart] = monthStr.split('-').map(Number);
+    const dueDate = new Date(yearPart, monthPart - 1, 5);
     const feesToCreate: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>> = [];
 
     students.forEach(student => {
-      const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${currentMonth}`);
+      const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${monthStr}`);
       if (!existingFee) {
         const classFee = classFees.find(cf => cf.class === student.class);
         const feeAmount = classFee ? classFee.amount : 0;
         if (feeAmount > 0) {
-          const dueDate = new Date(currentYear, new Date().getMonth(), 5);
           feesToCreate.push({
             studentId: student.id,
-            feeType: `Monthly Fee - ${currentMonth}`,
+            feeType: `Monthly Fee - ${monthStr}`,
             amount: feeAmount,
             dueDate: dueDate.toISOString().split('T')[0],
             status: 'unpaid'
@@ -206,7 +206,7 @@ export function FeesList({
         toast.success(`Generated fees for ${feesToCreate.length} students`);
       }
     } else {
-      toast.info('All students already have fees for this month');
+      toast.info('All students already have fees for the selected month');
     }
   }
 
