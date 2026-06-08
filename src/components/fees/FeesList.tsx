@@ -425,7 +425,7 @@ export function FeesList({
               <SelectValue placeholder="Month" />
             </SelectTrigger>
             <SelectContent>
-              {getAvailableMonths().map(month => (
+              {availableMonths.map(month => (
                 <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
               ))}
             </SelectContent>
@@ -587,7 +587,7 @@ export function FeesList({
                 <SelectValue placeholder="Month" />
               </SelectTrigger>
               <SelectContent>
-                {getAvailableMonths().map(month => (
+                {availableMonths.map(month => (
                   <SelectItem key={month.value} value={month.value}>{month.label}</SelectItem>
                 ))}
               </SelectContent>
@@ -636,7 +636,7 @@ export function FeesList({
         <div className="md:hidden flex flex-wrap gap-2">
           {selectedMonth !== getCurrentMonth() && (
             <Badge variant="secondary" className="gap-1">
-              Month: {getAvailableMonths().find(m => m.value === selectedMonth)?.label.split(' ')[0]}
+              Month: {availableMonths.find(m => m.value === selectedMonth)?.label.split(' ')[0]}
               <button onClick={() => setSelectedMonth(getCurrentMonth())} className="ml-1">
                 <X className="h-3 w-3" />
               </button>
