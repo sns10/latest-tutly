@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { StudentFee } from '@/types';
 import {
   Dialog,
@@ -41,6 +41,8 @@ interface FeeReceiptProps {
   payment: FeePayment;
   tuition: TuitionInfo | null;
   receiptNumber?: string;
+  /** All payments on this fee (including this one). Used to show "Previously Paid" + "Balance" rows. */
+  existingPayments?: FeePayment[];
 }
 
 const formatPaymentMethod = (method: string) => {
@@ -107,8 +109,18 @@ export function FeeReceipt({
   payment,
   tuition,
   receiptNumber,
+  existingPayments = [],
 }: FeeReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Compute prior-payment context for partial-payment receipts.
+  const { priorPaid, balanceAfter } = useMemo(() => {
+    const others = existingPayments.filter(p => p.id !== payment.id);
+    const prior = others.reduce((s, p) => s + Number(p.amount || 0), 0);
+    const balance = Math.max(0, Number(fee.amount) - prior - Number(payment.amount || 0));
+    return { priorPaid: prior, balanceAfter: balance };
+  }, [existingPayments, payment, fee.amount]);
 
   // Move this before handlePrint so it's available in the HTML template
   const generatedReceiptNumber = receiptNumber || `RCP-${payment.id.substring(0, 8).toUpperCase()}`;
