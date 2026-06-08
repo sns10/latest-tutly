@@ -309,10 +309,18 @@ export function FeeReceipt({
                     <td>${fee.feeType} - ${new Date(fee.dueDate).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</td>
                     <td style="text-align: right;">₹${fee.amount.toLocaleString('en-IN')}</td>
                   </tr>
+                  ${priorPaid > 0 ? `<tr>
+                    <td style="color: #666;">Previously Paid</td>
+                    <td style="text-align: right; color: #666;">- ₹${priorPaid.toLocaleString('en-IN')}</td>
+                  </tr>` : ''}
                   <tr class="amount-row">
-                    <td>Amount Paid</td>
+                    <td>This Payment</td>
                     <td style="text-align: right;">₹${payment.amount.toLocaleString('en-IN')}</td>
                   </tr>
+                  ${(priorPaid > 0 || balanceAfter > 0) ? `<tr>
+                    <td style="color: #b45309;">Balance After</td>
+                    <td style="text-align: right; color: #b45309;">₹${balanceAfter.toLocaleString('en-IN')}</td>
+                  </tr>` : ''}
                 </tbody>
               </table>
             </div>
