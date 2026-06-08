@@ -265,7 +265,7 @@ export function FeesList({
 
   const getTotalPaid = (feeId: string) => totalPaidByFeeId.get(feeId) || 0;
 
-  const handleMarkAsPaid = (feeId: string) => {
+  const handleMarkAsPaid = useCallback((feeId: string) => {
     const fee = fees.find((f) => f.id === feeId);
     const paidDate = new Date().toISOString().split('T')[0];
 
@@ -281,32 +281,19 @@ export function FeesList({
     const remaining = fee.amount - totalPaid;
 
     if (remaining > 0) {
-      const newPayment: FeePayment = {
-        id: `temp-${Date.now()}`,
-        feeId,
-        amount: remaining,
-        paymentDate: paidDate,
-        paymentMethod: 'cash',
-        paymentReference: undefined,
-        notes: 'Marked as paid',
-        createdAt: new Date().toISOString(),
-      };
-
+      // Record the payment first; the receipt will be opened from the freshly-saved
+      // payment row after the mutation invalidates the cache (no temp ids on paper).
       onRecordPayment(feeId, remaining, 'cash', undefined, 'Marked as paid');
-
-      // Show receipt automatically
-      setReceiptFee(fee);
-      setReceiptPayment(newPayment);
-      setReceiptOpen(true);
+      setPendingReceiptFor({ feeId, expectedAt: Date.now() });
       return;
     }
 
     onUpdateFeeStatus(feeId, 'paid', paidDate);
     toast.success('Fee marked as paid');
-  };
+  }, [fees, onUpdateFeeStatus, onRecordPayment, totalPaidByFeeId]);
 
 
-  const handleBulkMarkPaid = () => {
+  const handleBulkMarkPaid = useCallback(() => {
     if (selectedFees.size === 0) {
       toast.error('No fees selected');
       return;
@@ -323,13 +310,17 @@ export function FeesList({
       if (remaining > 0) {
         // Record a payment entry so fee_payments stays consistent
         onRecordPayment(feeId, remaining, 'cash', undefined, 'Bulk marked as paid');
-      } else {
+      } else if (remaining === 0) {
         onUpdateFeeStatus(feeId, 'paid', paidDate);
+      } else {
+        // remaining < 0 means an overpayment already exists; log & skip so we
+        // don't silently mask the discrepancy.
+        console.warn(`Bulk mark paid skipped fee ${feeId}: overpayment detected (remaining=${remaining})`);
       }
     });
     toast.success(`${selectedFees.size} fees marked as paid`);
     setSelectedFees(new Set());
-  };
+  }, [selectedFees, fees, onUpdateFeeStatus, onRecordPayment, totalPaidByFeeId]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -340,33 +331,52 @@ export function FeesList({
     }
   };
 
-  const handleSelectFee = (feeId: string, checked: boolean) => {
-    const newSelected = new Set(selectedFees);
-    if (checked) {
-      newSelected.add(feeId);
-    } else {
-      newSelected.delete(feeId);
-    }
-    setSelectedFees(newSelected);
-  };
+  const handleSelectFee = useCallback((feeId: string, checked: boolean) => {
+    setSelectedFees(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(feeId); else next.delete(feeId);
+      return next;
+    });
+  }, []);
 
-  const handleRecordPayment = (fee: StudentFee) => {
+  const handleRecordPayment = useCallback((fee: StudentFee) => {
     setSelectedFeeForPayment(fee);
     setPaymentDialogOpen(true);
-  };
+  }, []);
 
-  const handleViewHistory = (fee: StudentFee) => {
+  // Stable wrappers used by FeeCard so React.memo can short-circuit re-renders.
+  const handleRecordPaymentById = useCallback((feeId: string) => {
+    const fee = fees.find(f => f.id === feeId);
+    if (fee) handleRecordPayment(fee);
+  }, [fees, handleRecordPayment]);
+
+  const handleViewHistory = useCallback((fee: StudentFee) => {
     setSelectedFeeForHistory(fee);
     setHistoryDialogOpen(true);
-  };
+  }, []);
 
-  const handleSendReminder = (studentId: string) => {
-    const student = getStudent(studentId);
+  const handleViewHistoryById = useCallback((feeId: string) => {
+    const fee = fees.find(f => f.id === feeId);
+    if (fee) handleViewHistory(fee);
+  }, [fees, handleViewHistory]);
+
+  const handleSendReminder = useCallback((studentId: string) => {
+    const student = studentsById.get(studentId);
     if (student) {
       setSelectedStudentForReminder(student);
       setWhatsappDialogOpen(true);
     }
-  };
+  }, [studentsById]);
+
+  const handlePrintReceiptForFee = useCallback((feeId: string) => {
+    const fee = fees.find(f => f.id === feeId);
+    const feePayments = paymentsByFeeId.get(feeId);
+    if (fee && feePayments && feePayments.length > 0) {
+      setReceiptFee(fee);
+      setReceiptPayment(feePayments[0]); // most recent
+      setReceiptOpen(true);
+    }
+  }, [fees, paymentsByFeeId]);
 
 
 
