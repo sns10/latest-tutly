@@ -546,7 +546,7 @@ export function FeesList({
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={generateMonthlyFees} size="sm" className="text-xs sm:text-sm">
+          <Button onClick={() => setGenerateDialogOpen(true)} size="sm" className="text-xs sm:text-sm">
             <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">Generate Fees</span>
             <span className="sm:hidden">Generate</span>
@@ -954,7 +954,7 @@ export function FeesList({
             toast.info('No unpaid fees to record payment for');
           }
         }}
-        onGenerateFees={generateMonthlyFees}
+        onGenerateFees={() => setGenerateDialogOpen(true)}
         showGenerateFees={true}
       />
     </div>
