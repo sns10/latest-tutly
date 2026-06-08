@@ -463,7 +463,7 @@ export function FeesList({
   }, [fees, selectedStudentForReminder]);
 
   const clearFilters = () => {
-    setSelectedMonth(getCurrentMonth());
+    setSelectedMonth(currentMonth);
     setSelectedClass('All');
     setSelectedDivision('All');
     setStatusFilter('All');
@@ -694,10 +694,10 @@ export function FeesList({
       {/* Active Filter Chips - Mobile */}
       {activeFilterCount > 0 && (
         <div className="md:hidden flex flex-wrap gap-2">
-          {selectedMonth !== getCurrentMonth() && (
+          {selectedMonth !== currentMonth && (
             <Badge variant="secondary" className="gap-1">
               Month: {availableMonths.find(m => m.value === selectedMonth)?.label.split(' ')[0]}
-              <button onClick={() => setSelectedMonth(getCurrentMonth())} className="ml-1">
+              <button onClick={() => setSelectedMonth(currentMonth)} className="ml-1">
                 <X className="h-3 w-3" />
               </button>
             </Badge>
