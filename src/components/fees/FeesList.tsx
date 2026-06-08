@@ -233,11 +233,16 @@ export function FeesList({
 
   const filteredFees = useMemo(() => {
     const search = debouncedSearch.toLowerCase();
+    const monthStart = `${selectedMonth}-01`;
+    const [my, mm] = selectedMonth.split('-').map(Number);
+    const monthEnd = new Date(my, mm, 0).toISOString().split('T')[0]; // last day
     return fees.filter(fee => {
       const student = studentsById.get(fee.studentId);
       const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
-      const monthMatch = fee.feeType?.includes(selectedMonth) ||
-        (fee.feeType === 'monthly' && fee.dueDate?.startsWith(selectedMonth));
+      // Match if the fee_type label embeds the month (monthly fees) OR if dueDate falls in the month (custom fees).
+      const monthMatch =
+        (fee.feeType && fee.feeType.includes(selectedMonth)) ||
+        (fee.dueDate >= monthStart && fee.dueDate <= monthEnd);
       const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
       const divisionMatch = selectedDivision === 'All' || (student && student.divisionId === selectedDivision);
       const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
