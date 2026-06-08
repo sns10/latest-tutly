@@ -111,6 +111,11 @@ export function FeesList({
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedFeeForHistory, setSelectedFeeForHistory] = useState<StudentFee | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generateMonth, setGenerateMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   
   // Receipt state for automatic receipt after payment
   const [receiptOpen, setReceiptOpen] = useState(false);
