@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Student, StudentFee, ClassFee } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -109,6 +109,42 @@ export function FeesList({
   const [receiptFee, setReceiptFee] = useState<StudentFee | null>(null);
   const [receiptPayment, setReceiptPayment] = useState<FeePayment | null>(null);
 
+  // Debounce search input so each keystroke doesn't trigger a full re-render of every row.
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 150);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  // ----- Lookup maps (built once per data change) -----
+  const studentsById = useMemo(() => {
+    const m = new Map<string, Student>();
+    for (const s of students) m.set(s.id, s);
+    return m;
+  }, [students]);
+
+  const paymentsByFeeId = useMemo(() => {
+    const m = new Map<string, FeePayment[]>();
+    for (const p of payments) {
+      const arr = m.get(p.feeId);
+      if (arr) arr.push(p);
+      else m.set(p.feeId, [p]);
+    }
+    // Sort each list desc by createdAt once
+    for (const arr of m.values()) {
+      arr.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    }
+    return m;
+  }, [payments]);
+
+  const totalPaidByFeeId = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of payments) {
+      m.set(p.feeId, (m.get(p.feeId) || 0) + Number(p.amount));
+    }
+    return m;
+  }, [payments]);
+
   // Memoize current month to avoid function recreation
   const currentMonth = useMemo(() => {
     const now = new Date();
@@ -161,8 +197,8 @@ export function FeesList({
     }
   }
 
-  const getAvailableMonths = () => {
-    const months = [];
+  const availableMonths = useMemo(() => {
+    const months: Array<{ value: string; label: string }> = [];
     const now = new Date();
     for (let i = 0; i < 12; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -173,47 +209,41 @@ export function FeesList({
       });
     }
     return months;
-  };
+  }, []);
 
-  const uniqueClasses = Array.from(new Set(students.map(s => s.class))).sort();
+  const uniqueClasses = useMemo(
+    () => Array.from(new Set(students.map(s => s.class))).sort(),
+    [students]
+  );
 
   const filteredFees = useMemo(() => {
+    const search = debouncedSearch.toLowerCase();
     return fees.filter(fee => {
-      const student = students.find(s => s.id === fee.studentId);
+      const student = studentsById.get(fee.studentId);
       const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
       const monthMatch = fee.feeType?.includes(selectedMonth) ||
         (fee.feeType === 'monthly' && fee.dueDate?.startsWith(selectedMonth));
       const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
       const divisionMatch = selectedDivision === 'All' || (student && student.divisionId === selectedDivision);
       const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
-      const searchMatch = searchQuery === '' || (student && student.name.toLowerCase().includes(searchQuery.toLowerCase()));
+      const searchMatch = search === '' || (student && student.name.toLowerCase().includes(search));
       return studentMatch && monthMatch && classMatch && divisionMatch && statusMatch && searchMatch;
     });
-  }, [fees, students, selectedStudent, selectedMonth, selectedClass, selectedDivision, statusFilter, searchQuery]);
+  }, [fees, studentsById, selectedStudent, selectedMonth, selectedClass, selectedDivision, statusFilter, debouncedSearch]);
 
-  const getStudentName = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student ? student.name : 'Unknown';
-  };
+  const getStudentName = (studentId: string) =>
+    studentsById.get(studentId)?.name || 'Unknown';
 
-  const getStudentClass = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student?.class || '-';
-  };
+  const getStudentClass = (studentId: string) =>
+    studentsById.get(studentId)?.class || '-';
 
-  const getStudent = (studentId: string) => {
-    return students.find(s => s.id === studentId);
-  };
+  const getStudent = (studentId: string) => studentsById.get(studentId);
 
-  const getFeePayments = (feeId: string) => {
-    return payments.filter(p => p.feeId === feeId).sort((a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
-  };
+  const EMPTY_PAYMENTS: FeePayment[] = [];
+  const getFeePayments = (feeId: string) =>
+    paymentsByFeeId.get(feeId) || EMPTY_PAYMENTS;
 
-  const getTotalPaid = (feeId: string) => {
-    return payments.filter(p => p.feeId === feeId).reduce((sum, p) => sum + Number(p.amount), 0);
-  };
+  const getTotalPaid = (feeId: string) => totalPaidByFeeId.get(feeId) || 0;
 
   const handleMarkAsPaid = (feeId: string) => {
     const fee = fees.find((f) => f.id === feeId);
@@ -347,8 +377,15 @@ export function FeesList({
     toast.success('Exported to CSV');
   };
 
-  const totalAmount = filteredFees.reduce((sum, f) => sum + f.amount, 0);
-  const paidAmount = filteredFees.reduce((sum, f) => sum + getTotalPaid(f.id), 0);
+  const { totalAmount, paidAmount } = useMemo(() => {
+    let total = 0;
+    let paid = 0;
+    for (const f of filteredFees) {
+      total += f.amount;
+      paid += totalPaidByFeeId.get(f.id) || 0;
+    }
+    return { totalAmount: total, paidAmount: paid };
+  }, [filteredFees, totalPaidByFeeId]);
 
   // Count active filters - use currentMonth memo instead of function call
   const activeFilterCount = useMemo(() => {
