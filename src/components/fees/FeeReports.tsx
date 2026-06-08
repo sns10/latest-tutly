@@ -38,6 +38,13 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  // Lookup map: O(1) student fetch instead of O(N) .find() per row.
+  const studentsById = useMemo(() => {
+    const m = new Map<string, Student>();
+    for (const s of students) m.set(s.id, s);
+    return m;
+  }, [students]);
+
   const getAvailableMonths = () => {
     const months = [];
     const now = new Date();
