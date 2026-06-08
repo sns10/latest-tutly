@@ -400,9 +400,12 @@ export function FeeReceipt({
 
   // Download as PDF
   const handleDownloadPDF = async () => {
+    if (busy) return;
+    setBusy(true);
     const receiptElement = receiptRef.current;
     if (!receiptElement) {
       toast.error('Receipt not found');
+      setBusy(false);
       return;
     }
 
@@ -451,6 +454,7 @@ export function FeeReceipt({
       // left a stuck pointer-events lock during the long sync block.
       restoreBodyPointerEvents();
       setTimeout(restoreBodyPointerEvents, 200);
+      setBusy(false);
     }
   };
 
