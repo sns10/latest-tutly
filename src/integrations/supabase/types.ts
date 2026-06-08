@@ -1457,6 +1457,8 @@ export type Database = {
         Args: { _full_name: string; _tuition_id: string; _user_id: string }
         Returns: undefined
       }
+      void_fee_payment: { Args: { p_payment_id: string }; Returns: Json }
+      void_fee_payments: { Args: { p_fee_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "super_admin" | "tuition_admin" | "student" | "parent"
