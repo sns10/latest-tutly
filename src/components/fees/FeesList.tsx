@@ -211,6 +211,8 @@ export function FeesList({
     return months;
   }, []);
 
+  const getAvailableMonths = () => availableMonths;
+
   const uniqueClasses = useMemo(
     () => Array.from(new Set(students.map(s => s.class))).sort(),
     [students]
