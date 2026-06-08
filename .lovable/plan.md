@@ -1,65 +1,53 @@
+# Remove Academic Year Reset + Allow Past-Month Fee Marking
 
-## Problem
+## Part 1 — Remove the "academic year reset" behavior
 
-The Fee section becomes laggy/unresponsive (buttons take time to react, typing in search stutters, switching tabs feels stuck). Root cause is **expensive work re-running on every render and every keystroke** — not a data/network issue.
+Today, fees / tests / homework queries silently scope themselves to the **current Indian academic year (June 1 → May 31)**. Every June 1 this acts like a "reset" — older records disappear from default views. You want this gone.
 
-### What's actually slow
+### Changes
 
-**`src/components/fees/FeesList.tsx`**
-- For each visible row, the component calls `getStudentName`, `getStudentClass`, `getTotalPaid`, `getFeePayments`, `getStudent` — each does `students.find()` or `payments.filter()`. With ~150 students and hundreds of payments × hundreds of fee rows, that's tens of thousands of array scans per render.
-- Search input (`searchQuery`) is unthrottled, so every keystroke triggers the full filter + re-render of every row + all the lookups above.
-- `getAvailableMonths()` and `uniqueClasses` are rebuilt every render (also rebuilt twice — desktop filter card and mobile sheet).
-- `selectedFees` (a `Set`) is cloned on every checkbox toggle — fine, but the parent re-renders all rows because rows aren't memoized.
+1. **`src/hooks/queries/useFeesQuery.ts`**
+   - Remove the default `.gte('due_date', getCurrentAcademicYearStart())` branch in `useFeesQuery`. Keep `month` and `fromDate` filters as-is. Result: all fees load by default (pagination loop already handles large datasets).
+   - Drop the `getCurrentAcademicYearStart` import.
 
-**`src/components/fees/PaymentActivityFeed.tsx`**
-- `paymentsByDate` reduce + sort runs on every render.
-- For each payment row, `getFeeForPayment` and `getStudentForPayment` each do `.find()` over fees and students. Over months of activity this is the worst hotspot.
+2. **`src/hooks/queries/useTestsQuery.ts`**
+   - Remove the two `.gte('test_date', getPreviousAcademicYearStart())` defaults (lines ~22–24 and ~71–73). Drop the import.
 
-**`src/pages/Fees.tsx`**
-- Passes `payments.map(...)` inline to `PaymentActivityFeed` — new array reference every render, killing any downstream memoization and forcing the heavy reduce/sort above to re-run even when nothing changed.
+3. **`src/hooks/useStudentData.ts`**
+   - Remove the `.gte('test_date', getCurrentAcademicYearStart())` on tests and `.gte('due_date', getCurrentAcademicYearStart())` on homework. Drop the import. Keep `getDefaultAttendanceWindowStart` (attendance still needs a rolling 60-day window for perf).
 
-**`src/components/fees/CustomFeesManager.tsx`**
-- Same `students.find()` per row in the table, plus a partial-amount calculation that does `payments.filter(...)` inside a `reduce` over custom fees (N×M again).
+4. **`src/lib/dateWindows.ts`**
+   - Delete `getCurrentAcademicYearStart` and `getPreviousAcademicYearStart`. Keep `getDefaultAttendanceWindowStart`.
 
-The combined effect is long synchronous tasks on the main thread — that's what makes buttons appear unresponsive (clicks register but the handler is queued behind the render).
+5. **Leave alone**: the `academic_year` *column* on `term_exams` — it's just a label admins type when creating an exam, not a reset/cutoff. No DB changes.
 
-## Fix
+## Part 2 — Mark a previous-month fee in the current month
 
-Purely frontend / presentation. No business-logic or schema changes.
+### Current behavior
+- "Generate Monthly Fees" button in `FeesList.tsx` always uses **today's month**. If June is here and an admin wants to create May's fee record now, there is no UI path (besides per-student Custom Fees).
+- Recording a *payment* against an existing past-month fee already works: `RecordPaymentDialog` has a "Payment Date" picker that allows back-dating to any past date.
 
-### 1. `src/components/fees/FeesList.tsx`
-- Build `useMemo` lookup maps once per data change:
-  - `studentsById: Map<string, Student>`
-  - `paymentsByFeeId: Map<string, FeePayment[]>` (sorted desc by createdAt once)
-  - `totalPaidByFeeId: Map<string, number>`
-- Replace `getStudentName / getStudentClass / getStudent / getFeePayments / getTotalPaid` with map lookups.
-- `useMemo` for `uniqueClasses` and `availableMonths` (compute once).
-- Debounce `searchQuery` used by the filter (keep `searchInput` as immediate state for the input, derive a debounced value ~150 ms for `filteredFees`).
-- Extract the row body into a small memoized component (`FeeRow` for desktop table). `FeeCard` already exists for mobile — wrap it in `React.memo` and pass primitive props so it skips re-renders when unrelated state changes (e.g. opening a dropdown).
-- Compute `totalAmount` / `paidAmount` from the memoized maps so the summary doesn't re-scan payments.
+### Change
+Enhance `generateMonthlyFees` in `src/components/fees/FeesList.tsx` to let the admin pick the target month before generating:
 
-### 2. `src/components/fees/PaymentActivityFeed.tsx`
-- `useMemo` for `feesById`, `studentsById`, and the `paymentsByDate` grouping + sorted `dateKeys`.
-- Resolve student/fee per row via map lookups instead of `.find()`.
-- Wrap the per-row content in a memoized child so opening the receipt dialog doesn't re-render every other row.
+- Add a small "Generate Fees" confirmation dialog (or reuse a simple month picker built from the existing `availableMonths` list, which already covers the last 12 months).
+- Default the month to the current month (keeps today's one-tap flow intact).
+- Use the picked month for both `feeType` (`Monthly Fee - YYYY-MM`) and `dueDate` (5th of that month).
+- Existing duplicate-detection logic continues to work since it keys on `feeType` containing the month.
 
-### 3. `src/pages/Fees.tsx`
-- Move the `payments.map(...)` adapter passed to `PaymentActivityFeed` into a `useMemo` so the prop reference is stable across renders.
+No schema, RLS, or backend changes.
 
-### 4. `src/components/fees/CustomFeesManager.tsx`
-- Same `studentsById` and `paymentsByFeeId` memo treatment.
-- Replace the nested `reduce`/`filter` in the `stats` memo with one pass that uses `paymentsByFeeId`.
+## Files touched
 
-### Validation
+```text
+src/hooks/queries/useFeesQuery.ts       (remove academic-year default)
+src/hooks/queries/useTestsQuery.ts      (remove academic-year default)
+src/hooks/useStudentData.ts             (remove academic-year defaults)
+src/lib/dateWindows.ts                  (drop academic-year helpers)
+src/components/fees/FeesList.tsx        (month-picker for generate fees)
+```
 
-- After edits, reload `/` → Fees tab and confirm:
-  - Typing in the search field is smooth (no per-keystroke jank).
-  - Switching between Activity / Fees / Custom / Structure / Reports tabs is instant.
-  - Action buttons (Mark as Paid, Record Payment, dropdowns) respond on first click.
-- Spot-check with `browser--performance_profile` before/after if needed to confirm long-task duration drops.
-
-### Out of scope
-
-- No changes to queries, mutations, RLS, or DB schema.
-- No change in visible UI/UX besides the lag going away.
-- No new dependencies; debounce is implemented inline with `useEffect` + `setTimeout`.
+## Out of scope
+- No changes to attendance windowing (still rolling 60 days for performance).
+- No changes to `term_exams.academic_year` field.
+- No changes to RecordPaymentDialog (back-dating already supported).
