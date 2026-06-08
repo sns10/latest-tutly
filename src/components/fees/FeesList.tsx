@@ -909,26 +909,11 @@ export function FeesList({
           studentName={getStudentName(selectedFeeForPayment.studentId)}
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
           onRecordPayment={(amount, method, reference, notes, paymentDate) => {
-            // Create a temporary payment object for receipt
-            const newPayment: FeePayment = {
-              id: `temp-${Date.now()}`,
-              feeId: selectedFeeForPayment.id,
-              amount: amount,
-              paymentDate: paymentDate || new Date().toISOString().split('T')[0],
-              paymentMethod: method,
-              paymentReference: reference,
-              notes: notes,
-              createdAt: new Date().toISOString()
-            };
-            
-            // Record the payment
+            // Record the payment and mark a pending-receipt watch.
+            // The effect above opens the receipt for the *real* persisted payment
+            // once the cache refreshes — no "RCP-TEMP-..." numbers on paper.
             onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes, paymentDate);
-            
-            // Show receipt automatically
-            setReceiptFee(selectedFeeForPayment);
-            setReceiptPayment(newPayment);
-            setReceiptOpen(true);
-            
+            setPendingReceiptFor({ feeId: selectedFeeForPayment.id, expectedAt: Date.now() });
             setPaymentDialogOpen(false);
             setSelectedFeeForPayment(null);
           }}
@@ -944,8 +929,9 @@ export function FeesList({
           studentName={getStudentName(receiptFee.studentId)}
           studentClass={getStudentClass(receiptFee.studentId)}
           payment={receiptPayment}
+          existingPayments={getFeePayments(receiptFee.id)}
           tuition={tuition}
-          receiptNumber={`RCP-${Date.now().toString().slice(-8)}`}
+          receiptNumber={`RCP-${receiptPayment.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`}
         />
       )}
 
@@ -968,7 +954,8 @@ export function FeesList({
           open={whatsappDialogOpen}
           onOpenChange={setWhatsappDialogOpen}
           student={selectedStudentForReminder}
-          unpaidFees={fees.filter(f => f.studentId === selectedStudentForReminder.id && f.status !== 'paid')}
+          unpaidFees={reminderUnpaidFees}
+          totalPaidByFeeId={totalPaidByFeeId}
         />
       )}
 
