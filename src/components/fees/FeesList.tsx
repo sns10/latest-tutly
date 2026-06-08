@@ -603,13 +603,13 @@ export function FeesList({
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setGenerateDialogOpen(true)} size="sm" className="text-xs sm:text-sm">
+          <Button onClick={() => setGenerateDialogOpen(true)} size="sm" className="text-xs sm:text-sm" disabled={isAddingFees}>
             <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">Generate Fees</span>
             <span className="sm:hidden">Generate</span>
           </Button>
           {selectedFees.size > 0 && (
-            <Button onClick={handleBulkMarkPaid} size="sm" variant="outline" className="text-xs sm:text-sm">
+            <Button onClick={handleBulkMarkPaid} size="sm" variant="outline" className="text-xs sm:text-sm" disabled={isRecordingPayment}>
               <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
               <span className="hidden sm:inline">Mark {selectedFees.size} as Paid</span>
               <span className="sm:hidden">Mark {selectedFees.size} Paid</span>
