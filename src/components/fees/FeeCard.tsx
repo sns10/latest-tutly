@@ -31,12 +31,13 @@ interface FeeCardProps {
   remaining: number;
   paymentCount: number;
   isSelected: boolean;
-  onSelect: (checked: boolean) => void;
-  onMarkAsPaid: () => void;
-  onRecordPayment: () => void;
-  onSendReminder: () => void;
-  onViewHistory: () => void;
-  onPrintReceipt?: () => void;
+  /** Stable callbacks — pass the same function reference for every card to keep React.memo effective. */
+  onSelect: (feeId: string, checked: boolean) => void;
+  onMarkAsPaid: (feeId: string) => void;
+  onRecordPayment: (feeId: string) => void;
+  onSendReminder: (studentId: string) => void;
+  onViewHistory: (feeId: string) => void;
+  onPrintReceipt?: (feeId: string) => void;
 }
 
 function FeeCardComponent({
@@ -65,7 +66,7 @@ function FeeCardComponent({
               {fee.status !== 'paid' && (
                 <Checkbox
                   checked={isSelected}
-                  onCheckedChange={onSelect}
+                  onCheckedChange={(checked) => onSelect(fee.id, checked === true)}
                   className="mt-1"
                 />
               )}
@@ -88,15 +89,15 @@ function FeeCardComponent({
               <DropdownMenuContent align="end">
                 {fee.status !== 'paid' && (
                   <>
-                    <DropdownMenuItem onClick={onMarkAsPaid}>
+                    <DropdownMenuItem onClick={() => onMarkAsPaid(fee.id)}>
                       <CheckCircle className="h-4 w-4 mr-2" />
                       Mark as Paid
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onRecordPayment}>
+                    <DropdownMenuItem onClick={() => onRecordPayment(fee.id)}>
                       <CreditCard className="h-4 w-4 mr-2" />
                       Record Payment
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={onSendReminder}>
+                    <DropdownMenuItem onClick={() => onSendReminder(fee.studentId)}>
                       <MessageSquare className="h-4 w-4 mr-2" />
                       Send Reminder
                     </DropdownMenuItem>
@@ -107,7 +108,7 @@ function FeeCardComponent({
                 {/* If a fee was marked paid without a payment entry, allow adding it for accurate history/receipts */}
                 {fee.status === 'paid' && paymentCount === 0 && (
                   <>
-                    <DropdownMenuItem onClick={onRecordPayment}>
+                    <DropdownMenuItem onClick={() => onRecordPayment(fee.id)}>
                       <CreditCard className="h-4 w-4 mr-2" />
                       Record Payment
                     </DropdownMenuItem>
@@ -115,12 +116,12 @@ function FeeCardComponent({
                   </>
                 )}
 
-                <DropdownMenuItem onClick={onViewHistory}>
+                <DropdownMenuItem onClick={() => onViewHistory(fee.id)}>
                   <History className="h-4 w-4 mr-2" />
                   Payment History {paymentCount > 0 && `(${paymentCount})`}
                 </DropdownMenuItem>
                 {paymentCount > 0 && onPrintReceipt && (
-                  <DropdownMenuItem onClick={onPrintReceipt}>
+                  <DropdownMenuItem onClick={() => onPrintReceipt(fee.id)}>
                     <Printer className="h-4 w-4 mr-2" />
                     Print Receipt
                   </DropdownMenuItem>
@@ -158,7 +159,7 @@ function FeeCardComponent({
                 size="sm"
                 variant="outline"
                 className="flex-1"
-                onClick={onRecordPayment}
+                onClick={() => onRecordPayment(fee.id)}
               >
                 <CreditCard className="h-3.5 w-3.5 mr-1.5" />
                 Record Payment
@@ -167,7 +168,7 @@ function FeeCardComponent({
                 size="sm"
                 variant="outline"
                 className="flex-1"
-                onClick={onMarkAsPaid}
+                onClick={() => onMarkAsPaid(fee.id)}
               >
                 <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
                 Mark Paid
