@@ -1018,14 +1018,15 @@ export function FeesList({
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)} disabled={isAddingFees}>Cancel</Button>
             <Button
+              disabled={isAddingFees}
               onClick={() => {
                 generateMonthlyFees(generateMonth);
                 setGenerateDialogOpen(false);
               }}
             >
-              Generate
+              {isAddingFees ? 'Generating...' : 'Generate'}
             </Button>
           </DialogFooter>
         </DialogContent>
