@@ -929,6 +929,7 @@ export function FeesList({
           fee={selectedFeeForPayment}
           studentName={getStudentName(selectedFeeForPayment.studentId)}
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
+          isPending={isRecordingPayment}
           onRecordPayment={(amount, method, reference, notes, paymentDate) => {
             // Record the payment and mark a pending-receipt watch.
             // The effect above opens the receipt for the *real* persisted payment
