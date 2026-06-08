@@ -1,49 +1,65 @@
-## Root cause
 
-When I added the "Mark Absent" feature, the migration created a new `UNIQUE (test_id, student_id)` constraint on `student_test_results` — but an identical unique constraint **already existed**. Same thing happened on `term_exam_results`.
+## Problem
 
-Current state in the database:
+The Fee section becomes laggy/unresponsive (buttons take time to react, typing in search stutters, switching tabs feels stuck). Root cause is **expensive work re-running on every render and every keystroke** — not a data/network issue.
 
-```text
-student_test_results:
-  UNIQUE (test_id, student_id)  -- student_test_results_test_id_student_id_key   (original)
-  UNIQUE (test_id, student_id)  -- student_test_results_test_student_unique      (added by absent migration)
+### What's actually slow
 
-term_exam_results:
-  UNIQUE (term_exam_id, student_id, subject_id)  -- *_key             (original)
-  UNIQUE (term_exam_id, student_id, subject_id)  -- *_unique          (added)
-```
+**`src/components/fees/FeesList.tsx`**
+- For each visible row, the component calls `getStudentName`, `getStudentClass`, `getTotalPaid`, `getFeePayments`, `getStudent` — each does `students.find()` or `payments.filter()`. With ~150 students and hundreds of payments × hundreds of fee rows, that's tens of thousands of array scans per render.
+- Search input (`searchQuery`) is unthrottled, so every keystroke triggers the full filter + re-render of every row + all the lookups above.
+- `getAvailableMonths()` and `uniqueClasses` are rebuilt every render (also rebuilt twice — desktop filter card and mobile sheet).
+- `selectedFees` (a `Set`) is cloned on every checkbox toggle — fine, but the parent re-renders all rows because rows aren't memoized.
 
-### Why this breaks bulk save
+**`src/components/fees/PaymentActivityFeed.tsx`**
+- `paymentsByDate` reduce + sort runs on every render.
+- For each payment row, `getFeeForPayment` and `getStudentForPayment` each do `.find()` over fees and students. Over months of activity this is the worst hotspot.
 
-The frontend does:
-```ts
-.upsert(records, { onConflict: 'test_id,student_id' })
-```
+**`src/pages/Fees.tsx`**
+- Passes `payments.map(...)` inline to `PaymentActivityFeed` — new array reference every render, killing any downstream memoization and forcing the heavy reduce/sort above to re-run even when nothing changed.
 
-Postgres can only use **one** arbiter index for `ON CONFLICT`. The first unique index resolves to UPDATE, but the second duplicate unique index still fires as a fresh insert violation → entire batch fails with `duplicate key value violates unique constraint "student_test_results_test_student_unique"`. So:
+**`src/components/fees/CustomFeesManager.tsx`**
+- Same `students.find()` per row in the table, plus a partial-amount calculation that does `payments.filter(...)` inside a `reduce` over custom fees (N×M again).
 
-- First-time mark entry (no existing rows) → works
-- Re-saving / editing already-entered marks (bulk Save All) → fails with "Failed to save marks"
-
-This matches the symptom: "Weekly test — bulk save → Toast: Failed to save", and explains why no 4xx shows in the edge log window (it's a 409 from PostgREST that's intermittent and may roll out of the 1-hour log window).
+The combined effect is long synchronous tasks on the main thread — that's what makes buttons appear unresponsive (clicks register but the handler is queued behind the render).
 
 ## Fix
 
-Single migration that drops the redundant constraints, keeping the original `*_key` one on each table.
+Purely frontend / presentation. No business-logic or schema changes.
 
-```sql
-ALTER TABLE public.student_test_results
-  DROP CONSTRAINT IF EXISTS student_test_results_test_student_unique;
+### 1. `src/components/fees/FeesList.tsx`
+- Build `useMemo` lookup maps once per data change:
+  - `studentsById: Map<string, Student>`
+  - `paymentsByFeeId: Map<string, FeePayment[]>` (sorted desc by createdAt once)
+  - `totalPaidByFeeId: Map<string, number>`
+- Replace `getStudentName / getStudentClass / getStudent / getFeePayments / getTotalPaid` with map lookups.
+- `useMemo` for `uniqueClasses` and `availableMonths` (compute once).
+- Debounce `searchQuery` used by the filter (keep `searchInput` as immediate state for the input, derive a debounced value ~150 ms for `filteredFees`).
+- Extract the row body into a small memoized component (`FeeRow` for desktop table). `FeeCard` already exists for mobile — wrap it in `React.memo` and pass primitive props so it skips re-renders when unrelated state changes (e.g. opening a dropdown).
+- Compute `totalAmount` / `paidAmount` from the memoized maps so the summary doesn't re-scan payments.
 
-ALTER TABLE public.term_exam_results
-  DROP CONSTRAINT IF EXISTS term_exam_results_exam_student_subject_unique;
-```
+### 2. `src/components/fees/PaymentActivityFeed.tsx`
+- `useMemo` for `feesById`, `studentsById`, and the `paymentsByDate` grouping + sorted `dateKeys`.
+- Resolve student/fee per row via map lookups instead of `.find()`.
+- Wrap the per-row content in a memoized child so opening the receipt dialog doesn't re-render every other row.
 
-No frontend changes needed — the upsert calls already infer the correct (and now sole) unique index by columns.
+### 3. `src/pages/Fees.tsx`
+- Move the `payments.map(...)` adapter passed to `PaymentActivityFeed` into a `useMemo` so the prop reference is stable across renders.
 
-## Verification
+### 4. `src/components/fees/CustomFeesManager.tsx`
+- Same `studentsById` and `paymentsByFeeId` memo treatment.
+- Replace the nested `reduce`/`filter` in the `stats` memo with one pass that uses `paymentsByFeeId`.
 
-1. After the migration, re-open Enter Marks on a test that already has results, edit a few marks, click Save All — should succeed.
-2. Re-run for term exams: enter subject marks for students who already have entries — should succeed.
-3. Confirm `pg_constraint` shows only one unique constraint per table.
+### Validation
+
+- After edits, reload `/` → Fees tab and confirm:
+  - Typing in the search field is smooth (no per-keystroke jank).
+  - Switching between Activity / Fees / Custom / Structure / Reports tabs is instant.
+  - Action buttons (Mark as Paid, Record Payment, dropdowns) respond on first click.
+- Spot-check with `browser--performance_profile` before/after if needed to confirm long-task duration drops.
+
+### Out of scope
+
+- No changes to queries, mutations, RLS, or DB schema.
+- No change in visible UI/UX besides the lag going away.
+- No new dependencies; debounce is implemented inline with `useEffect` + `setTimeout`.
