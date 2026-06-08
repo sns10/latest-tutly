@@ -169,6 +169,22 @@ export function FeesList({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }, []);
 
+  // Open receipt for the *real* freshly-persisted payment once the mutation lands
+  // and the payments cache refreshes. Prevents "RCP-TEMP-..." receipts on paper.
+  useEffect(() => {
+    if (!pendingReceiptFor) return;
+    const list = paymentsByFeeId.get(pendingReceiptFor.feeId);
+    if (!list || list.length === 0) return;
+    const newest = list[0]; // sorted desc by createdAt
+    if (new Date(newest.createdAt).getTime() < pendingReceiptFor.expectedAt - 1000) return;
+    const fee = fees.find(f => f.id === pendingReceiptFor.feeId);
+    if (!fee) return;
+    setReceiptFee(fee);
+    setReceiptPayment(newest);
+    setReceiptOpen(true);
+    setPendingReceiptFor(null);
+  }, [pendingReceiptFor, paymentsByFeeId, fees]);
+
   function getCurrentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
