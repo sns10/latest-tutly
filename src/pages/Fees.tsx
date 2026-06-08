@@ -184,6 +184,7 @@ export default function FeesPage() {
         onOpenChange={setAddFeeDialogOpen}
         students={students}
         onAddFee={addFee}
+        onAddFeesBatch={addFeesBatch}
       />
     </div>
   );
