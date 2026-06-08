@@ -83,6 +83,8 @@ interface FeesListProps {
   onAddFeesBatch?: (fees: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
   onRecordPayment: (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string, paymentDate?: string) => void;
+  isRecordingPayment?: boolean;
+  isAddingFees?: boolean;
 }
 
 export function FeesList({
@@ -94,7 +96,9 @@ export function FeesList({
   onAddFee,
   onAddFeesBatch,
   onUpdateFeeStatus,
-  onRecordPayment
+  onRecordPayment,
+  isRecordingPayment = false,
+  isAddingFees = false,
 }: FeesListProps) {
   const { tuition } = useTuitionInfo();
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
