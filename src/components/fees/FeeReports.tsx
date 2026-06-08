@@ -38,6 +38,13 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
+  // Lookup map: O(1) student fetch instead of O(N) .find() per row.
+  const studentsById = useMemo(() => {
+    const m = new Map<string, Student>();
+    for (const s of students) m.set(s.id, s);
+    return m;
+  }, [students]);
+
   const getAvailableMonths = () => {
     const months = [];
     const now = new Date();
@@ -90,7 +97,7 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
       const classFee = classFees.find(cf => cf.class === className);
       
       const classFeeRecords = fees.filter(f => {
-        const student = students.find(s => s.id === f.studentId);
+        const student = studentsById.get(f.studentId);
         return student?.class === className;
       });
 
@@ -174,7 +181,7 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
     if (selectedReport === 'monthly') {
       csvContent = 'Student,Class,Amount,Status,Due Date,Paid Date\n';
       monthlyReport.fees.forEach(fee => {
-        const student = students.find(s => s.id === fee.studentId);
+        const student = studentsById.get(fee.studentId);
         csvContent += `"${student?.name || 'Unknown'}","${student?.class || '-'}",${fee.amount},${fee.status},${fee.dueDate},${fee.paidDate || '-'}\n`;
       });
       filename = `monthly-report-${selectedMonth}.csv`;
@@ -340,7 +347,7 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
                     </TableRow>
                   ) : (
                     monthlyReport.fees.map(fee => {
-                      const student = students.find(s => s.id === fee.studentId);
+                      const student = studentsById.get(fee.studentId);
                       return (
                         <TableRow key={fee.id}>
                           <TableCell className="font-medium">{student?.name || 'Unknown'}</TableCell>
@@ -370,7 +377,7 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
                 </Card>
               ) : (
                 monthlyReport.fees.map(fee => {
-                  const student = students.find(s => s.id === fee.studentId);
+                  const student = studentsById.get(fee.studentId);
                   return (
                     <Card key={fee.id}>
                       <CardContent className="p-4">

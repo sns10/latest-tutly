@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Student, StudentFee, ClassFee } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -83,6 +83,8 @@ interface FeesListProps {
   onAddFeesBatch?: (fees: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>>) => void;
   onUpdateFeeStatus: (feeId: string, status: 'paid' | 'unpaid' | 'partial' | 'overdue', paidDate?: string) => void;
   onRecordPayment: (feeId: string, amount: number, paymentMethod: string, reference?: string, notes?: string, paymentDate?: string) => void;
+  isRecordingPayment?: boolean;
+  isAddingFees?: boolean;
 }
 
 export function FeesList({
@@ -94,7 +96,9 @@ export function FeesList({
   onAddFee,
   onAddFeesBatch,
   onUpdateFeeStatus,
-  onRecordPayment
+  onRecordPayment,
+  isRecordingPayment = false,
+  isAddingFees = false,
 }: FeesListProps) {
   const { tuition } = useTuitionInfo();
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
@@ -116,6 +120,11 @@ export function FeesList({
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // When Mark-as-Paid / Record-Payment kicks off a mutation, we remember which fee
+  // is awaiting a freshly-persisted payment. An effect below watches `payments`
+  // and opens the receipt for the real saved payment once it lands.
+  const [pendingReceiptFor, setPendingReceiptFor] = useState<{ feeId: string; expectedAt: number } | null>(null);
   
   // Receipt state for automatic receipt after payment
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -164,6 +173,22 @@ export function FeesList({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }, []);
 
+  // Open receipt for the *real* freshly-persisted payment once the mutation lands
+  // and the payments cache refreshes. Prevents "RCP-TEMP-..." receipts on paper.
+  useEffect(() => {
+    if (!pendingReceiptFor) return;
+    const list = paymentsByFeeId.get(pendingReceiptFor.feeId);
+    if (!list || list.length === 0) return;
+    const newest = list[0]; // sorted desc by createdAt
+    if (new Date(newest.createdAt).getTime() < pendingReceiptFor.expectedAt - 1000) return;
+    const fee = fees.find(f => f.id === pendingReceiptFor.feeId);
+    if (!fee) return;
+    setReceiptFee(fee);
+    setReceiptPayment(newest);
+    setReceiptOpen(true);
+    setPendingReceiptFor(null);
+  }, [pendingReceiptFor, paymentsByFeeId, fees]);
+
   function getCurrentMonth() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -179,23 +204,31 @@ export function FeesList({
     const [yearPart, monthPart] = monthStr.split('-').map(Number);
     const dueDate = new Date(yearPart, monthPart - 1, 5);
     const feesToCreate: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>> = [];
+    const targetFeeType = `Monthly Fee - ${monthStr}`;
 
-    students.forEach(student => {
-      const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${monthStr}`);
-      if (!existingFee) {
-        const classFee = classFees.find(cf => cf.class === student.class);
-        const feeAmount = classFee ? classFee.amount : 0;
-        if (feeAmount > 0) {
-          feesToCreate.push({
-            studentId: student.id,
-            feeType: `Monthly Fee - ${monthStr}`,
-            amount: feeAmount,
-            dueDate: dueDate.toISOString().split('T')[0],
-            status: 'unpaid'
-          });
-        }
+    // Pre-build lookup structures so the loop is O(N) instead of O(students × fees).
+    // Prevents UI freeze on tuitions with hundreds of students × months of history.
+    const existingForMonth = new Set<string>();
+    for (const f of fees) {
+      if (f.feeType === targetFeeType) existingForMonth.add(f.studentId);
+    }
+    const classFeeByClass = new Map<string, number>();
+    for (const cf of classFees) classFeeByClass.set(cf.class, cf.amount);
+    const dueDateStr = dueDate.toISOString().split('T')[0];
+
+    for (const student of students) {
+      if (existingForMonth.has(student.id)) continue;
+      const feeAmount = classFeeByClass.get(student.class) || 0;
+      if (feeAmount > 0) {
+        feesToCreate.push({
+          studentId: student.id,
+          feeType: targetFeeType,
+          amount: feeAmount,
+          dueDate: dueDateStr,
+          status: 'unpaid'
+        });
       }
-    });
+    }
 
     if (feesToCreate.length > 0) {
       if (onAddFeesBatch) {
@@ -233,11 +266,16 @@ export function FeesList({
 
   const filteredFees = useMemo(() => {
     const search = debouncedSearch.toLowerCase();
+    const monthStart = `${selectedMonth}-01`;
+    const [my, mm] = selectedMonth.split('-').map(Number);
+    const monthEnd = new Date(my, mm, 0).toISOString().split('T')[0]; // last day
     return fees.filter(fee => {
       const student = studentsById.get(fee.studentId);
       const studentMatch = selectedStudent === 'All' || fee.studentId === selectedStudent;
-      const monthMatch = fee.feeType?.includes(selectedMonth) ||
-        (fee.feeType === 'monthly' && fee.dueDate?.startsWith(selectedMonth));
+      // Match if the fee_type label embeds the month (monthly fees) OR if dueDate falls in the month (custom fees).
+      const monthMatch =
+        (fee.feeType && fee.feeType.includes(selectedMonth)) ||
+        (fee.dueDate >= monthStart && fee.dueDate <= monthEnd);
       const classMatch = selectedClass === 'All' || (student && student.class === selectedClass);
       const divisionMatch = selectedDivision === 'All' || (student && student.divisionId === selectedDivision);
       const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
@@ -260,7 +298,7 @@ export function FeesList({
 
   const getTotalPaid = (feeId: string) => totalPaidByFeeId.get(feeId) || 0;
 
-  const handleMarkAsPaid = (feeId: string) => {
+  const handleMarkAsPaid = useCallback((feeId: string) => {
     const fee = fees.find((f) => f.id === feeId);
     const paidDate = new Date().toISOString().split('T')[0];
 
@@ -276,32 +314,19 @@ export function FeesList({
     const remaining = fee.amount - totalPaid;
 
     if (remaining > 0) {
-      const newPayment: FeePayment = {
-        id: `temp-${Date.now()}`,
-        feeId,
-        amount: remaining,
-        paymentDate: paidDate,
-        paymentMethod: 'cash',
-        paymentReference: undefined,
-        notes: 'Marked as paid',
-        createdAt: new Date().toISOString(),
-      };
-
+      // Record the payment first; the receipt will be opened from the freshly-saved
+      // payment row after the mutation invalidates the cache (no temp ids on paper).
       onRecordPayment(feeId, remaining, 'cash', undefined, 'Marked as paid');
-
-      // Show receipt automatically
-      setReceiptFee(fee);
-      setReceiptPayment(newPayment);
-      setReceiptOpen(true);
+      setPendingReceiptFor({ feeId, expectedAt: Date.now() });
       return;
     }
 
     onUpdateFeeStatus(feeId, 'paid', paidDate);
     toast.success('Fee marked as paid');
-  };
+  }, [fees, onUpdateFeeStatus, onRecordPayment, totalPaidByFeeId]);
 
 
-  const handleBulkMarkPaid = () => {
+  const handleBulkMarkPaid = useCallback(() => {
     if (selectedFees.size === 0) {
       toast.error('No fees selected');
       return;
@@ -318,13 +343,17 @@ export function FeesList({
       if (remaining > 0) {
         // Record a payment entry so fee_payments stays consistent
         onRecordPayment(feeId, remaining, 'cash', undefined, 'Bulk marked as paid');
-      } else {
+      } else if (remaining === 0) {
         onUpdateFeeStatus(feeId, 'paid', paidDate);
+      } else {
+        // remaining < 0 means an overpayment already exists; log & skip so we
+        // don't silently mask the discrepancy.
+        console.warn(`Bulk mark paid skipped fee ${feeId}: overpayment detected (remaining=${remaining})`);
       }
     });
     toast.success(`${selectedFees.size} fees marked as paid`);
     setSelectedFees(new Set());
-  };
+  }, [selectedFees, fees, onUpdateFeeStatus, onRecordPayment, totalPaidByFeeId]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -335,33 +364,52 @@ export function FeesList({
     }
   };
 
-  const handleSelectFee = (feeId: string, checked: boolean) => {
-    const newSelected = new Set(selectedFees);
-    if (checked) {
-      newSelected.add(feeId);
-    } else {
-      newSelected.delete(feeId);
-    }
-    setSelectedFees(newSelected);
-  };
+  const handleSelectFee = useCallback((feeId: string, checked: boolean) => {
+    setSelectedFees(prev => {
+      const next = new Set(prev);
+      if (checked) next.add(feeId); else next.delete(feeId);
+      return next;
+    });
+  }, []);
 
-  const handleRecordPayment = (fee: StudentFee) => {
+  const handleRecordPayment = useCallback((fee: StudentFee) => {
     setSelectedFeeForPayment(fee);
     setPaymentDialogOpen(true);
-  };
+  }, []);
 
-  const handleViewHistory = (fee: StudentFee) => {
+  // Stable wrappers used by FeeCard so React.memo can short-circuit re-renders.
+  const handleRecordPaymentById = useCallback((feeId: string) => {
+    const fee = fees.find(f => f.id === feeId);
+    if (fee) handleRecordPayment(fee);
+  }, [fees, handleRecordPayment]);
+
+  const handleViewHistory = useCallback((fee: StudentFee) => {
     setSelectedFeeForHistory(fee);
     setHistoryDialogOpen(true);
-  };
+  }, []);
 
-  const handleSendReminder = (studentId: string) => {
-    const student = getStudent(studentId);
+  const handleViewHistoryById = useCallback((feeId: string) => {
+    const fee = fees.find(f => f.id === feeId);
+    if (fee) handleViewHistory(fee);
+  }, [fees, handleViewHistory]);
+
+  const handleSendReminder = useCallback((studentId: string) => {
+    const student = studentsById.get(studentId);
     if (student) {
       setSelectedStudentForReminder(student);
       setWhatsappDialogOpen(true);
     }
-  };
+  }, [studentsById]);
+
+  const handlePrintReceiptForFee = useCallback((feeId: string) => {
+    const fee = fees.find(f => f.id === feeId);
+    const feePayments = paymentsByFeeId.get(feeId);
+    if (fee && feePayments && feePayments.length > 0) {
+      setReceiptFee(fee);
+      setReceiptPayment(feePayments[0]); // most recent
+      setReceiptOpen(true);
+    }
+  }, [fees, paymentsByFeeId]);
 
 
 
@@ -420,8 +468,14 @@ export function FeesList({
     return divisions.filter(d => d.class === selectedClass);
   }, [divisions, selectedClass]);
 
+  // Memoize the unpaid-fees list passed to the WhatsApp reminder dialog.
+  const reminderUnpaidFees = useMemo(() => {
+    if (!selectedStudentForReminder) return [] as StudentFee[];
+    return fees.filter(f => f.studentId === selectedStudentForReminder.id && f.status !== 'paid');
+  }, [fees, selectedStudentForReminder]);
+
   const clearFilters = () => {
-    setSelectedMonth(getCurrentMonth());
+    setSelectedMonth(currentMonth);
     setSelectedClass('All');
     setSelectedDivision('All');
     setStatusFilter('All');
@@ -429,8 +483,11 @@ export function FeesList({
     setSearchQuery('');
   };
 
-  // Filter component (reusable)
-  const FilterContent = () => (
+  // Filter panel JSX — assembled as a memoized node (NOT a component) so React
+  // does not unmount/remount the entire subtree on every render of FeesList.
+  // Defining a component inside another component's body would change the
+  // component type identity on each render and tear down all child Selects.
+  const filterContent = (
     <div className="space-y-4">
       <div className="space-y-3">
         <div>
@@ -546,13 +603,13 @@ export function FeesList({
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={() => setGenerateDialogOpen(true)} size="sm" className="text-xs sm:text-sm">
+          <Button onClick={() => setGenerateDialogOpen(true)} size="sm" className="text-xs sm:text-sm" disabled={isAddingFees}>
             <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">Generate Fees</span>
             <span className="sm:hidden">Generate</span>
           </Button>
           {selectedFees.size > 0 && (
-            <Button onClick={handleBulkMarkPaid} size="sm" variant="outline" className="text-xs sm:text-sm">
+            <Button onClick={handleBulkMarkPaid} size="sm" variant="outline" className="text-xs sm:text-sm" disabled={isRecordingPayment}>
               <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
               <span className="hidden sm:inline">Mark {selectedFees.size} as Paid</span>
               <span className="sm:hidden">Mark {selectedFees.size} Paid</span>
@@ -581,7 +638,7 @@ export function FeesList({
                 </SheetDescription>
               </SheetHeader>
               <div className="mt-6">
-                <FilterContent />
+                {filterContent}
               </div>
             </SheetContent>
           </Sheet>
@@ -649,10 +706,10 @@ export function FeesList({
       {/* Active Filter Chips - Mobile */}
       {activeFilterCount > 0 && (
         <div className="md:hidden flex flex-wrap gap-2">
-          {selectedMonth !== getCurrentMonth() && (
+          {selectedMonth !== currentMonth && (
             <Badge variant="secondary" className="gap-1">
               Month: {availableMonths.find(m => m.value === selectedMonth)?.label.split(' ')[0]}
-              <button onClick={() => setSelectedMonth(getCurrentMonth())} className="ml-1">
+              <button onClick={() => setSelectedMonth(currentMonth)} className="ml-1">
                 <X className="h-3 w-3" />
               </button>
             </Badge>
@@ -852,19 +909,12 @@ export function FeesList({
                 remaining={remaining}
                 paymentCount={paymentCount}
                 isSelected={selectedFees.has(fee.id)}
-                onSelect={(checked) => handleSelectFee(fee.id, checked)}
-                onMarkAsPaid={() => handleMarkAsPaid(fee.id)}
-                onRecordPayment={() => handleRecordPayment(fee)}
-                onSendReminder={() => handleSendReminder(fee.studentId)}
-                onViewHistory={() => handleViewHistory(fee)}
-                onPrintReceipt={paymentCount > 0 ? () => {
-                  const feePayments = getFeePayments(fee.id);
-                  if (feePayments.length > 0) {
-                    setReceiptFee(fee);
-                    setReceiptPayment(feePayments[0]); // Most recent payment
-                    setReceiptOpen(true);
-                  }
-                } : undefined}
+                onSelect={handleSelectFee}
+                onMarkAsPaid={handleMarkAsPaid}
+                onRecordPayment={handleRecordPaymentById}
+                onSendReminder={handleSendReminder}
+                onViewHistory={handleViewHistoryById}
+                onPrintReceipt={paymentCount > 0 ? handlePrintReceiptForFee : undefined}
               />
             );
           })
@@ -879,27 +929,13 @@ export function FeesList({
           fee={selectedFeeForPayment}
           studentName={getStudentName(selectedFeeForPayment.studentId)}
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
+          isPending={isRecordingPayment}
           onRecordPayment={(amount, method, reference, notes, paymentDate) => {
-            // Create a temporary payment object for receipt
-            const newPayment: FeePayment = {
-              id: `temp-${Date.now()}`,
-              feeId: selectedFeeForPayment.id,
-              amount: amount,
-              paymentDate: paymentDate || new Date().toISOString().split('T')[0],
-              paymentMethod: method,
-              paymentReference: reference,
-              notes: notes,
-              createdAt: new Date().toISOString()
-            };
-            
-            // Record the payment
+            // Record the payment and mark a pending-receipt watch.
+            // The effect above opens the receipt for the *real* persisted payment
+            // once the cache refreshes — no "RCP-TEMP-..." numbers on paper.
             onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes, paymentDate);
-            
-            // Show receipt automatically
-            setReceiptFee(selectedFeeForPayment);
-            setReceiptPayment(newPayment);
-            setReceiptOpen(true);
-            
+            setPendingReceiptFor({ feeId: selectedFeeForPayment.id, expectedAt: Date.now() });
             setPaymentDialogOpen(false);
             setSelectedFeeForPayment(null);
           }}
@@ -915,8 +951,9 @@ export function FeesList({
           studentName={getStudentName(receiptFee.studentId)}
           studentClass={getStudentClass(receiptFee.studentId)}
           payment={receiptPayment}
+          existingPayments={getFeePayments(receiptFee.id)}
           tuition={tuition}
-          receiptNumber={`RCP-${Date.now().toString().slice(-8)}`}
+          receiptNumber={`RCP-${receiptPayment.id.replace(/-/g, '').slice(0, 8).toUpperCase()}`}
         />
       )}
 
@@ -939,7 +976,8 @@ export function FeesList({
           open={whatsappDialogOpen}
           onOpenChange={setWhatsappDialogOpen}
           student={selectedStudentForReminder}
-          unpaidFees={fees.filter(f => f.studentId === selectedStudentForReminder.id && f.status !== 'paid')}
+          unpaidFees={reminderUnpaidFees}
+          totalPaidByFeeId={totalPaidByFeeId}
         />
       )}
 
@@ -980,14 +1018,15 @@ export function FeesList({
             </Select>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)} disabled={isAddingFees}>Cancel</Button>
             <Button
+              disabled={isAddingFees}
               onClick={() => {
                 generateMonthlyFees(generateMonth);
                 setGenerateDialogOpen(false);
               }}
             >
-              Generate
+              {isAddingFees ? 'Generating...' : 'Generate'}
             </Button>
           </DialogFooter>
         </DialogContent>

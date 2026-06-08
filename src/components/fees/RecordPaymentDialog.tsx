@@ -40,6 +40,7 @@ interface RecordPaymentDialogProps {
   studentName: string;
   existingPayments?: FeePayment[];
   onRecordPayment: (amount: number, paymentMethod: string, reference?: string, notes?: string, paymentDate?: string) => void;
+  isPending?: boolean;
 }
 
 const PAYMENT_METHODS = [
@@ -61,7 +62,8 @@ export function RecordPaymentDialog({
   fee,
   studentName,
   existingPayments = [],
-  onRecordPayment
+  onRecordPayment,
+  isPending = false,
 }: RecordPaymentDialogProps) {
   const alreadyPaid = existingPayments.reduce((sum, p) => sum + p.amount, 0);
   const remainingDue = fee.amount - alreadyPaid;
@@ -145,7 +147,7 @@ export function RecordPaymentDialog({
   };
 
   const isPartial = parseFloat(amount || '0') > 0 && parseFloat(amount || '0') < remainingDue;
-  const newRemaining = remainingDue - parseFloat(amount || '0');
+  const newRemaining = Math.max(0, Math.round((remainingDue - parseFloat(amount || '0')) * 100) / 100);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -331,11 +333,11 @@ export function RecordPaymentDialog({
         </div>
 
         <DialogFooter className="px-4 sm:px-6 py-3 sm:py-4 border-t flex-shrink-0 gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs sm:text-sm">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="text-xs sm:text-sm" disabled={isPending}>
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={remainingDue <= 0} className="text-xs sm:text-sm">
-            Record Payment
+          <Button onClick={handleSubmit} disabled={remainingDue <= 0 || isPending} className="text-xs sm:text-sm">
+            {isPending ? 'Saving...' : 'Record Payment'}
           </Button>
         </DialogFooter>
       </DialogContent>

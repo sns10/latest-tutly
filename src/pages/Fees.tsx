@@ -156,6 +156,8 @@ export default function FeesPage() {
             onAddFeesBatch={addFeesBatch}
             onUpdateFeeStatus={updateFeeStatus}
             onRecordPayment={handleRecordPayment}
+            isRecordingPayment={recordPaymentMutation.isPending}
+            isAddingFees={addFeesBatchMut.isPending || addFeeMut.isPending}
           />
         </TabsContent>
 
@@ -184,6 +186,7 @@ export default function FeesPage() {
         onOpenChange={setAddFeeDialogOpen}
         students={students}
         onAddFee={addFee}
+        onAddFeesBatch={addFeesBatch}
       />
     </div>
   );

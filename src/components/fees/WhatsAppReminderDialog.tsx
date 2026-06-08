@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Student, StudentFee } from '@/types';
 import {
   Dialog,
@@ -25,13 +25,17 @@ interface WhatsAppReminderDialogProps {
   onOpenChange: (open: boolean) => void;
   student: Student;
   unpaidFees: StudentFee[];
+  /** Optional map of total paid per fee id — used to compute remaining balance. */
+  totalPaidByFeeId?: Map<string, number>;
 }
 
 type Language = 'english' | 'malayalam';
 
-function generateEnglishMessage(student: Student, unpaidFees: StudentFee[], totalUnpaid: number): string {
-  const feeDetails = unpaidFees.map(f => 
-    `• ${f.feeType || 'Monthly Fee'}: ₹${f.amount.toLocaleString('en-IN')} (Due: ${new Date(f.dueDate).toLocaleDateString()})`
+interface FeeLine { fee: StudentFee; remaining: number; }
+
+function generateEnglishMessage(student: Student, lines: FeeLine[], totalUnpaid: number): string {
+  const feeDetails = lines.map(({ fee: f, remaining }) =>
+    `• ${f.feeType || 'Monthly Fee'}: ₹${remaining.toLocaleString('en-IN')} (Due: ${new Date(f.dueDate).toLocaleDateString()})`
   ).join('\n');
 
   return `Dear Parent,
@@ -43,7 +47,7 @@ ${feeDetails}
 
 *Total Outstanding: ₹${totalUnpaid.toLocaleString('en-IN')}*
 
-Please arrange for the payment at your earliest convenience to avoid any late fee charges.
+Please arrange for the payment at your earliest convenience.
 
 Thank you for your cooperation.
 
@@ -51,9 +55,9 @@ Best regards,
 Tuition Administration`;
 }
 
-function generateMalayalamMessage(student: Student, unpaidFees: StudentFee[], totalUnpaid: number): string {
-  const feeDetails = unpaidFees.map(f => 
-    `• ${f.feeType || 'മാസ ഫീസ്'}: ₹${f.amount.toLocaleString('en-IN')} (അവസാന തീയതി: ${new Date(f.dueDate).toLocaleDateString()})`
+function generateMalayalamMessage(student: Student, lines: FeeLine[], totalUnpaid: number): string {
+  const feeDetails = lines.map(({ fee: f, remaining }) =>
+    `• ${f.feeType || 'മാസ ഫീസ്'}: ₹${remaining.toLocaleString('en-IN')} (അവസാന തീയതി: ${new Date(f.dueDate).toLocaleDateString()})`
   ).join('\n');
 
   return `പ്രിയ രക്ഷിതാവ്,
@@ -65,7 +69,7 @@ ${feeDetails}
 
 *ആകെ കുടിശ്ശിക: ₹${totalUnpaid.toLocaleString('en-IN')}*
 
-ലേറ്റ് ഫീസ് ഒഴിവാക്കാൻ ദയവായി എത്രയും വേഗം ഫീസ് അടയ്ക്കുക.
+ദയവായി എത്രയും വേഗം ഫീസ് അടയ്ക്കുക.
 
 നന്ദി.
 ട്യൂഷൻ അഡ്മിനിസ്ട്രേഷൻ`;
@@ -75,26 +79,46 @@ export function WhatsAppReminderDialog({
   open,
   onOpenChange,
   student,
-  unpaidFees
+  unpaidFees,
+  totalPaidByFeeId,
 }: WhatsAppReminderDialogProps) {
-  const totalUnpaid = unpaidFees.reduce((sum, f) => sum + f.amount, 0);
+  const lines = useMemo<FeeLine[]>(() => {
+    return unpaidFees
+      .map(fee => {
+        const paid = totalPaidByFeeId?.get(fee.id) ?? 0;
+        const remaining = Math.max(0, fee.amount - paid);
+        return { fee, remaining };
+      })
+      .filter(l => l.remaining > 0);
+  }, [unpaidFees, totalPaidByFeeId]);
+
+  const totalUnpaid = useMemo(
+    () => lines.reduce((sum, l) => sum + l.remaining, 0),
+    [lines]
+  );
   const [language, setLanguage] = useState<Language>('english');
   
   const defaultMessage = useMemo(() => {
     return language === 'malayalam'
-      ? generateMalayalamMessage(student, unpaidFees, totalUnpaid)
-      : generateEnglishMessage(student, unpaidFees, totalUnpaid);
-  }, [student, unpaidFees, totalUnpaid, language]);
+      ? generateMalayalamMessage(student, lines, totalUnpaid)
+      : generateEnglishMessage(student, lines, totalUnpaid);
+  }, [student, lines, totalUnpaid, language]);
 
   const [message, setMessage] = useState(defaultMessage);
+
+  // Reset message body whenever dialog opens or the target student changes.
+  useEffect(() => {
+    if (open) setMessage(defaultMessage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, student.id]);
 
   // Update message when language changes
   const handleLanguageChange = (value: string) => {
     if (value === 'english' || value === 'malayalam') {
       setLanguage(value);
       const newMsg = value === 'malayalam'
-        ? generateMalayalamMessage(student, unpaidFees, totalUnpaid)
-        : generateEnglishMessage(student, unpaidFees, totalUnpaid);
+        ? generateMalayalamMessage(student, lines, totalUnpaid)
+        : generateEnglishMessage(student, lines, totalUnpaid);
       setMessage(newMsg);
     }
   };
@@ -164,7 +188,7 @@ export function WhatsAppReminderDialog({
                 <p className="text-sm text-muted-foreground">{student.class}</p>
               </div>
               <div className="text-right">
-                <p className="text-sm text-muted-foreground">{unpaidFees.length} unpaid fees</p>
+                <p className="text-sm text-muted-foreground">{lines.length} unpaid fees</p>
                 <p className="font-bold text-red-600">₹{totalUnpaid.toLocaleString('en-IN')}</p>
               </div>
             </div>

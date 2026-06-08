@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Student, StudentFee } from '@/types';
+import { useUserTuition } from '@/hooks/useUserTuition';
+import { useVoidFeePaymentsMutation } from '@/hooks/queries';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -73,10 +75,20 @@ export function CustomFeesManager({
   onAddCustomFee,
 }: CustomFeesManagerProps) {
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery), 150);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [feeTypeFilter, setFeeTypeFilter] = useState<string>('All');
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [feeToDelete, setFeeToDelete] = useState<StudentFee | null>(null);
+  const [unpaidConfirmOpen, setUnpaidConfirmOpen] = useState(false);
+  const [feeToReset, setFeeToReset] = useState<StudentFee | null>(null);
+
+  const { tuitionId } = useUserTuition();
+  const voidFeePaymentsMut = useVoidFeePaymentsMutation(tuitionId);
 
   // Filter custom fees (non-monthly fees)
   const customFees = useMemo(() => {
@@ -106,17 +118,18 @@ export function CustomFeesManager({
 
   // Filtered fees
   const filteredFees = useMemo(() => {
+    const search = debouncedSearch.toLowerCase();
     return customFees.filter(fee => {
       const student = studentsById.get(fee.studentId);
       const searchMatch =
-        searchQuery === '' ||
-        (student && student.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        fee.feeType?.toLowerCase().includes(searchQuery.toLowerCase());
+        search === '' ||
+        (student && student.name.toLowerCase().includes(search)) ||
+        (fee.feeType ? fee.feeType.toLowerCase().includes(search) : false);
       const statusMatch = statusFilter === 'All' || fee.status === statusFilter;
       const typeMatch = feeTypeFilter === 'All' || fee.feeType === feeTypeFilter;
       return searchMatch && statusMatch && typeMatch;
     });
-  }, [customFees, studentsById, searchQuery, statusFilter, feeTypeFilter]);
+  }, [customFees, studentsById, debouncedSearch, statusFilter, feeTypeFilter]);
 
   // Stats
   const stats = useMemo(() => {
@@ -148,8 +161,17 @@ export function CustomFeesManager({
   };
 
   const handleMarkAsUnpaid = (fee: StudentFee) => {
-    onUpdateFeeStatus(fee.id, 'unpaid');
-    toast.success('Fee marked as unpaid');
+    // Reset means clearing payment history too — keep status consistent.
+    setFeeToReset(fee);
+    setUnpaidConfirmOpen(true);
+  };
+
+  const handleConfirmUnpaid = () => {
+    if (feeToReset) {
+      voidFeePaymentsMut.mutate(feeToReset.id);
+    }
+    setUnpaidConfirmOpen(false);
+    setFeeToReset(null);
   };
 
   const handleDeleteClick = (fee: StudentFee) => {
@@ -402,6 +424,35 @@ export function CustomFeesManager({
               className="bg-red-600 hover:bg-red-700"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mark Unpaid Confirmation — warns about deleting payment history */}
+      <AlertDialog open={unpaidConfirmOpen} onOpenChange={setUnpaidConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset fee to unpaid?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete all payment records for this fee and reset its status to unpaid.
+              {feeToReset && (
+                <div className="mt-2 p-2 bg-muted rounded text-sm">
+                  <strong>{getStudentName(feeToReset.studentId)}</strong> — {feeToReset.feeType}
+                  <br />
+                  Payments to delete: <strong>{(paidByFeeId.get(feeToReset.id) || 0) > 0 ? `₹${(paidByFeeId.get(feeToReset.id) || 0).toLocaleString('en-IN')}` : 'none'}</strong>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={voidFeePaymentsMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmUnpaid}
+              disabled={voidFeePaymentsMut.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {voidFeePaymentsMut.isPending ? 'Resetting...' : 'Reset Fee'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import { StudentFee } from '@/types';
 import {
   Dialog,
@@ -41,6 +41,8 @@ interface FeeReceiptProps {
   payment: FeePayment;
   tuition: TuitionInfo | null;
   receiptNumber?: string;
+  /** All payments on this fee (including this one). Used to show "Previously Paid" + "Balance" rows. */
+  existingPayments?: FeePayment[];
 }
 
 const formatPaymentMethod = (method: string) => {
@@ -107,8 +109,18 @@ export function FeeReceipt({
   payment,
   tuition,
   receiptNumber,
+  existingPayments = [],
 }: FeeReceiptProps) {
   const receiptRef = useRef<HTMLDivElement>(null);
+  const [busy, setBusy] = useState(false);
+
+  // Compute prior-payment context for partial-payment receipts.
+  const { priorPaid, balanceAfter } = useMemo(() => {
+    const others = existingPayments.filter(p => p.id !== payment.id);
+    const prior = others.reduce((s, p) => s + Number(p.amount || 0), 0);
+    const balance = Math.max(0, Number(fee.amount) - prior - Number(payment.amount || 0));
+    return { priorPaid: prior, balanceAfter: balance };
+  }, [existingPayments, payment, fee.amount]);
 
   // Move this before handlePrint so it's available in the HTML template
   const generatedReceiptNumber = receiptNumber || `RCP-${payment.id.substring(0, 8).toUpperCase()}`;
@@ -297,10 +309,18 @@ export function FeeReceipt({
                     <td>${fee.feeType} - ${new Date(fee.dueDate).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</td>
                     <td style="text-align: right;">₹${fee.amount.toLocaleString('en-IN')}</td>
                   </tr>
+                  ${priorPaid > 0 ? `<tr>
+                    <td style="color: #666;">Previously Paid</td>
+                    <td style="text-align: right; color: #666;">- ₹${priorPaid.toLocaleString('en-IN')}</td>
+                  </tr>` : ''}
                   <tr class="amount-row">
-                    <td>Amount Paid</td>
+                    <td>This Payment</td>
                     <td style="text-align: right;">₹${payment.amount.toLocaleString('en-IN')}</td>
                   </tr>
+                  ${(priorPaid > 0 || balanceAfter > 0) ? `<tr>
+                    <td style="color: #b45309;">Balance After</td>
+                    <td style="text-align: right; color: #b45309;">₹${balanceAfter.toLocaleString('en-IN')}</td>
+                  </tr>` : ''}
                 </tbody>
               </table>
             </div>
@@ -388,9 +408,12 @@ export function FeeReceipt({
 
   // Download as PDF
   const handleDownloadPDF = async () => {
+    if (busy) return;
+    setBusy(true);
     const receiptElement = receiptRef.current;
     if (!receiptElement) {
       toast.error('Receipt not found');
+      setBusy(false);
       return;
     }
 
@@ -439,6 +462,7 @@ export function FeeReceipt({
       // left a stuck pointer-events lock during the long sync block.
       restoreBodyPointerEvents();
       setTimeout(restoreBodyPointerEvents, 200);
+      setBusy(false);
     }
   };
 
@@ -505,11 +529,11 @@ Thank you for your payment!`;
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Fee Receipt</DialogTitle>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={handleDownloadPDF}>
+            <Button size="sm" variant="outline" onClick={handleDownloadPDF} disabled={busy}>
               <Download className="h-4 w-4 mr-2" />
-              PDF
+              {busy ? '...' : 'PDF'}
             </Button>
-            <Button size="sm" variant="outline" onClick={handlePrint}>
+            <Button size="sm" variant="outline" onClick={handlePrint} disabled={busy}>
               <Printer className="h-4 w-4 mr-2" />
               Print
             </Button>
@@ -594,10 +618,22 @@ Thank you for your payment!`;
                   </td>
                   <td className="border p-2 text-right">₹{fee.amount.toLocaleString('en-IN')}</td>
                 </tr>
+                {priorPaid > 0 && (
+                  <tr>
+                    <td className="border p-2 text-muted-foreground">Previously Paid</td>
+                    <td className="border p-2 text-right text-muted-foreground">- ₹{priorPaid.toLocaleString('en-IN')}</td>
+                  </tr>
+                )}
                 <tr className="amount-row font-bold text-base">
-                  <td className="border p-2 bg-muted/50">Amount Paid</td>
+                  <td className="border p-2 bg-muted/50">This Payment</td>
                   <td className="border p-2 text-right bg-muted/50">₹{payment.amount.toLocaleString('en-IN')}</td>
                 </tr>
+                {(priorPaid > 0 || balanceAfter > 0) && (
+                  <tr>
+                    <td className="border p-2 text-yellow-700">Balance After</td>
+                    <td className="border p-2 text-right text-yellow-700">₹{balanceAfter.toLocaleString('en-IN')}</td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
