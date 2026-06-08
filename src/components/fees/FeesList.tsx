@@ -116,6 +116,11 @@ export function FeesList({
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+
+  // When Mark-as-Paid / Record-Payment kicks off a mutation, we remember which fee
+  // is awaiting a freshly-persisted payment. An effect below watches `payments`
+  // and opens the receipt for the real saved payment once it lands.
+  const [pendingReceiptFor, setPendingReceiptFor] = useState<{ feeId: string; expectedAt: number } | null>(null);
   
   // Receipt state for automatic receipt after payment
   const [receiptOpen, setReceiptOpen] = useState(false);
