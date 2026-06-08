@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useUserTuition } from '@/hooks/useUserTuition';
 import {
   useStudentsQuery,
@@ -45,6 +45,23 @@ export default function FeesPage() {
   const addFeesBatchMut = useAddFeesBatchMutation(tuitionId);
 
   const [addFeeDialogOpen, setAddFeeDialogOpen] = useState(false);
+
+  // Memoize the adapter array so PaymentActivityFeed gets a stable prop and skips
+  // its expensive grouping work when other state changes (filters, dialogs, etc).
+  const activityPayments = useMemo(
+    () =>
+      payments.map(p => ({
+        id: p.id,
+        fee_id: p.feeId,
+        amount: p.amount,
+        payment_date: p.paymentDate,
+        payment_method: p.paymentMethod,
+        payment_reference: p.paymentReference || null,
+        notes: p.notes || null,
+        created_at: p.createdAt,
+      })),
+    [payments]
+  );
 
   const addFee = (newFee: Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>) => {
     addFeeMut.mutate(newFee);
@@ -122,16 +139,7 @@ export default function FeesPage() {
 
         <TabsContent value="activity" className="mt-4">
           <PaymentActivityFeed
-            feePayments={payments.map(p => ({
-              id: p.id,
-              fee_id: p.feeId,
-              amount: p.amount,
-              payment_date: p.paymentDate,
-              payment_method: p.paymentMethod,
-              payment_reference: p.paymentReference || null,
-              notes: p.notes || null,
-              created_at: p.createdAt,
-            }))}
+            feePayments={activityPayments}
             fees={fees}
             students={students}
           />

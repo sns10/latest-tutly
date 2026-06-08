@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,27 +46,39 @@ export function PaymentActivityFeed({ feePayments, fees, students }: PaymentActi
   const [receiptStudentName, setReceiptStudentName] = useState<string>("");
   const [receiptStudentClass, setReceiptStudentClass] = useState<string>("");
 
-  // Group payments by date
-  const paymentsByDate = feePayments.reduce((acc, payment) => {
-    const dateKey = startOfDay(new Date(payment.payment_date)).toISOString();
-    if (!acc[dateKey]) {
-      acc[dateKey] = [];
+  // Lookup maps — built once per data change instead of scanning arrays per row.
+  const feesById = useMemo(() => {
+    const m = new Map<string, StudentFee>();
+    for (const f of fees) m.set(f.id, f);
+    return m;
+  }, [fees]);
+
+  const studentsById = useMemo(() => {
+    const m = new Map<string, Student>();
+    for (const s of students) m.set(s.id, s);
+    return m;
+  }, [students]);
+
+  // Group payments by date + sorted keys (memoized).
+  const { paymentsByDate, sortedDates } = useMemo(() => {
+    const byDate: Record<string, FeePayment[]> = {};
+    for (const payment of feePayments) {
+      const dateKey = startOfDay(new Date(payment.payment_date)).toISOString();
+      (byDate[dateKey] ||= []).push(payment);
     }
-    acc[dateKey].push(payment);
-    return acc;
-  }, {} as Record<string, FeePayment[]>);
+    const keys = Object.keys(byDate).sort(
+      (a, b) => new Date(b).getTime() - new Date(a).getTime()
+    );
+    return { paymentsByDate: byDate, sortedDates: keys };
+  }, [feePayments]);
 
-  // Sort dates in descending order
-  const sortedDates = Object.keys(paymentsByDate).sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
-
-  const getFeeForPayment = (payment: FeePayment) => {
-    return fees.find((f) => f.id === payment.fee_id) || null;
-  };
+  const getFeeForPayment = (payment: FeePayment) =>
+    feesById.get(payment.fee_id) || null;
 
   const getStudentForPayment = (payment: FeePayment) => {
     const fee = getFeeForPayment(payment);
     if (!fee) return null;
-    return students.find((s) => s.id === fee.studentId) || null;
+    return studentsById.get(fee.studentId) || null;
   };
 
   const formatDateHeader = (dateStr: string) => {

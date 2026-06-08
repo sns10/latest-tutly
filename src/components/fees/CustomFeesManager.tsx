@@ -83,6 +83,21 @@ export function CustomFeesManager({
     return fees.filter(fee => !fee.feeType?.includes('Monthly Fee'));
   }, [fees]);
 
+  // Lookup maps — avoid O(N*M) per-row scans.
+  const studentsById = useMemo(() => {
+    const m = new Map<string, Student>();
+    for (const s of students) m.set(s.id, s);
+    return m;
+  }, [students]);
+
+  const paidByFeeId = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of payments) {
+      m.set(p.feeId, (m.get(p.feeId) || 0) + Number(p.amount));
+    }
+    return m;
+  }, [payments]);
+
   // Get unique fee types
   const feeTypes = useMemo(() => {
     const types = new Set(customFees.map(f => f.feeType));
@@ -92,7 +107,7 @@ export function CustomFeesManager({
   // Filtered fees
   const filteredFees = useMemo(() => {
     return customFees.filter(fee => {
-      const student = students.find(s => s.id === fee.studentId);
+      const student = studentsById.get(fee.studentId);
       const searchMatch =
         searchQuery === '' ||
         (student && student.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -101,7 +116,7 @@ export function CustomFeesManager({
       const typeMatch = feeTypeFilter === 'All' || fee.feeType === feeTypeFilter;
       return searchMatch && statusMatch && typeMatch;
     });
-  }, [customFees, students, searchQuery, statusFilter, feeTypeFilter]);
+  }, [customFees, studentsById, searchQuery, statusFilter, feeTypeFilter]);
 
   // Stats
   const stats = useMemo(() => {
@@ -116,23 +131,16 @@ export function CustomFeesManager({
       .reduce((sum, f) => sum + f.amount, 0);
     const partialAmount = customFees
       .filter(f => f.status === 'partial')
-      .reduce((sum, f) => {
-        const feePayments = payments.filter(p => p.feeId === f.id);
-        return sum + feePayments.reduce((s, p) => s + p.amount, 0);
-      }, 0);
+      .reduce((sum, f) => sum + (paidByFeeId.get(f.id) || 0), 0);
 
     return { total, paid, unpaid, partial, overdue, totalAmount, collectedAmount: collectedAmount + partialAmount };
-  }, [customFees, payments]);
+  }, [customFees, paidByFeeId]);
 
-  const getStudentName = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student ? student.name : 'Unknown';
-  };
+  const getStudentName = (studentId: string) =>
+    studentsById.get(studentId)?.name || 'Unknown';
 
-  const getStudentClass = (studentId: string) => {
-    const student = students.find(s => s.id === studentId);
-    return student?.class || '-';
-  };
+  const getStudentClass = (studentId: string) =>
+    studentsById.get(studentId)?.class || '-';
 
   const handleMarkAsPaid = (fee: StudentFee) => {
     onUpdateFeeStatus(fee.id, 'paid', new Date().toISOString().split('T')[0]);
