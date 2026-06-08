@@ -48,6 +48,14 @@ import { toast } from 'sonner';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { FloatingActionButton } from './FloatingActionButton';
 import { FeeCard } from './FeeCard';
 import { FeeReceipt } from './FeeReceipt';
@@ -103,6 +111,11 @@ export function FeesList({
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [selectedFeeForHistory, setSelectedFeeForHistory] = useState<StudentFee | null>(null);
   const [filterSheetOpen, setFilterSheetOpen] = useState(false);
+  const [generateDialogOpen, setGenerateDialogOpen] = useState(false);
+  const [generateMonth, setGenerateMonth] = useState<string>(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
   
   // Receipt state for automatic receipt after payment
   const [receiptOpen, setReceiptOpen] = useState(false);
@@ -156,26 +169,26 @@ export function FeesList({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  function generateMonthlyFees() {
+  function generateMonthlyFees(targetMonth?: string) {
     if (classFees.length === 0 || classFees.every(cf => cf.amount === 0)) {
       toast.error('Please set class fees first');
       return;
     }
 
-    const currentMonth = getCurrentMonth();
-    const currentYear = new Date().getFullYear();
+    const monthStr = targetMonth || getCurrentMonth();
+    const [yearPart, monthPart] = monthStr.split('-').map(Number);
+    const dueDate = new Date(yearPart, monthPart - 1, 5);
     const feesToCreate: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>> = [];
 
     students.forEach(student => {
-      const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${currentMonth}`);
+      const existingFee = fees.find(f => f.studentId === student.id && f.feeType === `Monthly Fee - ${monthStr}`);
       if (!existingFee) {
         const classFee = classFees.find(cf => cf.class === student.class);
         const feeAmount = classFee ? classFee.amount : 0;
         if (feeAmount > 0) {
-          const dueDate = new Date(currentYear, new Date().getMonth(), 5);
           feesToCreate.push({
             studentId: student.id,
-            feeType: `Monthly Fee - ${currentMonth}`,
+            feeType: `Monthly Fee - ${monthStr}`,
             amount: feeAmount,
             dueDate: dueDate.toISOString().split('T')[0],
             status: 'unpaid'
@@ -193,7 +206,7 @@ export function FeesList({
         toast.success(`Generated fees for ${feesToCreate.length} students`);
       }
     } else {
-      toast.info('All students already have fees for this month');
+      toast.info('All students already have fees for the selected month');
     }
   }
 
@@ -533,7 +546,7 @@ export function FeesList({
       {/* Actions Bar */}
       <div className="flex flex-col sm:flex-row justify-between gap-3">
         <div className="flex flex-wrap gap-2">
-          <Button onClick={generateMonthlyFees} size="sm" className="text-xs sm:text-sm">
+          <Button onClick={() => setGenerateDialogOpen(true)} size="sm" className="text-xs sm:text-sm">
             <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">Generate Fees</span>
             <span className="sm:hidden">Generate</span>
@@ -941,9 +954,44 @@ export function FeesList({
             toast.info('No unpaid fees to record payment for');
           }
         }}
-        onGenerateFees={generateMonthlyFees}
+        onGenerateFees={() => setGenerateDialogOpen(true)}
         showGenerateFees={true}
       />
+
+      {/* Generate Monthly Fees - month picker */}
+      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Monthly Fees</DialogTitle>
+            <DialogDescription>
+              Pick the month to generate fees for. Existing fees for that month are skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Select value={generateMonth} onValueChange={setGenerateMonth}>
+              <SelectTrigger className="bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                {availableMonths.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                generateMonthlyFees(generateMonth);
+                setGenerateDialogOpen(false);
+              }}
+            >
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

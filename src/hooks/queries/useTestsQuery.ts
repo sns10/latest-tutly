@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { WeeklyTest, StudentTestResult, ClassName } from '@/types';
 import { toast } from 'sonner';
-import { getPreviousAcademicYearStart } from '@/lib/dateWindows';
 
 const STALE_TIME = 10 * 60 * 1000; // 10 minutes
 const GC_TIME = 45 * 60 * 1000; // 45 minutes
@@ -13,16 +12,11 @@ export function useWeeklyTestsQuery(tuitionId: string | null, opts?: { loadHisto
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      let baseQuery = supabase
+      const baseQuery = supabase
         .from('weekly_tests')
         .select('*')
         .eq('tuition_id', tuitionId)
         .order('test_date', { ascending: false });
-
-      // Default scope: tests from current academic year only.
-      if (!opts?.loadHistory) {
-        baseQuery = baseQuery.gte('test_date', getPreviousAcademicYearStart());
-      }
 
       const allData: any[] = [];
       let from = 0;
@@ -60,25 +54,19 @@ export function useTestResultsQuery(tuitionId: string | null, testId?: string, o
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      let query = supabase
+      const query = supabase
         .from('student_test_results')
         .select('test_id, student_id, marks, is_absent, weekly_tests!inner(tuition_id, test_date)')
         .eq('weekly_tests.tuition_id', tuitionId);
 
-      if (testId) {
-        query = query.eq('test_id', testId);
-      } else if (!opts?.loadHistory) {
-        // Default scope: include previous academic year so tests from the
-        // year that just ended remain visible right after a new year starts.
-        query = query.gte('weekly_tests.test_date', getPreviousAcademicYearStart());
-      }
+      const scopedQuery = testId ? query.eq('test_id', testId) : query;
 
       // Paginate to get ALL results (no blanket limit)
       const allData: any[] = [];
       let from = 0;
       const PAGE_SIZE = 1000;
       while (true) {
-        const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+        const { data, error } = await scopedQuery.range(from, from + PAGE_SIZE - 1);
         if (error) {
           console.error('Error fetching test results:', error);
           throw error;
