@@ -18,7 +18,7 @@ interface FeeFilters {
 }
 
 const formatFees = (data: any[]): StudentFee[] => {
-  const today = new Date().toISOString().split('T')[0];
+  const today = format(new Date(), 'yyyy-MM-dd');
   return data.map(fee => {
     // Derive overdue status client-side: if unpaid and due_date has passed, treat as overdue
     let effectiveStatus = fee.status as 'paid' | 'unpaid' | 'partial' | 'overdue';
@@ -52,7 +52,11 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
         .eq('students.tuition_id', tuitionId)
         .order('due_date', { ascending: false });
 
-      if (filters?.status) {
+      if (filters?.status === 'overdue') {
+        // 'overdue' is a derived/virtual status; the DB stores it as 'unpaid' with a past due_date.
+        const today = format(new Date(), 'yyyy-MM-dd');
+        query = query.eq('status', 'unpaid').lt('due_date', today);
+      } else if (filters?.status) {
         query = query.eq('status', filters.status);
       }
 
@@ -222,6 +226,8 @@ export function useDeleteFeeMutation(tuitionId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
       toast.success('Fee deleted successfully');
     },
     onError: (error) => {
