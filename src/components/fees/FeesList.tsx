@@ -48,6 +48,14 @@ import { toast } from 'sonner';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { FloatingActionButton } from './FloatingActionButton';
 import { FeeCard } from './FeeCard';
 import { FeeReceipt } from './FeeReceipt';
