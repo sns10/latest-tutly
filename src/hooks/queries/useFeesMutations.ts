@@ -20,16 +20,33 @@ export function useAddFeesBatchMutation(tuitionId: string | null) {
         notes: fee.notes || null,
       }));
 
-      // Use ON CONFLICT DO NOTHING via upsert with ignoreDuplicates so a stale
-      // cache + double click can never create duplicate monthly fees.
-      // The DB has a partial unique index on (student_id, fee_type) WHERE fee_type LIKE 'Monthly Fee - %'.
+      // Plain insert. The client (FeesList.generateMonthlyFees) already filters
+      // out students with an existing fee for the target month, so duplicates
+      // are rare. The DB has a PARTIAL unique index on (student_id, fee_type)
+      // WHERE fee_type LIKE 'Monthly Fee - %' as a safety net — but Postgres
+      // rejects ON CONFLICT against a partial index, so we can't use upsert.
       const { data, error } = await supabase
         .from('student_fees')
-        .upsert(feeRecords, {
-          onConflict: 'student_id,fee_type',
-          ignoreDuplicates: true,
-        })
+        .insert(feeRecords)
         .select('id');
+
+      if (error && (error as any).code === '23505') {
+        // A duplicate slipped through (stale cache). Fall back to per-row
+        // inserts and skip the offending rows so the rest still get created.
+        let inserted = 0;
+        for (const row of feeRecords) {
+          const { error: rowErr } = await supabase
+            .from('student_fees')
+            .insert(row);
+          if (!rowErr) {
+            inserted += 1;
+          } else if ((rowErr as any).code !== '23505') {
+            throw rowErr;
+          }
+        }
+        return inserted;
+      }
+
       if (error) throw error;
       return data?.length ?? 0;
     },
