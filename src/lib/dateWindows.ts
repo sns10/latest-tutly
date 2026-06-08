@@ -1,33 +1,10 @@
 /**
  * Shared time-window helpers for query scoping.
  *
- * Goal: keep dashboard reads bounded so a tuition with years of history
- * doesn't pull every row into the browser on every page load.
- *
- * The Indian academic year typically runs June -> May. We default to
- * "current academic year" for fees / tests / student data, and a rolling
- * 60-day window for general attendance. Callers can opt into wider
- * windows by passing { loadHistory: true } or explicit start/end dates.
+ * Attendance reads use a rolling window for performance. Fees / tests /
+ * homework no longer auto-scope to an academic year — all history loads
+ * by default (pagination handles large datasets).
  */
-
-export function getCurrentAcademicYearStart(today: Date = new Date()): string {
-  const year = today.getFullYear();
-  const month = today.getMonth(); // 0-indexed; 5 = June
-  const startYear = month >= 5 ? year : year - 1;
-  // June 1st of startYear
-  return `${startYear}-06-01`;
-}
-
-/**
- * Start of the *previous* academic year. Used as a softer default so that
- * tests / results from the year that just ended remain visible right after
- * the new academic year begins (otherwise everything appears empty on June 1).
- */
-export function getPreviousAcademicYearStart(today: Date = new Date()): string {
-  const current = getCurrentAcademicYearStart(today);
-  const startYear = parseInt(current.slice(0, 4), 10) - 1;
-  return `${startYear}-06-01`;
-}
 
 export function getDefaultAttendanceWindowStart(days = 60, today: Date = new Date()): string {
   const d = new Date(today);

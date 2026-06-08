@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { StudentFee, ClassFee, ClassName } from '@/types';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { getCurrentAcademicYearStart } from '@/lib/dateWindows';
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes
 const GC_TIME = 30 * 60 * 1000; // 30 minutes
@@ -66,12 +65,8 @@ export function useFeesQuery(tuitionId: string | null, filters?: FeeFilters) {
         const endOfMonth = new Date(parseInt(filters.month.split('-')[0]), parseInt(filters.month.split('-')[1]), 0)
           .toISOString().split('T')[0];
         query = query.gte('due_date', startOfMonth).lte('due_date', endOfMonth);
-      } else if (!filters?.loadHistory && !filters?.studentId) {
-        // Default scope: current academic year only. Prevents loading years
-        // of fee history into the browser on every dashboard render.
-        // Per-student views always load full history (small dataset).
-        const fromDate = filters?.fromDate || getCurrentAcademicYearStart();
-        query = query.gte('due_date', fromDate);
+      } else if (filters?.fromDate) {
+        query = query.gte('due_date', filters.fromDate);
       }
 
       // Paginate to get all fees (no arbitrary limit)

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/components/AuthProvider';
 import type { Tables } from '@/integrations/supabase/types';
-import { getCurrentAcademicYearStart, getDefaultAttendanceWindowStart } from '@/lib/dateWindows';
+import { getDefaultAttendanceWindowStart } from '@/lib/dateWindows';
 
 type Student = Tables<'students'>;
 type StudentAttendance = Tables<'student_attendance'>;
@@ -201,13 +201,11 @@ export function useStudentData(selectedStudentId?: string | null) {
         paginatedFetch(() =>
           supabase.from('weekly_tests').select('*')
             .eq('tuition_id', studentData.tuition_id)
-            .gte('test_date', getCurrentAcademicYearStart())
             .order('test_date', { ascending: false })
         ),
         paginatedFetch(() =>
           supabase.from('student_fees').select('*')
             .eq('student_id', studentData.id)
-            .gte('due_date', getCurrentAcademicYearStart())
             .order('due_date', { ascending: false })
         ),
         supabase
