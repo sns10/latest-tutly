@@ -39,7 +39,7 @@ interface FeeCardProps {
   onPrintReceipt?: () => void;
 }
 
-export function FeeCard({
+function FeeCardComponent({
   fee,
   studentName,
   studentClass,
@@ -179,4 +179,6 @@ export function FeeCard({
     </Card>
   );
 }
+
+export const FeeCard = React.memo(FeeCardComponent);
 
