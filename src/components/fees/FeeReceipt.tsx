@@ -521,11 +521,11 @@ Thank you for your payment!`;
         <DialogHeader className="flex flex-row items-center justify-between">
           <DialogTitle>Fee Receipt</DialogTitle>
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={handleDownloadPDF}>
+            <Button size="sm" variant="outline" onClick={handleDownloadPDF} disabled={busy}>
               <Download className="h-4 w-4 mr-2" />
-              PDF
+              {busy ? '...' : 'PDF'}
             </Button>
-            <Button size="sm" variant="outline" onClick={handlePrint}>
+            <Button size="sm" variant="outline" onClick={handlePrint} disabled={busy}>
               <Printer className="h-4 w-4 mr-2" />
               Print
             </Button>
