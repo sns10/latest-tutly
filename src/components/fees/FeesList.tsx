@@ -957,6 +957,41 @@ export function FeesList({
         onGenerateFees={() => setGenerateDialogOpen(true)}
         showGenerateFees={true}
       />
+
+      {/* Generate Monthly Fees - month picker */}
+      <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md">
+          <DialogHeader>
+            <DialogTitle>Generate Monthly Fees</DialogTitle>
+            <DialogDescription>
+              Pick the month to generate fees for. Existing fees for that month are skipped.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-2">
+            <Select value={generateMonth} onValueChange={setGenerateMonth}>
+              <SelectTrigger className="bg-white">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-white">
+                {availableMonths.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setGenerateDialogOpen(false)}>Cancel</Button>
+            <Button
+              onClick={() => {
+                generateMonthlyFees(generateMonth);
+                setGenerateDialogOpen(false);
+              }}
+            >
+              Generate
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
