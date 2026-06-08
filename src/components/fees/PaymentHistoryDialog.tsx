@@ -7,11 +7,23 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { History, CreditCard, Banknote, Smartphone, Building, Calendar, Printer } from 'lucide-react';
+import { History, CreditCard, Banknote, Smartphone, Building, Calendar, Printer, Trash2 } from 'lucide-react';
 import { FeeReceipt } from './FeeReceipt';
+import { useUserTuition } from '@/hooks/useUserTuition';
+import { useVoidFeePaymentMutation } from '@/hooks/queries';
 
 interface FeePayment {
   id: string;
@@ -77,6 +89,11 @@ export function PaymentHistoryDialog({
 }: PaymentHistoryDialogProps) {
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<FeePayment | null>(null);
+  const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
+  const [paymentToVoid, setPaymentToVoid] = useState<FeePayment | null>(null);
+
+  const { tuitionId } = useUserTuition();
+  const voidPaymentMut = useVoidFeePaymentMutation(tuitionId);
   
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
   const remaining = Number(fee.amount) - totalPaid;
@@ -84,6 +101,19 @@ export function PaymentHistoryDialog({
   const handlePrintReceipt = (payment: FeePayment) => {
     setSelectedPaymentForReceipt(payment);
     setReceiptOpen(true);
+  };
+
+  const handleVoidClick = (payment: FeePayment) => {
+    setPaymentToVoid(payment);
+    setVoidConfirmOpen(true);
+  };
+
+  const handleConfirmVoid = () => {
+    if (paymentToVoid) {
+      voidPaymentMut.mutate(paymentToVoid.id);
+    }
+    setVoidConfirmOpen(false);
+    setPaymentToVoid(null);
   };
 
   return (
@@ -150,8 +180,18 @@ export function PaymentHistoryDialog({
                             size="sm"
                             onClick={() => handlePrintReceipt(payment)}
                             className="h-7 px-2"
+                            title="Print receipt"
                           >
                             <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleVoidClick(payment)}
+                            className="h-7 px-2 text-destructive hover:text-destructive"
+                            title="Void payment"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                           <Badge variant="outline" className="text-xs">
                             #{payments.length - index}
@@ -202,9 +242,39 @@ export function PaymentHistoryDialog({
           studentName={studentName}
           studentClass={studentClass}
           payment={selectedPaymentForReceipt}
+          existingPayments={payments}
           tuition={tuition || null}
         />
       )}
+
+      {/* Void Payment Confirmation */}
+      <AlertDialog open={voidConfirmOpen} onOpenChange={setVoidConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Void this payment?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes the payment record and recomputes the fee status from remaining payments. This cannot be undone.
+              {paymentToVoid && (
+                <div className="mt-2 p-2 bg-muted rounded text-sm">
+                  Amount: <strong>₹{paymentToVoid.amount.toLocaleString('en-IN')}</strong>
+                  <br />
+                  Date: {new Date(paymentToVoid.paymentDate).toLocaleDateString('en-IN')}
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={voidPaymentMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmVoid}
+              disabled={voidPaymentMut.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {voidPaymentMut.isPending ? 'Voiding...' : 'Void Payment'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }
