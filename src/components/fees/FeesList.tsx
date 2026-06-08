@@ -888,19 +888,12 @@ export function FeesList({
                 remaining={remaining}
                 paymentCount={paymentCount}
                 isSelected={selectedFees.has(fee.id)}
-                onSelect={(checked) => handleSelectFee(fee.id, checked)}
-                onMarkAsPaid={() => handleMarkAsPaid(fee.id)}
-                onRecordPayment={() => handleRecordPayment(fee)}
-                onSendReminder={() => handleSendReminder(fee.studentId)}
-                onViewHistory={() => handleViewHistory(fee)}
-                onPrintReceipt={paymentCount > 0 ? () => {
-                  const feePayments = getFeePayments(fee.id);
-                  if (feePayments.length > 0) {
-                    setReceiptFee(fee);
-                    setReceiptPayment(feePayments[0]); // Most recent payment
-                    setReceiptOpen(true);
-                  }
-                } : undefined}
+                onSelect={handleSelectFee}
+                onMarkAsPaid={handleMarkAsPaid}
+                onRecordPayment={handleRecordPaymentById}
+                onSendReminder={handleSendReminder}
+                onViewHistory={handleViewHistoryById}
+                onPrintReceipt={paymentCount > 0 ? handlePrintReceiptForFee : undefined}
               />
             );
           })
