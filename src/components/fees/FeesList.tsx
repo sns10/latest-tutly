@@ -62,6 +62,22 @@ import { FeeReceipt } from './FeeReceipt';
 import { getStatusBadge } from './feeHelpers';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { restoreBodyPointerEvents } from '@/lib/dialogSafety';
+import {
+  useVoidFeePaymentsMutation,
+  useSetFeeStatusManualMutation,
+} from '@/hooks/queries';
+import { useUserTuition } from '@/hooks/useUserTuition';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { RotateCcw, XCircle } from 'lucide-react';
 
 interface FeePayment {
   id: string;
@@ -107,6 +123,11 @@ export function FeesList({
   isAddingFees = false,
 }: FeesListProps) {
   const { tuition } = useTuitionInfo();
+  const { tuitionId } = useUserTuition();
+  const voidAllMut = useVoidFeePaymentsMutation(tuitionId);
+  const setStatusManualMut = useSetFeeStatusManualMutation(tuitionId);
+  const [resetFeeConfirm, setResetFeeConfirm] = useState<StudentFee | null>(null);
+  const [markUnpaidConfirm, setMarkUnpaidConfirm] = useState<StudentFee | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
   const [selectedClass, setSelectedClass] = useState<string>('All');
@@ -899,6 +920,25 @@ export function FeesList({
                                   Print Receipt
                                 </DropdownMenuItem>
                               )}
+
+                              <DropdownMenuSeparator />
+                              {paymentCount > 0 && (
+                                <DropdownMenuItem
+                                  onClick={() => setResetFeeConfirm(fee)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Reset Fee (void all payments)
+                                </DropdownMenuItem>
+                              )}
+                              {paymentCount === 0 && fee.status === 'paid' && (
+                                <DropdownMenuItem
+                                  onClick={() => setMarkUnpaidConfirm(fee)}
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Mark as Unpaid
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -1057,6 +1097,64 @@ export function FeesList({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reset fee confirm — voids all payments and resets to unpaid */}
+      <AlertDialog
+        open={!!resetFeeConfirm}
+        onOpenChange={(o) => { if (!o) { setResetFeeConfirm(null); unlockBody(); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset this fee?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes <strong>all payment entries</strong> on this fee and marks it unpaid.
+              This cannot be undone. Use this to correct a fee that was wrongly recorded.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={voidAllMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={voidAllMut.isPending}
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (resetFeeConfirm) voidAllMut.mutate(resetFeeConfirm.id);
+                setResetFeeConfirm(null);
+              }}
+            >
+              {voidAllMut.isPending ? 'Resetting...' : 'Reset Fee'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mark unpaid confirm — only for fees with zero payments */}
+      <AlertDialog
+        open={!!markUnpaidConfirm}
+        onOpenChange={(o) => { if (!o) { setMarkUnpaidConfirm(null); unlockBody(); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark this fee as unpaid?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This flips the fee status back to unpaid. No payment records exist on this fee, so the ledger stays clean.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={setStatusManualMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={setStatusManualMut.isPending}
+              onClick={() => {
+                if (markUnpaidConfirm) {
+                  setStatusManualMut.mutate({ feeId: markUnpaidConfirm.id, status: 'unpaid' });
+                }
+                setMarkUnpaidConfirm(null);
+              }}
+            >
+              {setStatusManualMut.isPending ? 'Updating...' : 'Mark as Unpaid'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -9,3 +9,4 @@ export { PaymentHistoryDialog } from './PaymentHistoryDialog';
 export { CustomFeesManager } from './CustomFeesManager';
 export { PaymentActivityFeed } from './PaymentActivityFeed';
 export { FeeReceipt } from './FeeReceipt';
+export { EditPaymentDialog } from './EditPaymentDialog';
