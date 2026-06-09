@@ -72,13 +72,19 @@ export function useVoidFeePaymentsMutation(tuitionId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (feeId: string) => {
-      const { error } = await supabase.rpc('void_fee_payments', { p_fee_id: feeId });
-      if (error) throw error;
+      const { data, error } = await supabase.rpc('void_fee_payments', { p_fee_id: feeId });
+      if (error) {
+        console.error('[void_fee_payments] RPC error', { feeId, error });
+        throw error;
+      }
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] }),
+      ]);
       toast.success('Fee reset — all payments removed');
     },
     onError: (e: any) => {
@@ -92,13 +98,28 @@ export function useVoidFeePaymentMutation(tuitionId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (paymentId: string) => {
-      const { error } = await supabase.rpc('void_fee_payment', { p_payment_id: paymentId });
-      if (error) throw error;
+      const { data, error } = await supabase.rpc('void_fee_payment', { p_payment_id: paymentId });
+      if (error) {
+        console.error('[void_fee_payment] RPC error', { paymentId, error });
+        throw error;
+      }
+      // Sanity check the server response so we never treat a failed/no-op
+      // call as success (which would leave a stale row on screen).
+      const result = data as { feeId?: string; newStatus?: string } | null;
+      if (!result || !result.feeId) {
+        console.error('[void_fee_payment] unexpected response', { paymentId, data });
+        throw new Error('Void did not return a valid result. The payment may not have been removed.');
+      }
+      return result;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
+    onSuccess: async () => {
+      // Wait for the fresh data before declaring success, so the UI the user
+      // sees next actually reflects the deletion.
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] }),
+      ]);
       toast.success('Payment voided');
     },
     onError: (e: any) => {
@@ -123,7 +144,7 @@ export function useEditFeePaymentMutation(tuitionId: string | null) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (input: EditFeePaymentInput) => {
-      const { error } = await supabase.rpc('edit_fee_payment', {
+      const { data, error } = await supabase.rpc('edit_fee_payment', {
         p_payment_id: input.paymentId,
         p_amount: input.amount,
         p_payment_method: input.paymentMethod,
@@ -131,12 +152,18 @@ export function useEditFeePaymentMutation(tuitionId: string | null) {
         p_notes: input.notes ?? null,
         p_payment_date: input.paymentDate ?? null,
       });
-      if (error) throw error;
+      if (error) {
+        console.error('[edit_fee_payment] RPC error', { input, error });
+        throw error;
+      }
+      return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] }),
+      ]);
       toast.success('Payment updated');
     },
     onError: (e: any) => {

@@ -216,20 +216,34 @@ export function useDeleteFeeMutation(tuitionId: string | null) {
 
   return useMutation({
     mutationFn: async (feeId: string) => {
-      // Delete associated payments first
-      await supabase.from('fee_payments').delete().eq('fee_id', feeId);
+      // Delete associated payments first. Surface any error instead of
+      // silently continuing — otherwise the fee row deletion could fail
+      // cascade-style and leave the UI showing a "deleted" payment.
+      const { error: paymentsErr } = await supabase
+        .from('fee_payments')
+        .delete()
+        .eq('fee_id', feeId);
+      if (paymentsErr) {
+        console.error('[delete_fee] failed to delete fee_payments', { feeId, paymentsErr });
+        throw paymentsErr;
+      }
 
       const { error } = await supabase
         .from('student_fees')
         .delete()
         .eq('id', feeId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('[delete_fee] failed to delete student_fees row', { feeId, error });
+        throw error;
+      }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
-      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] }),
+        queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] }),
+      ]);
       toast.success('Fee deleted successfully');
     },
     onError: (error) => {

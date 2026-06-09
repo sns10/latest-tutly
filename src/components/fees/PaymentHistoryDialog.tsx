@@ -141,12 +141,20 @@ export function PaymentHistoryDialog({
     setVoidConfirmOpen(true);
   };
 
-  const handleConfirmVoid = () => {
-    if (paymentToVoid) {
-      voidPaymentMut.mutate(paymentToVoid.id);
+  const handleConfirmVoid = async () => {
+    if (!paymentToVoid) return;
+    try {
+      // Await the mutation so we only close the confirm dialog AFTER the
+      // backend confirms the delete and the queries have refetched. If the
+      // server rejects (RLS / tuition mismatch / payment not found), the
+      // mutation throws, the error toast fires, and the dialog stays open
+      // so the user sees what happened instead of a silent no-op.
+      await voidPaymentMut.mutateAsync(paymentToVoid.id);
+      setVoidConfirmOpen(false);
+      setPaymentToVoid(null);
+    } catch {
+      // toast is shown by the mutation's onError; keep the dialog open.
     }
-    setVoidConfirmOpen(false);
-    setPaymentToVoid(null);
   };
 
   const handleEditClick = (payment: FeePayment) => {
