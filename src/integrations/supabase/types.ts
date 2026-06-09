@@ -1412,6 +1412,17 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      edit_fee_payment: {
+        Args: {
+          p_amount: number
+          p_notes?: string
+          p_payment_date?: string
+          p_payment_id: string
+          p_payment_method: string
+          p_reference?: string
+        }
+        Returns: Json
+      }
       get_tuition_dashboard_stats: {
         Args: {
           _month_end?: string
@@ -1453,6 +1464,10 @@ export type Database = {
             }
             Returns: Json
           }
+      set_fee_status_manual: {
+        Args: { p_fee_id: string; p_status: string }
+        Returns: Json
+      }
       setup_tuition_admin: {
         Args: { _full_name: string; _tuition_id: string; _user_id: string }
         Returns: undefined
