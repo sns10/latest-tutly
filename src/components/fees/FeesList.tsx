@@ -1097,6 +1097,64 @@ export function FeesList({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Reset fee confirm — voids all payments and resets to unpaid */}
+      <AlertDialog
+        open={!!resetFeeConfirm}
+        onOpenChange={(o) => { if (!o) { setResetFeeConfirm(null); unlockBody(); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reset this fee?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This permanently deletes <strong>all payment entries</strong> on this fee and marks it unpaid.
+              This cannot be undone. Use this to correct a fee that was wrongly recorded.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={voidAllMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={voidAllMut.isPending}
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => {
+                if (resetFeeConfirm) voidAllMut.mutate(resetFeeConfirm.id);
+                setResetFeeConfirm(null);
+              }}
+            >
+              {voidAllMut.isPending ? 'Resetting...' : 'Reset Fee'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Mark unpaid confirm — only for fees with zero payments */}
+      <AlertDialog
+        open={!!markUnpaidConfirm}
+        onOpenChange={(o) => { if (!o) { setMarkUnpaidConfirm(null); unlockBody(); } }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Mark this fee as unpaid?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This flips the fee status back to unpaid. No payment records exist on this fee, so the ledger stays clean.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={setStatusManualMut.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={setStatusManualMut.isPending}
+              onClick={() => {
+                if (markUnpaidConfirm) {
+                  setStatusManualMut.mutate({ feeId: markUnpaidConfirm.id, status: 'unpaid' });
+                }
+                setMarkUnpaidConfirm(null);
+              }}
+            >
+              {setStatusManualMut.isPending ? 'Updating...' : 'Mark as Unpaid'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
