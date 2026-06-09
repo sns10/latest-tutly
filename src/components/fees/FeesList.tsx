@@ -62,6 +62,22 @@ import { FeeReceipt } from './FeeReceipt';
 import { getStatusBadge } from './feeHelpers';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { restoreBodyPointerEvents } from '@/lib/dialogSafety';
+import {
+  useVoidFeePaymentsMutation,
+  useSetFeeStatusManualMutation,
+} from '@/hooks/queries';
+import { useUserTuition } from '@/hooks/useUserTuition';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { RotateCcw, XCircle } from 'lucide-react';
 
 interface FeePayment {
   id: string;
@@ -107,6 +123,11 @@ export function FeesList({
   isAddingFees = false,
 }: FeesListProps) {
   const { tuition } = useTuitionInfo();
+  const { tuitionId } = useUserTuition();
+  const voidAllMut = useVoidFeePaymentsMutation(tuitionId);
+  const setStatusManualMut = useSetFeeStatusManualMutation(tuitionId);
+  const [resetFeeConfirm, setResetFeeConfirm] = useState<StudentFee | null>(null);
+  const [markUnpaidConfirm, setMarkUnpaidConfirm] = useState<StudentFee | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<string>('All');
   const [selectedMonth, setSelectedMonth] = useState<string>(getCurrentMonth());
   const [selectedClass, setSelectedClass] = useState<string>('All');
@@ -897,6 +918,25 @@ export function FeesList({
                                 >
                                   <Printer className="h-4 w-4 mr-2" />
                                   Print Receipt
+                                </DropdownMenuItem>
+                              )}
+
+                              <DropdownMenuSeparator />
+                              {paymentCount > 0 && (
+                                <DropdownMenuItem
+                                  onClick={() => setResetFeeConfirm(fee)}
+                                  className="text-destructive focus:text-destructive"
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-2" />
+                                  Reset Fee (void all payments)
+                                </DropdownMenuItem>
+                              )}
+                              {paymentCount === 0 && fee.status === 'paid' && (
+                                <DropdownMenuItem
+                                  onClick={() => setMarkUnpaidConfirm(fee)}
+                                >
+                                  <XCircle className="h-4 w-4 mr-2" />
+                                  Mark as Unpaid
                                 </DropdownMenuItem>
                               )}
                             </DropdownMenuContent>
