@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { StudentFee } from '@/types';
 import {
   Dialog,
@@ -100,6 +100,36 @@ export function PaymentHistoryDialog({
   
   const totalPaid = payments.reduce((sum, p) => sum + Number(p.amount), 0);
   const remaining = Number(fee.amount) - totalPaid;
+
+  // Keep selections in sync with live data: if a referenced payment was voided
+  // (or this fee was reset) by the open Edit/Receipt/Void sub-dialog, clear
+  // the stale local state and close that child so the UI doesn't show a
+  // ghost row.
+  const paymentIds = useMemo(() => new Set(payments.map(p => p.id)), [payments]);
+
+  useEffect(() => {
+    if (selectedPaymentForReceipt && !paymentIds.has(selectedPaymentForReceipt.id)) {
+      setSelectedPaymentForReceipt(null);
+      setReceiptOpen(false);
+    }
+    if (paymentToVoid && !paymentIds.has(paymentToVoid.id)) {
+      setPaymentToVoid(null);
+      setVoidConfirmOpen(false);
+    }
+    if (paymentToEdit && !paymentIds.has(paymentToEdit.id)) {
+      setPaymentToEdit(null);
+      setEditOpen(false);
+    }
+  }, [paymentIds, selectedPaymentForReceipt, paymentToVoid, paymentToEdit]);
+
+  // Always feed the receipt the LIVE payment object (post-edit values), not
+  // the snapshot taken when the user clicked the printer icon.
+  const livePaymentForReceipt = selectedPaymentForReceipt
+    ? payments.find(p => p.id === selectedPaymentForReceipt.id) || null
+    : null;
+  const livePaymentToEdit = paymentToEdit
+    ? payments.find(p => p.id === paymentToEdit.id) || null
+    : null;
 
   const handlePrintReceipt = (payment: FeePayment) => {
     setSelectedPaymentForReceipt(payment);
@@ -258,14 +288,14 @@ export function PaymentHistoryDialog({
       </Dialog>
 
       {/* Receipt Dialog */}
-      {selectedPaymentForReceipt && (
+      {livePaymentForReceipt && (
         <FeeReceipt
           open={receiptOpen}
           onOpenChange={setReceiptOpen}
           fee={fee}
           studentName={studentName}
           studentClass={studentClass}
-          payment={selectedPaymentForReceipt}
+          payment={livePaymentForReceipt}
           existingPayments={payments}
           tuition={tuition || null}
         />
@@ -307,8 +337,8 @@ export function PaymentHistoryDialog({
           setEditOpen(o);
           if (!o) setPaymentToEdit(null);
         }}
-        payment={paymentToEdit}
-        maxAmount={paymentToEdit ? maxAmountFor(paymentToEdit) : 0}
+        payment={livePaymentToEdit}
+        maxAmount={livePaymentToEdit ? maxAmountFor(livePaymentToEdit) : 0}
       />
     </>
   );

@@ -201,6 +201,8 @@ export function useUpdateFeeStatusMutation(tuitionId: string | null) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
     },
     onError: (error) => {
       console.error('Error updating fee status:', error);

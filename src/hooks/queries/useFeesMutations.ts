@@ -160,6 +160,8 @@ export function useSetFeeStatusManualMutation(tuitionId: string | null) {
     },
     onSuccess: (_d, vars) => {
       queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
       toast.success(vars.status === 'paid' ? 'Fee marked as paid' : 'Fee marked as unpaid');
     },
     onError: (e: any) => {
