@@ -73,6 +73,11 @@ interface FeePayment {
   createdAt: string;
 }
 
+// Module-scope stable empty array so getFeePayments() returns the same
+// reference for every fee without payments. Avoids spurious re-renders of
+// child dialogs that include the payments list in their prop set.
+const EMPTY_PAYMENTS: FeePayment[] = [];
+
 interface FeesListProps {
   students: Student[];
   fees: StudentFee[];
@@ -951,13 +956,15 @@ export function FeesList({
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
           isPending={isRecordingPayment}
           onRecordPayment={(amount, method, reference, notes, paymentDate) => {
-            // Record the payment and mark a pending-receipt watch.
+            // Tear down the dialog state FIRST so its unmount doesn't compete
+            // with the mutation's post-success refetch on slower laptops.
             // The effect above opens the receipt for the *real* persisted payment
             // once the cache refreshes — no "RCP-TEMP-..." numbers on paper.
-            onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes, paymentDate);
-            setPendingReceiptFor({ feeId: selectedFeeForPayment.id, expectedAt: Date.now() });
+            const feeId = selectedFeeForPayment.id;
             setPaymentDialogOpen(false);
             setSelectedFeeForPayment(null);
+            setPendingReceiptFor({ feeId, expectedAt: Date.now() });
+            onRecordPayment(feeId, amount, method, reference, notes, paymentDate);
           }}
         />
       )}
