@@ -112,6 +112,16 @@ export function FeeReceipt({
   const receiptRef = useRef<HTMLDivElement>(null);
   const [busy, setBusy] = useState(false);
 
+  // If the underlying payment was voided (or the parent fee was reset) while
+  // this receipt is still open, auto-close it so the user never sees a stale
+  // record that no longer exists in the database.
+  useEffect(() => {
+    if (!open) return;
+    if (existingPayments.length === 0) return;
+    const stillExists = existingPayments.some(p => p.id === payment.id);
+    if (!stillExists) onOpenChange(false);
+  }, [open, existingPayments, payment.id, onOpenChange]);
+
   // Compute prior-payment context for partial-payment receipts.
   const { priorPaid, balanceAfter } = useMemo(() => {
     const others = existingPayments.filter(p => p.id !== payment.id);
