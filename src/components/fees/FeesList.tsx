@@ -175,6 +175,9 @@ export function FeesList({
 
   // Open receipt for the *real* freshly-persisted payment once the mutation lands
   // and the payments cache refreshes. Prevents "RCP-TEMP-..." receipts on paper.
+  // Defer the actual receipt open by one frame so the (potentially heavy)
+  // post-mutation re-render of FeesList paints first instead of stalling the
+  // main thread alongside the receipt mount on slower laptops.
   useEffect(() => {
     if (!pendingReceiptFor) return;
     const list = paymentsByFeeId.get(pendingReceiptFor.feeId);
@@ -183,11 +186,29 @@ export function FeesList({
     if (new Date(newest.createdAt).getTime() < pendingReceiptFor.expectedAt - 1000) return;
     const fee = fees.find(f => f.id === pendingReceiptFor.feeId);
     if (!fee) return;
-    setReceiptFee(fee);
-    setReceiptPayment(newest);
-    setReceiptOpen(true);
     setPendingReceiptFor(null);
+    const raf = requestAnimationFrame(() => {
+      setReceiptFee(fee);
+      setReceiptPayment(newest);
+      setReceiptOpen(true);
+    });
+    return () => cancelAnimationFrame(raf);
   }, [pendingReceiptFor, paymentsByFeeId, fees]);
+
+  // Safety net: if the post-payment cache refresh never lands (slow network,
+  // mutation error), make sure the watcher doesn't stay armed forever and the
+  // UI gives the user a clear signal.
+  useEffect(() => {
+    if (!pendingReceiptFor) return;
+    const t = setTimeout(() => {
+      setPendingReceiptFor((cur) => {
+        if (!cur) return cur;
+        toast.info('Payment saved. Open the row menu to print the receipt.');
+        return null;
+      });
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [pendingReceiptFor]);
 
   function getCurrentMonth() {
     const now = new Date();
@@ -292,7 +313,6 @@ export function FeesList({
 
   const getStudent = (studentId: string) => studentsById.get(studentId);
 
-  const EMPTY_PAYMENTS: FeePayment[] = [];
   const getFeePayments = (feeId: string) =>
     paymentsByFeeId.get(feeId) || EMPTY_PAYMENTS;
 
