@@ -20,10 +20,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { History, CreditCard, Banknote, Smartphone, Building, Calendar, Printer, Trash2 } from 'lucide-react';
+import { History, CreditCard, Banknote, Smartphone, Building, Calendar, Printer, Trash2, Pencil } from 'lucide-react';
 import { FeeReceipt } from './FeeReceipt';
 import { useUserTuition } from '@/hooks/useUserTuition';
 import { useVoidFeePaymentMutation } from '@/hooks/queries';
+import { EditPaymentDialog } from './EditPaymentDialog';
 
 interface FeePayment {
   id: string;
@@ -91,6 +92,8 @@ export function PaymentHistoryDialog({
   const [selectedPaymentForReceipt, setSelectedPaymentForReceipt] = useState<FeePayment | null>(null);
   const [voidConfirmOpen, setVoidConfirmOpen] = useState(false);
   const [paymentToVoid, setPaymentToVoid] = useState<FeePayment | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [paymentToEdit, setPaymentToEdit] = useState<FeePayment | null>(null);
 
   const { tuitionId } = useUserTuition();
   const voidPaymentMut = useVoidFeePaymentMutation(tuitionId);
@@ -114,6 +117,18 @@ export function PaymentHistoryDialog({
     }
     setVoidConfirmOpen(false);
     setPaymentToVoid(null);
+  };
+
+  const handleEditClick = (payment: FeePayment) => {
+    setPaymentToEdit(payment);
+    setEditOpen(true);
+  };
+
+  const maxAmountFor = (payment: FeePayment) => {
+    const otherTotal = payments
+      .filter((p) => p.id !== payment.id)
+      .reduce((s, p) => s + Number(p.amount), 0);
+    return Number(fee.amount) - otherTotal;
   };
 
   return (
@@ -183,6 +198,15 @@ export function PaymentHistoryDialog({
                             title="Print receipt"
                           >
                             <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditClick(payment)}
+                            className="h-7 px-2"
+                            title="Edit payment"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
                           </Button>
                           <Button
                             variant="ghost"
@@ -275,6 +299,17 @@ export function PaymentHistoryDialog({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Payment Dialog */}
+      <EditPaymentDialog
+        open={editOpen}
+        onOpenChange={(o) => {
+          setEditOpen(o);
+          if (!o) setPaymentToEdit(null);
+        }}
+        payment={paymentToEdit}
+        maxAmount={paymentToEdit ? maxAmountFor(paymentToEdit) : 0}
+      />
     </>
   );
 }
