@@ -9,8 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Printer, MessageCircle, Download, Copy } from 'lucide-react';
 import { toast } from 'sonner';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import { safelyOpenExternal, restoreBodyPointerEvents } from '@/lib/dialogSafety';
 
 interface FeePayment {
@@ -426,6 +424,13 @@ export function FeeReceipt({
     });
 
     try {
+      // Lazy-load the heavy PDF libs only when the user actually clicks
+      // Download PDF. Keeps initial receipt open instant on slow laptops.
+      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
+
       const canvas = await html2canvas(receiptElement, {
         scale: 2,
         useCORS: true,

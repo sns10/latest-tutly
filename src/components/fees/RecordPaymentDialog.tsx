@@ -75,18 +75,24 @@ export function RecordPaymentDialog({
   const [errors, setErrors] = useState<{ amount?: string; reference?: string; notes?: string }>({});
   const [paymentDate, setPaymentDate] = useState<Date>(new Date());
 
-  // Reset amount when dialog opens or fee changes
+  // Reset form ONLY when the dialog transitions open (or the underlying fee row
+  // changes). Depending on `existingPayments` here causes a reset cascade every
+  // time the parent re-renders (the parent passes a fresh array reference each
+  // render) — that can stall typing and submit on slower laptops.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (open) {
-      const remaining = fee.amount - existingPayments.reduce((sum, p) => sum + p.amount, 0);
-      setAmount(remaining > 0 ? remaining.toString() : '0');
-      setPaymentMethod('cash');
-      setReference('');
-      setNotes('');
-      setErrors({});
-      setPaymentDate(new Date());
-    }
-  }, [open, fee, existingPayments]);
+    if (!open) return;
+    const remaining =
+      fee.amount - existingPayments.reduce((sum, p) => sum + p.amount, 0);
+    setAmount(remaining > 0 ? remaining.toString() : '0');
+    setPaymentMethod('cash');
+    setReference('');
+    setNotes('');
+    setErrors({});
+    setPaymentDate(new Date());
+    // Intentionally exclude `existingPayments` and `fee` (object identity)
+    // from deps — reset is keyed on dialog open + fee.id only.
+  }, [open, fee.id]);
 
   const handleAmountChange = (value: string) => {
     // Only allow valid numeric input
@@ -142,8 +148,10 @@ export function RecordPaymentDialog({
     const sanitizedNotes = notes ? sanitizeString(notes) : undefined;
     const dateStr = format(paymentDate, 'yyyy-MM-dd');
 
-    onRecordPayment(paymentAmount, paymentMethod, sanitizedReference, sanitizedNotes, dateStr);
+    // Close the dialog FIRST so its tear-down isn't competing with the
+    // mutation's post-success cache refetch on slower laptops.
     onOpenChange(false);
+    onRecordPayment(paymentAmount, paymentMethod, sanitizedReference, sanitizedNotes, dateStr);
   };
 
   const isPartial = parseFloat(amount || '0') > 0 && parseFloat(amount || '0') < remainingDue;

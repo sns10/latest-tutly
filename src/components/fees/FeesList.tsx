@@ -73,6 +73,11 @@ interface FeePayment {
   createdAt: string;
 }
 
+// Module-scope stable empty array so getFeePayments() returns the same
+// reference for every fee without payments. Avoids spurious re-renders of
+// child dialogs that include the payments list in their prop set.
+const EMPTY_PAYMENTS: FeePayment[] = [];
+
 interface FeesListProps {
   students: Student[];
   fees: StudentFee[];
@@ -175,6 +180,9 @@ export function FeesList({
 
   // Open receipt for the *real* freshly-persisted payment once the mutation lands
   // and the payments cache refreshes. Prevents "RCP-TEMP-..." receipts on paper.
+  // Defer the actual receipt open by one frame so the (potentially heavy)
+  // post-mutation re-render of FeesList paints first instead of stalling the
+  // main thread alongside the receipt mount on slower laptops.
   useEffect(() => {
     if (!pendingReceiptFor) return;
     const list = paymentsByFeeId.get(pendingReceiptFor.feeId);
@@ -183,11 +191,29 @@ export function FeesList({
     if (new Date(newest.createdAt).getTime() < pendingReceiptFor.expectedAt - 1000) return;
     const fee = fees.find(f => f.id === pendingReceiptFor.feeId);
     if (!fee) return;
-    setReceiptFee(fee);
-    setReceiptPayment(newest);
-    setReceiptOpen(true);
     setPendingReceiptFor(null);
+    const raf = requestAnimationFrame(() => {
+      setReceiptFee(fee);
+      setReceiptPayment(newest);
+      setReceiptOpen(true);
+    });
+    return () => cancelAnimationFrame(raf);
   }, [pendingReceiptFor, paymentsByFeeId, fees]);
+
+  // Safety net: if the post-payment cache refresh never lands (slow network,
+  // mutation error), make sure the watcher doesn't stay armed forever and the
+  // UI gives the user a clear signal.
+  useEffect(() => {
+    if (!pendingReceiptFor) return;
+    const t = setTimeout(() => {
+      setPendingReceiptFor((cur) => {
+        if (!cur) return cur;
+        toast.info('Payment saved. Open the row menu to print the receipt.');
+        return null;
+      });
+    }, 8000);
+    return () => clearTimeout(t);
+  }, [pendingReceiptFor]);
 
   function getCurrentMonth() {
     const now = new Date();
@@ -292,7 +318,6 @@ export function FeesList({
 
   const getStudent = (studentId: string) => studentsById.get(studentId);
 
-  const EMPTY_PAYMENTS: FeePayment[] = [];
   const getFeePayments = (feeId: string) =>
     paymentsByFeeId.get(feeId) || EMPTY_PAYMENTS;
 
@@ -931,13 +956,15 @@ export function FeesList({
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
           isPending={isRecordingPayment}
           onRecordPayment={(amount, method, reference, notes, paymentDate) => {
-            // Record the payment and mark a pending-receipt watch.
+            // Tear down the dialog state FIRST so its unmount doesn't compete
+            // with the mutation's post-success refetch on slower laptops.
             // The effect above opens the receipt for the *real* persisted payment
             // once the cache refreshes — no "RCP-TEMP-..." numbers on paper.
-            onRecordPayment(selectedFeeForPayment.id, amount, method, reference, notes, paymentDate);
-            setPendingReceiptFor({ feeId: selectedFeeForPayment.id, expectedAt: Date.now() });
+            const feeId = selectedFeeForPayment.id;
             setPaymentDialogOpen(false);
             setSelectedFeeForPayment(null);
+            setPendingReceiptFor({ feeId, expectedAt: Date.now() });
+            onRecordPayment(feeId, amount, method, reference, notes, paymentDate);
           }}
         />
       )}
