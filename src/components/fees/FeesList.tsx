@@ -61,6 +61,7 @@ import { FeeCard } from './FeeCard';
 import { FeeReceipt } from './FeeReceipt';
 import { getStatusBadge } from './feeHelpers';
 import { useTuitionInfo } from '@/hooks/useTuitionInfo';
+import { restoreBodyPointerEvents } from '@/lib/dialogSafety';
 
 interface FeePayment {
   id: string;
@@ -126,12 +127,10 @@ export function FeesList({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
 
-  // When Mark-as-Paid / Record-Payment kicks off a mutation, we remember which fee
-  // is awaiting a freshly-persisted payment. An effect below watches `payments`
-  // and opens the receipt for the real saved payment once it lands.
-  const [pendingReceiptFor, setPendingReceiptFor] = useState<{ feeId: string; expectedAt: number } | null>(null);
-  
-  // Receipt state for automatic receipt after payment
+  // Receipt state — opened ONLY via explicit user action (row menu / history).
+  // We intentionally do NOT auto-open the receipt after a payment is recorded
+  // because chaining one Radix dialog close into another open caused a stuck
+  // body pointer-events lock on some laptops (page scrolled but no clicks).
   const [receiptOpen, setReceiptOpen] = useState(false);
   const [receiptFee, setReceiptFee] = useState<StudentFee | null>(null);
   const [receiptPayment, setReceiptPayment] = useState<FeePayment | null>(null);
@@ -178,42 +177,48 @@ export function FeesList({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }, []);
 
-  // Open receipt for the *real* freshly-persisted payment once the mutation lands
-  // and the payments cache refreshes. Prevents "RCP-TEMP-..." receipts on paper.
-  // Defer the actual receipt open by one frame so the (potentially heavy)
-  // post-mutation re-render of FeesList paints first instead of stalling the
-  // main thread alongside the receipt mount on slower laptops.
-  useEffect(() => {
-    if (!pendingReceiptFor) return;
-    const list = paymentsByFeeId.get(pendingReceiptFor.feeId);
-    if (!list || list.length === 0) return;
-    const newest = list[0]; // sorted desc by createdAt
-    if (new Date(newest.createdAt).getTime() < pendingReceiptFor.expectedAt - 1000) return;
-    const fee = fees.find(f => f.id === pendingReceiptFor.feeId);
-    if (!fee) return;
-    setPendingReceiptFor(null);
-    const raf = requestAnimationFrame(() => {
-      setReceiptFee(fee);
-      setReceiptPayment(newest);
-      setReceiptOpen(true);
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [pendingReceiptFor, paymentsByFeeId, fees]);
+  // Belt-and-braces: whenever ANY of the fee dialogs close, restore the body
+  // pointer-events lock that Radix can leave behind when one dialog's close
+  // animation overlaps another's mount.
+  const unlockBody = useCallback(() => {
+    restoreBodyPointerEvents();
+    setTimeout(restoreBodyPointerEvents, 50);
+    setTimeout(restoreBodyPointerEvents, 250);
+  }, []);
 
-  // Safety net: if the post-payment cache refresh never lands (slow network,
-  // mutation error), make sure the watcher doesn't stay armed forever and the
-  // UI gives the user a clear signal.
-  useEffect(() => {
-    if (!pendingReceiptFor) return;
-    const t = setTimeout(() => {
-      setPendingReceiptFor((cur) => {
-        if (!cur) return cur;
-        toast.info('Payment saved. Open the row menu to print the receipt.');
-        return null;
-      });
-    }, 8000);
-    return () => clearTimeout(t);
-  }, [pendingReceiptFor]);
+  // Centralised close handlers — clear the selected entity AND unlock the body.
+  const closePaymentDialog = useCallback((open: boolean) => {
+    setPaymentDialogOpen(open);
+    if (!open) {
+      setSelectedFeeForPayment(null);
+      unlockBody();
+    }
+  }, [unlockBody]);
+
+  const closeHistoryDialog = useCallback((open: boolean) => {
+    setHistoryDialogOpen(open);
+    if (!open) {
+      setSelectedFeeForHistory(null);
+      unlockBody();
+    }
+  }, [unlockBody]);
+
+  const closeWhatsappDialog = useCallback((open: boolean) => {
+    setWhatsappDialogOpen(open);
+    if (!open) {
+      setSelectedStudentForReminder(null);
+      unlockBody();
+    }
+  }, [unlockBody]);
+
+  const closeReceiptDialog = useCallback((open: boolean) => {
+    setReceiptOpen(open);
+    if (!open) {
+      setReceiptFee(null);
+      setReceiptPayment(null);
+      unlockBody();
+    }
+  }, [unlockBody]);
 
   function getCurrentMonth() {
     const now = new Date();
@@ -339,10 +344,7 @@ export function FeesList({
     const remaining = fee.amount - totalPaid;
 
     if (remaining > 0) {
-      // Record the payment first; the receipt will be opened from the freshly-saved
-      // payment row after the mutation invalidates the cache (no temp ids on paper).
       onRecordPayment(feeId, remaining, 'cash', undefined, 'Marked as paid');
-      setPendingReceiptFor({ feeId, expectedAt: Date.now() });
       return;
     }
 
@@ -950,30 +952,27 @@ export function FeesList({
       {selectedFeeForPayment && (
         <RecordPaymentDialog
           open={paymentDialogOpen}
-          onOpenChange={setPaymentDialogOpen}
+          onOpenChange={closePaymentDialog}
           fee={selectedFeeForPayment}
           studentName={getStudentName(selectedFeeForPayment.studentId)}
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
           isPending={isRecordingPayment}
           onRecordPayment={(amount, method, reference, notes, paymentDate) => {
-            // Tear down the dialog state FIRST so its unmount doesn't compete
-            // with the mutation's post-success refetch on slower laptops.
-            // The effect above opens the receipt for the *real* persisted payment
-            // once the cache refreshes — no "RCP-TEMP-..." numbers on paper.
             const feeId = selectedFeeForPayment.id;
-            setPaymentDialogOpen(false);
-            setSelectedFeeForPayment(null);
-            setPendingReceiptFor({ feeId, expectedAt: Date.now() });
+            // Close the dialog (clears selection + unlocks body) BEFORE the
+            // mutation fires so its teardown does not race with the cache
+            // refetch. Receipt can be opened later via the row menu.
+            closePaymentDialog(false);
             onRecordPayment(feeId, amount, method, reference, notes, paymentDate);
           }}
         />
       )}
       
-      {/* Automatic Receipt after Payment */}
+      {/* Receipt — opened only via explicit user action (row menu / history) */}
       {receiptFee && receiptPayment && (
         <FeeReceipt
           open={receiptOpen}
-          onOpenChange={setReceiptOpen}
+          onOpenChange={closeReceiptDialog}
           fee={receiptFee}
           studentName={getStudentName(receiptFee.studentId)}
           studentClass={getStudentClass(receiptFee.studentId)}
@@ -988,7 +987,7 @@ export function FeesList({
       {selectedFeeForHistory && (
         <PaymentHistoryDialog
           open={historyDialogOpen}
-          onOpenChange={setHistoryDialogOpen}
+          onOpenChange={closeHistoryDialog}
           fee={selectedFeeForHistory}
           studentName={getStudentName(selectedFeeForHistory.studentId)}
           studentClass={getStudentClass(selectedFeeForHistory.studentId)}
@@ -1001,7 +1000,7 @@ export function FeesList({
       {selectedStudentForReminder && (
         <WhatsAppReminderDialog
           open={whatsappDialogOpen}
-          onOpenChange={setWhatsappDialogOpen}
+          onOpenChange={closeWhatsappDialog}
           student={selectedStudentForReminder}
           unpaidFees={reminderUnpaidFees}
           totalPaidByFeeId={totalPaidByFeeId}
