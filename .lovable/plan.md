@@ -1,45 +1,32 @@
-# Plan
 
-The page is most likely getting stuck behind an invisible dialog lock after `Record Payment` closes. The strong clue is: the screen still scrolls, nothing visibly crashes, no receipt appears, but all buttons stop responding.
+## Problem
 
-## What I’ll change
+After clicking **Print** in the Fee Receipt dialog and closing the browser's print preview, the page becomes unresponsive (scrolls but clicks don't register). Same root cause family as before: a stuck `body { pointer-events: none }` left by Radix Dialog when the print dialog steals focus mid-lifecycle.
 
-1. **Stabilize the payment dialog teardown**
-   - Add a dedicated close handler in `src/components/fees/FeesList.tsx` for the payment dialog.
-   - When the dialog closes, clear both `paymentDialogOpen` and `selectedFeeForPayment` together and force dialog cleanup for body click-lock state.
+## What I'll change
 
-2. **Remove the risky automatic receipt popup after submit**
-   - Stop auto-opening `FeeReceipt` immediately after a payment is saved.
-   - Keep receipt access through the existing row menu / payment history actions.
-   - Replace the current auto-receipt watcher with a success toast only, so one dialog is not opening while another is still tearing down.
+**`src/components/fees/FeeReceipt.tsx` — `handlePrint`**
 
-3. **Fully unmount fee-related dialogs when closed**
-   - Update `FeesList` dialog state so `FeeReceipt`, `PaymentHistoryDialog`, and reminder/payment dialogs clear their selected item/state on close.
-   - This avoids hidden Radix overlays or body `pointer-events` locks persisting after close.
+1. Listen for the iframe's `afterprint` event and the parent window's `focus` event, and call `restoreBodyPointerEvents()` repeatedly (0ms, 200ms, 600ms) when either fires — this covers the moment the user dismisses the system print dialog.
+2. Close the receipt dialog itself (`onOpenChange(false)`) right after triggering print, so Radix can finish unmounting cleanly while the print preview is on screen. The receipt remains accessible from the row menu / payment history if needed again.
+3. Keep the existing 5-second iframe cleanup as a safety net, and add a final `restoreBodyPointerEvents()` burst there too.
+4. Also add a `setTimeout(restoreBodyPointerEvents, 1000)` right after print is triggered as a hard fallback for browsers that don't fire `afterprint` reliably.
 
-4. **Add an explicit click-unlock safety net on close**
-   - Reuse the existing dialog safety helper to restore pointer events whenever any fee dialog closes.
-   - Apply this specifically around the payment/receipt flow where the freeze is happening.
+**`src/components/fees/FeesList.tsx` — receipt dialog close handler**
 
-## Technical details
-
-**Files to update**
-- `src/components/fees/FeesList.tsx`
-- `src/components/fees/FeeReceipt.tsx` (only if needed for close cleanup)
-- `src/components/fees/RecordPaymentDialog.tsx` (only if a tiny close-handling adjustment is still needed)
-
-**Implementation approach**
-- Replace ad-hoc `setOpen(false)` calls with named close handlers.
-- Gate dialog rendering by both `open` state and selected entity where appropriate.
-- Clear `receiptFee` / `receiptPayment` on receipt close instead of leaving a hidden mounted dialog tree.
-- Remove `pendingReceiptFor` auto-open behavior if it is the source of the lock race.
+- Confirm `closeReceiptDialog` already calls `unlockBody()`; if not, add a multi-tick `restoreBodyPointerEvents` burst (0/100/400ms) to handle the post-print path.
 
 ## Expected result
 
-After submitting a payment:
-- the payment is saved,
-- the page stays clickable,
-- tabs/actions/three-dot menus keep working,
-- the next student’s payment can be recorded immediately.
+After printing a receipt:
+- The print dialog opens normally.
+- When the user closes/cancels the print dialog, the page is fully interactive again.
+- The 3-dot menu, tabs (Custom Fee, Structure, etc.), and Record Payment all respond immediately.
+- No visual change to the receipt layout or print output.
 
-If you approve, I’ll implement this focused fix now.
+## Files touched
+
+- `src/components/fees/FeeReceipt.tsx`
+- `src/components/fees/FeesList.tsx` (only if the receipt close handler needs the extra unlock burst)
+
+If you approve, I'll implement this focused fix now.
