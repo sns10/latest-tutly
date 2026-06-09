@@ -107,3 +107,64 @@ export function useVoidFeePaymentMutation(tuitionId: string | null) {
     },
   });
 }
+
+// ---- Edit a single payment ----
+
+export interface EditFeePaymentInput {
+  paymentId: string;
+  amount: number;
+  paymentMethod: string;
+  reference?: string | null;
+  notes?: string | null;
+  paymentDate?: string;
+}
+
+export function useEditFeePaymentMutation(tuitionId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: EditFeePaymentInput) => {
+      const { error } = await supabase.rpc('edit_fee_payment', {
+        p_payment_id: input.paymentId,
+        p_amount: input.amount,
+        p_payment_method: input.paymentMethod,
+        p_reference: input.reference ?? null,
+        p_notes: input.notes ?? null,
+        p_payment_date: input.paymentDate ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['feePayments', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['todayPayments', tuitionId] });
+      toast.success('Payment updated');
+    },
+    onError: (e: any) => {
+      console.error('edit_fee_payment failed', e);
+      toast.error(e?.message || 'Failed to update payment');
+    },
+  });
+}
+
+// ---- Manual paid/unpaid toggle (only when no payments exist) ----
+
+export function useSetFeeStatusManualMutation(tuitionId: string | null) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { feeId: string; status: 'paid' | 'unpaid' }) => {
+      const { error } = await supabase.rpc('set_fee_status_manual', {
+        p_fee_id: input.feeId,
+        p_status: input.status,
+      });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
+      toast.success(vars.status === 'paid' ? 'Fee marked as paid' : 'Fee marked as unpaid');
+    },
+    onError: (e: any) => {
+      console.error('set_fee_status_manual failed', e);
+      toast.error(e?.message || 'Failed to update fee status');
+    },
+  });
+}

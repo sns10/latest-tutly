@@ -21,6 +21,8 @@ export {
   useAddFeesBatchMutation,
   useVoidFeePaymentsMutation,
   useVoidFeePaymentMutation,
+  useEditFeePaymentMutation,
+  useSetFeeStatusManualMutation,
 } from './useFeesMutations';
 
 // Tests queries - loaded on-demand
