@@ -952,30 +952,27 @@ export function FeesList({
       {selectedFeeForPayment && (
         <RecordPaymentDialog
           open={paymentDialogOpen}
-          onOpenChange={setPaymentDialogOpen}
+          onOpenChange={closePaymentDialog}
           fee={selectedFeeForPayment}
           studentName={getStudentName(selectedFeeForPayment.studentId)}
           existingPayments={getFeePayments(selectedFeeForPayment.id)}
           isPending={isRecordingPayment}
           onRecordPayment={(amount, method, reference, notes, paymentDate) => {
-            // Tear down the dialog state FIRST so its unmount doesn't compete
-            // with the mutation's post-success refetch on slower laptops.
-            // The effect above opens the receipt for the *real* persisted payment
-            // once the cache refreshes — no "RCP-TEMP-..." numbers on paper.
             const feeId = selectedFeeForPayment.id;
-            setPaymentDialogOpen(false);
-            setSelectedFeeForPayment(null);
-            setPendingReceiptFor({ feeId, expectedAt: Date.now() });
+            // Close the dialog (clears selection + unlocks body) BEFORE the
+            // mutation fires so its teardown does not race with the cache
+            // refetch. Receipt can be opened later via the row menu.
+            closePaymentDialog(false);
             onRecordPayment(feeId, amount, method, reference, notes, paymentDate);
           }}
         />
       )}
       
-      {/* Automatic Receipt after Payment */}
+      {/* Receipt — opened only via explicit user action (row menu / history) */}
       {receiptFee && receiptPayment && (
         <FeeReceipt
           open={receiptOpen}
-          onOpenChange={setReceiptOpen}
+          onOpenChange={closeReceiptDialog}
           fee={receiptFee}
           studentName={getStudentName(receiptFee.studentId)}
           studentClass={getStudentClass(receiptFee.studentId)}
@@ -990,7 +987,7 @@ export function FeesList({
       {selectedFeeForHistory && (
         <PaymentHistoryDialog
           open={historyDialogOpen}
-          onOpenChange={setHistoryDialogOpen}
+          onOpenChange={closeHistoryDialog}
           fee={selectedFeeForHistory}
           studentName={getStudentName(selectedFeeForHistory.studentId)}
           studentClass={getStudentClass(selectedFeeForHistory.studentId)}
@@ -1003,7 +1000,7 @@ export function FeesList({
       {selectedStudentForReminder && (
         <WhatsAppReminderDialog
           open={whatsappDialogOpen}
-          onOpenChange={setWhatsappDialogOpen}
+          onOpenChange={closeWhatsappDialog}
           student={selectedStudentForReminder}
           unpaidFees={reminderUnpaidFees}
           totalPaidByFeeId={totalPaidByFeeId}
