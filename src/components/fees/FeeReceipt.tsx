@@ -393,6 +393,30 @@ export function FeeReceipt({
     // Fallback if onload never fires (iOS Safari quirk with document.write)
     setTimeout(triggerPrint, 400);
 
+    // Restore pointer-events whenever the print dialog closes or window
+    // regains focus. This is the key fix for the "page stuck after print"
+    // freeze: the system print dialog interrupts Radix Dialog's lifecycle
+    // and leaves body { pointer-events: none } stuck.
+    const unlockBurst = () => {
+      restoreBodyPointerEvents();
+      setTimeout(restoreBodyPointerEvents, 200);
+      setTimeout(restoreBodyPointerEvents, 600);
+      setTimeout(restoreBodyPointerEvents, 1200);
+    };
+    try {
+      iframe.contentWindow?.addEventListener('afterprint', unlockBurst);
+    } catch { /* ignore cross-origin */ }
+    window.addEventListener('afterprint', unlockBurst, { once: true });
+    const onFocus = () => unlockBurst();
+    window.addEventListener('focus', onFocus, { once: true });
+
+    // Close the receipt dialog so Radix can finish unmounting cleanly
+    // while the print preview is on screen.
+    setTimeout(() => {
+      try { onOpenChange(false); } catch { /* ignore */ }
+      unlockBurst();
+    }, 800);
+
     // GUARANTEED cleanup regardless of onload firing
     setTimeout(() => {
       try {
@@ -401,6 +425,7 @@ export function FeeReceipt({
         /* ignore */
       }
       restoreBodyPointerEvents();
+      window.removeEventListener('focus', onFocus);
     }, 5000);
   };
 
