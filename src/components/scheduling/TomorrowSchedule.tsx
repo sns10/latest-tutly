@@ -172,15 +172,20 @@ export function TomorrowSchedule({
     return `${displayHour}:${minutes} ${period}`;
   };
 
-  // Generate WhatsApp message for a class
-  const generateWhatsAppMessage = (className: ClassName) => {
-    const classes = tomorrowClasses[className];
-    if (!classes || classes.length === 0) return '';
+  // Generate WhatsApp message for a (class, division) group
+  const generateWhatsAppMessage = (groupKey: string) => {
+    const group = tomorrowGroups.find((g) => g.key === groupKey);
+    if (!group || group.entries.length === 0) return '';
+    const classes = group.entries;
 
     const dateFormatted = format(tomorrow, 'dd/MM/yyyy');
     let message = `📅 *Tomorrow's Class Schedule*\n`;
     message += `📆 Date: ${dateFormatted}\n`;
-    message += `🎓 *Class ${className}*\n`;
+    if (group.divisionName) {
+      message += `🎓 *Class ${group.className} — Division ${group.divisionName}*\n`;
+    } else {
+      message += `🎓 *Class ${group.className}*\n`;
+    }
     message += `━━━━━━━━━━━━━━━\n\n`;
 
     classes.forEach((entry, index) => {
