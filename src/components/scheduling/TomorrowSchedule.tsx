@@ -74,6 +74,7 @@ export function TomorrowSchedule({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedClassForAdd, setSelectedClassForAdd] = useState<ClassName | null>(null);
+  const [selectedDivisionForAdd, setSelectedDivisionForAdd] = useState<string | null>(null);
   const [addFormData, setAddFormData] = useState({
     subjectId: '',
     facultyId: '',
@@ -91,8 +92,8 @@ export function TomorrowSchedule({
   const tomorrowDateStr = useMemo(() => format(tomorrow, 'yyyy-MM-dd'), [tomorrow]);
   const tomorrowDayOfWeek = tomorrow.getDay();
 
-  // Get tomorrow's classes
-  const tomorrowClasses = useMemo(() => {
+  // Get tomorrow's classes grouped by (class, division)
+  const tomorrowGroups = useMemo(() => {
     // Get special classes for tomorrow
     const specialClasses = timetable.filter(
       (entry) => entry.type === 'special' && entry.specificDate === tomorrowDateStr
@@ -108,6 +109,7 @@ export function TomorrowSchedule({
         (s) =>
           s.class === entry.class &&
           s.subjectId === entry.subjectId &&
+          (s.divisionId || null) === (entry.divisionId || null) &&
           s.startTime < entry.endTime &&
           s.endTime > entry.startTime
       );
@@ -123,25 +125,43 @@ export function TomorrowSchedule({
       room: rooms.find((r) => r.id === entry.roomId),
     }));
 
-    // Group by class
-    const grouped: Record<ClassName, typeof allClasses> = {} as Record<ClassName, typeof allClasses>;
-    
+    // Group by class + division
+    type Group = {
+      key: string;
+      className: ClassName;
+      divisionId: string | null;
+      divisionName: string | null;
+      entries: typeof allClasses;
+    };
+    const grouped = new Map<string, Group>();
+
     allClasses.forEach((entry) => {
-      if (!grouped[entry.class]) {
-        grouped[entry.class] = [];
+      const divisionId = entry.divisionId || null;
+      const key = `${entry.class}__${divisionId ?? 'none'}`;
+      let group = grouped.get(key);
+      if (!group) {
+        const division = divisionId ? divisions.find((d) => d.id === divisionId) : null;
+        group = {
+          key,
+          className: entry.class,
+          divisionId,
+          divisionName: division?.name ?? null,
+          entries: [],
+        };
+        grouped.set(key, group);
       }
-      grouped[entry.class].push(entry);
+      group.entries.push(entry);
     });
 
-    // Sort each class's entries by time
-    Object.keys(grouped).forEach((className) => {
-      grouped[className as ClassName].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    grouped.forEach((g) => g.entries.sort((a, b) => a.startTime.localeCompare(b.startTime)));
+
+    return Array.from(grouped.values()).sort((a, b) => {
+      if (a.className !== b.className) return a.className.localeCompare(b.className);
+      if (!a.divisionName && b.divisionName) return 1;
+      if (a.divisionName && !b.divisionName) return -1;
+      return (a.divisionName || '').localeCompare(b.divisionName || '');
     });
-
-    return grouped;
-  }, [timetable, tomorrowDateStr, tomorrowDayOfWeek, subjects, faculty, rooms]);
-
-  const classNames = Object.keys(tomorrowClasses).sort() as ClassName[];
+  }, [timetable, tomorrowDateStr, tomorrowDayOfWeek, subjects, faculty, rooms, divisions]);
 
   // Format time for WhatsApp (e.g., "4:00 PM")
   const formatTimeForWhatsApp = (time: string) => {
@@ -152,15 +172,20 @@ export function TomorrowSchedule({
     return `${displayHour}:${minutes} ${period}`;
   };
 
-  // Generate WhatsApp message for a class
-  const generateWhatsAppMessage = (className: ClassName) => {
-    const classes = tomorrowClasses[className];
-    if (!classes || classes.length === 0) return '';
+  // Generate WhatsApp message for a (class, division) group
+  const generateWhatsAppMessage = (groupKey: string) => {
+    const group = tomorrowGroups.find((g) => g.key === groupKey);
+    if (!group || group.entries.length === 0) return '';
+    const classes = group.entries;
 
     const dateFormatted = format(tomorrow, 'dd/MM/yyyy');
     let message = `📅 *Tomorrow's Class Schedule*\n`;
     message += `📆 Date: ${dateFormatted}\n`;
-    message += `🎓 *Class ${className}*\n`;
+    if (group.divisionName) {
+      message += `🎓 *Class ${group.className} — Division ${group.divisionName}*\n`;
+    } else {
+      message += `🎓 *Class ${group.className}*\n`;
+    }
     message += `━━━━━━━━━━━━━━━\n\n`;
 
     classes.forEach((entry, index) => {
@@ -189,16 +214,16 @@ export function TomorrowSchedule({
   };
 
   // Share to WhatsApp
-  const shareToWhatsApp = (className: ClassName) => {
-    const message = generateWhatsAppMessage(className);
+  const shareToWhatsApp = (groupKey: string) => {
+    const message = generateWhatsAppMessage(groupKey);
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   };
 
   // Copy schedule to clipboard
-  const copyToClipboard = async (className: ClassName) => {
-    const message = generateWhatsAppMessage(className);
+  const copyToClipboard = async (groupKey: string) => {
+    const message = generateWhatsAppMessage(groupKey);
     try {
       await navigator.clipboard.writeText(message);
       toast.success('Schedule copied to clipboard!');
@@ -281,8 +306,9 @@ export function TomorrowSchedule({
   };
 
   // Handle add class for tomorrow
-  const handleAddClass = (className: ClassName) => {
+  const handleAddClass = (className: ClassName, divisionId: string | null) => {
     setSelectedClassForAdd(className);
+    setSelectedDivisionForAdd(divisionId);
     setAddFormData({
       subjectId: '',
       facultyId: '',
@@ -311,11 +337,12 @@ export function TomorrowSchedule({
       tomorrowDateStr,
       addFormData.eventType,
       undefined,
-      undefined
+      selectedDivisionForAdd || undefined
     );
 
     setIsAddDialogOpen(false);
     setSelectedClassForAdd(null);
+    setSelectedDivisionForAdd(null);
   };
 
   const classSubjects = useMemo(() => {
@@ -343,7 +370,7 @@ export function TomorrowSchedule({
         </div>
       </div>
 
-      {classNames.length === 0 ? (
+      {tomorrowGroups.length === 0 ? (
         <Card className="bg-white shadow-sm border-slate-200">
           <CardContent className="py-12 text-center text-muted-foreground">
             <Clock className="h-12 w-12 mx-auto mb-3 text-slate-300" />
@@ -353,20 +380,25 @@ export function TomorrowSchedule({
         </Card>
       ) : (
         <div className="space-y-6">
-          {classNames.map((className) => {
-            const classes = tomorrowClasses[className];
+          {tomorrowGroups.map((group) => {
+            const classes = group.entries;
             return (
-              <Card key={className} className="bg-white shadow-sm border-slate-200">
+              <Card key={group.key} className="bg-white shadow-sm border-slate-200">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-semibold">
-                      Class {className}
+                      Class {group.className}
+                      {group.divisionName && (
+                        <span className="ml-2 text-sm font-medium text-muted-foreground">
+                          — Division {group.divisionName}
+                        </span>
+                      )}
                     </CardTitle>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => copyToClipboard(className)}
+                        onClick={() => copyToClipboard(group.key)}
                         className="bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                       >
                         <Copy className="h-4 w-4 mr-2" />
@@ -375,7 +407,7 @@ export function TomorrowSchedule({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => shareToWhatsApp(className)}
+                        onClick={() => shareToWhatsApp(group.key)}
                         className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                       >
                         <Share2 className="h-4 w-4 mr-2" />
@@ -464,7 +496,7 @@ export function TomorrowSchedule({
                         variant="outline"
                         size="sm"
                         className="w-full mt-2"
-                        onClick={() => handleAddClass(className)}
+                        onClick={() => handleAddClass(group.className, group.divisionId)}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Class for Tomorrow
@@ -579,7 +611,13 @@ export function TomorrowSchedule({
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="max-w-md bg-white max-h-[85vh] flex flex-col p-0">
           <DialogHeader className="px-6 pt-6 pb-4 border-b flex-shrink-0">
-            <DialogTitle>Add Class for Tomorrow - Class {selectedClassForAdd}</DialogTitle>
+            <DialogTitle>
+              Add Class for Tomorrow - Class {selectedClassForAdd}
+              {selectedDivisionForAdd && (() => {
+                const d = divisions.find((x) => x.id === selectedDivisionForAdd);
+                return d ? ` (Division ${d.name})` : '';
+              })()}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleAddSubmit} className="flex flex-col flex-1 min-h-0">
             <div className="px-6 py-4 overflow-y-auto flex-1 space-y-4">
@@ -694,6 +732,7 @@ export function TomorrowSchedule({
                 onClick={() => {
                   setIsAddDialogOpen(false);
                   setSelectedClassForAdd(null);
+                  setSelectedDivisionForAdd(null);
                 }}
               >
                 Cancel
