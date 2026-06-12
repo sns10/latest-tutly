@@ -214,16 +214,16 @@ export function TomorrowSchedule({
   };
 
   // Share to WhatsApp
-  const shareToWhatsApp = (className: ClassName) => {
-    const message = generateWhatsAppMessage(className);
+  const shareToWhatsApp = (groupKey: string) => {
+    const message = generateWhatsAppMessage(groupKey);
     const encodedMessage = encodeURIComponent(message);
     const whatsappUrl = `https://wa.me/?text=${encodedMessage}`;
     window.open(whatsappUrl, '_blank');
   };
 
   // Copy schedule to clipboard
-  const copyToClipboard = async (className: ClassName) => {
-    const message = generateWhatsAppMessage(className);
+  const copyToClipboard = async (groupKey: string) => {
+    const message = generateWhatsAppMessage(groupKey);
     try {
       await navigator.clipboard.writeText(message);
       toast.success('Schedule copied to clipboard!');
@@ -306,8 +306,9 @@ export function TomorrowSchedule({
   };
 
   // Handle add class for tomorrow
-  const handleAddClass = (className: ClassName) => {
+  const handleAddClass = (className: ClassName, divisionId: string | null) => {
     setSelectedClassForAdd(className);
+    setSelectedDivisionForAdd(divisionId);
     setAddFormData({
       subjectId: '',
       facultyId: '',
@@ -336,11 +337,12 @@ export function TomorrowSchedule({
       tomorrowDateStr,
       addFormData.eventType,
       undefined,
-      undefined
+      selectedDivisionForAdd || undefined
     );
 
     setIsAddDialogOpen(false);
     setSelectedClassForAdd(null);
+    setSelectedDivisionForAdd(null);
   };
 
   const classSubjects = useMemo(() => {
@@ -368,7 +370,7 @@ export function TomorrowSchedule({
         </div>
       </div>
 
-      {classNames.length === 0 ? (
+      {tomorrowGroups.length === 0 ? (
         <Card className="bg-white shadow-sm border-slate-200">
           <CardContent className="py-12 text-center text-muted-foreground">
             <Clock className="h-12 w-12 mx-auto mb-3 text-slate-300" />
@@ -378,20 +380,25 @@ export function TomorrowSchedule({
         </Card>
       ) : (
         <div className="space-y-6">
-          {classNames.map((className) => {
-            const classes = tomorrowClasses[className];
+          {tomorrowGroups.map((group) => {
+            const classes = group.entries;
             return (
-              <Card key={className} className="bg-white shadow-sm border-slate-200">
+              <Card key={group.key} className="bg-white shadow-sm border-slate-200">
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-lg font-semibold">
-                      Class {className}
+                      Class {group.className}
+                      {group.divisionName && (
+                        <span className="ml-2 text-sm font-medium text-muted-foreground">
+                          — Division {group.divisionName}
+                        </span>
+                      )}
                     </CardTitle>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => copyToClipboard(className)}
+                        onClick={() => copyToClipboard(group.key)}
                         className="bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200"
                       >
                         <Copy className="h-4 w-4 mr-2" />
@@ -400,7 +407,7 @@ export function TomorrowSchedule({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => shareToWhatsApp(className)}
+                        onClick={() => shareToWhatsApp(group.key)}
                         className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                       >
                         <Share2 className="h-4 w-4 mr-2" />
@@ -489,7 +496,7 @@ export function TomorrowSchedule({
                         variant="outline"
                         size="sm"
                         className="w-full mt-2"
-                        onClick={() => handleAddClass(className)}
+                        onClick={() => handleAddClass(group.className, group.divisionId)}
                       >
                         <Plus className="h-4 w-4 mr-2" />
                         Add Class for Tomorrow
