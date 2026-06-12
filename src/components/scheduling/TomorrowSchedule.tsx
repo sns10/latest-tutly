@@ -74,6 +74,7 @@ export function TomorrowSchedule({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [selectedClassForAdd, setSelectedClassForAdd] = useState<ClassName | null>(null);
+  const [selectedDivisionForAdd, setSelectedDivisionForAdd] = useState<string | null>(null);
   const [addFormData, setAddFormData] = useState({
     subjectId: '',
     facultyId: '',
