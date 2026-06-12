@@ -92,8 +92,8 @@ export function TomorrowSchedule({
   const tomorrowDateStr = useMemo(() => format(tomorrow, 'yyyy-MM-dd'), [tomorrow]);
   const tomorrowDayOfWeek = tomorrow.getDay();
 
-  // Get tomorrow's classes
-  const tomorrowClasses = useMemo(() => {
+  // Get tomorrow's classes grouped by (class, division)
+  const tomorrowGroups = useMemo(() => {
     // Get special classes for tomorrow
     const specialClasses = timetable.filter(
       (entry) => entry.type === 'special' && entry.specificDate === tomorrowDateStr
@@ -109,6 +109,7 @@ export function TomorrowSchedule({
         (s) =>
           s.class === entry.class &&
           s.subjectId === entry.subjectId &&
+          (s.divisionId || null) === (entry.divisionId || null) &&
           s.startTime < entry.endTime &&
           s.endTime > entry.startTime
       );
@@ -124,25 +125,43 @@ export function TomorrowSchedule({
       room: rooms.find((r) => r.id === entry.roomId),
     }));
 
-    // Group by class
-    const grouped: Record<ClassName, typeof allClasses> = {} as Record<ClassName, typeof allClasses>;
-    
+    // Group by class + division
+    type Group = {
+      key: string;
+      className: ClassName;
+      divisionId: string | null;
+      divisionName: string | null;
+      entries: typeof allClasses;
+    };
+    const grouped = new Map<string, Group>();
+
     allClasses.forEach((entry) => {
-      if (!grouped[entry.class]) {
-        grouped[entry.class] = [];
+      const divisionId = entry.divisionId || null;
+      const key = `${entry.class}__${divisionId ?? 'none'}`;
+      let group = grouped.get(key);
+      if (!group) {
+        const division = divisionId ? divisions.find((d) => d.id === divisionId) : null;
+        group = {
+          key,
+          className: entry.class,
+          divisionId,
+          divisionName: division?.name ?? null,
+          entries: [],
+        };
+        grouped.set(key, group);
       }
-      grouped[entry.class].push(entry);
+      group.entries.push(entry);
     });
 
-    // Sort each class's entries by time
-    Object.keys(grouped).forEach((className) => {
-      grouped[className as ClassName].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    grouped.forEach((g) => g.entries.sort((a, b) => a.startTime.localeCompare(b.startTime)));
+
+    return Array.from(grouped.values()).sort((a, b) => {
+      if (a.className !== b.className) return a.className.localeCompare(b.className);
+      if (!a.divisionName && b.divisionName) return 1;
+      if (a.divisionName && !b.divisionName) return -1;
+      return (a.divisionName || '').localeCompare(b.divisionName || '');
     });
-
-    return grouped;
-  }, [timetable, tomorrowDateStr, tomorrowDayOfWeek, subjects, faculty, rooms]);
-
-  const classNames = Object.keys(tomorrowClasses).sort() as ClassName[];
+  }, [timetable, tomorrowDateStr, tomorrowDayOfWeek, subjects, faculty, rooms, divisions]);
 
   // Format time for WhatsApp (e.g., "4:00 PM")
   const formatTimeForWhatsApp = (time: string) => {
