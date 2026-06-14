@@ -315,37 +315,38 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['attendance', tuitionId] });
 
-      // Snapshot previous value
-      const previousAttendance = queryClient.getQueryData<StudentAttendance[]>(['attendance', tuitionId, undefined]);
+      // Snapshot ALL attendance cache entries for this tuition (any filter variant)
+      const snapshots = queryClient.getQueriesData<StudentAttendance[]>({
+        queryKey: ['attendance', tuitionId],
+      });
 
-      // Optimistically update the cache
-      if (previousAttendance) {
-        const { studentId, date, status, notes, subjectId, facultyId } = params;
-        const normalizedSubjectId = subjectId?.trim() || null;
-        const normalizedFacultyId = facultyId?.trim() || null;
-        
-        const existingIndex = previousAttendance.findIndex(a => 
-          a.studentId === studentId && 
+      const { studentId, date, status, notes, subjectId, facultyId } = params;
+      const normalizedSubjectId = subjectId?.trim() || null;
+      const normalizedFacultyId = facultyId?.trim() || null;
+      const now = new Date().toISOString();
+      const tempId = `temp-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`}`;
+
+      snapshots.forEach(([key, previous]) => {
+        if (!Array.isArray(previous)) return;
+
+        const existingIndex = previous.findIndex(a =>
+          a.studentId === studentId &&
           a.date === date &&
           (normalizedSubjectId ? a.subjectId === normalizedSubjectId : !a.subjectId) &&
           (normalizedFacultyId ? a.facultyId === normalizedFacultyId : !a.facultyId)
         );
 
-        const newAttendance = [...previousAttendance];
-        const now = new Date().toISOString();
-
+        const next = [...previous];
         if (existingIndex >= 0) {
-          // Update existing
-          newAttendance[existingIndex] = {
-            ...newAttendance[existingIndex],
+          next[existingIndex] = {
+            ...next[existingIndex],
             status: status as 'present' | 'absent' | 'late' | 'excused',
             notes,
             updatedAt: now,
           };
         } else {
-          // Add new
-          newAttendance.unshift({
-            id: `temp-${Date.now()}`,
+          next.unshift({
+            id: tempId,
             studentId,
             date,
             status: status as 'present' | 'absent' | 'late' | 'excused',
@@ -356,26 +357,22 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
             updatedAt: now,
           });
         }
+        queryClient.setQueryData(key, next);
+      });
 
-        queryClient.setQueryData(['attendance', tuitionId, undefined], newAttendance);
-      }
-
-      return { previousAttendance };
+      return { snapshots };
     },
     onError: (error, _params, context) => {
-      // Rollback on error
-      if (context?.previousAttendance) {
-        queryClient.setQueryData(['attendance', tuitionId, undefined], context.previousAttendance);
-      }
+      // Rollback all snapshots on error
+      context?.snapshots?.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
       console.error('Error marking attendance:', error);
       toast.error('Failed to mark attendance');
     },
     onSettled: () => {
-      // Refetch in background to ensure sync (but UI already updated)
-      queryClient.invalidateQueries({ 
-        queryKey: ['attendance', tuitionId],
-        refetchType: 'none' // Don't refetch immediately, just mark stale
-      });
+      // Reconcile UI with the database — otherwise silent failures leave a stale green dot.
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
     },
   });
 }
@@ -393,56 +390,87 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       subjectId?: string;
       facultyId?: string;
     }>) => {
-      const upsertRecords = records.map(r => ({
-        student_id: r.studentId,
-        date: r.date,
-        status: r.status,
-        notes: r.notes || null,
-        subject_id: r.subjectId?.trim() || null,
-        faculty_id: r.facultyId?.trim() || null,
-      }));
+      // Postgres treats NULL != NULL, so a plain onConflict on nullable columns
+      // would insert duplicates whenever subject/faculty is unset. Use the same
+      // select → update/insert pattern as the single-mark flow for each record.
+      for (const r of records) {
+        const normalizedSubjectId = r.subjectId?.trim() || null;
+        const normalizedFacultyId = r.facultyId?.trim() || null;
 
-      const { error } = await supabase
-        .from('student_attendance')
-        .upsert(upsertRecords, { 
-          onConflict: 'student_id,date,subject_id,faculty_id',
-          ignoreDuplicates: false 
-        });
+        let q = supabase
+          .from('student_attendance')
+          .select('id')
+          .eq('student_id', r.studentId)
+          .eq('date', r.date);
 
-      if (error) throw error;
+        q = normalizedSubjectId ? q.eq('subject_id', normalizedSubjectId) : q.is('subject_id', null);
+        q = normalizedFacultyId ? q.eq('faculty_id', normalizedFacultyId) : q.is('faculty_id', null);
+
+        const { data: existing, error: checkError } = await q.maybeSingle();
+        if (checkError) throw checkError;
+
+        if (existing) {
+          const { error } = await supabase
+            .from('student_attendance')
+            .update({
+              status: r.status,
+              notes: r.notes || null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', existing.id);
+          if (error) throw error;
+        } else {
+          const { error } = await supabase
+            .from('student_attendance')
+            .insert({
+              student_id: r.studentId,
+              date: r.date,
+              status: r.status,
+              notes: r.notes || null,
+              subject_id: normalizedSubjectId,
+              faculty_id: normalizedFacultyId,
+            });
+          if (error) throw error;
+        }
+      }
       return records;
     },
     // Optimistic update for bulk operations
     onMutate: async (records) => {
       await queryClient.cancelQueries({ queryKey: ['attendance', tuitionId] });
-      
-      const previousAttendance = queryClient.getQueryData<StudentAttendance[]>(['attendance', tuitionId, undefined]);
 
-      if (previousAttendance) {
-        const newAttendance = [...previousAttendance];
-        const now = new Date().toISOString();
+      const snapshots = queryClient.getQueriesData<StudentAttendance[]>({
+        queryKey: ['attendance', tuitionId],
+      });
+      const now = new Date().toISOString();
+      const makeTempId = () =>
+        `temp-${typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`}`;
+
+      snapshots.forEach(([key, previous]) => {
+        if (!Array.isArray(previous)) return;
+        const next = [...previous];
 
         records.forEach(({ studentId, date, status, notes, subjectId, facultyId }) => {
           const normalizedSubjectId = subjectId?.trim() || null;
           const normalizedFacultyId = facultyId?.trim() || null;
-          
-          const existingIndex = newAttendance.findIndex(a => 
-            a.studentId === studentId && 
+
+          const existingIndex = next.findIndex(a =>
+            a.studentId === studentId &&
             a.date === date &&
             (normalizedSubjectId ? a.subjectId === normalizedSubjectId : !a.subjectId) &&
             (normalizedFacultyId ? a.facultyId === normalizedFacultyId : !a.facultyId)
           );
 
           if (existingIndex >= 0) {
-            newAttendance[existingIndex] = {
-              ...newAttendance[existingIndex],
+            next[existingIndex] = {
+              ...next[existingIndex],
               status: status as 'present' | 'absent' | 'late' | 'excused',
               notes,
               updatedAt: now,
             };
           } else {
-            newAttendance.unshift({
-              id: `temp-${Date.now()}-${studentId}`,
+            next.unshift({
+              id: makeTempId(),
               studentId,
               date,
               status: status as 'present' | 'absent' | 'late' | 'excused',
@@ -455,23 +483,20 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
           }
         });
 
-        queryClient.setQueryData(['attendance', tuitionId, undefined], newAttendance);
-      }
+        queryClient.setQueryData(key, next);
+      });
 
-      return { previousAttendance };
+      return { snapshots };
     },
     onError: (error, _records, context) => {
-      if (context?.previousAttendance) {
-        queryClient.setQueryData(['attendance', tuitionId, undefined], context.previousAttendance);
-      }
+      context?.snapshots?.forEach(([key, previous]) => {
+        queryClient.setQueryData(key, previous);
+      });
       console.error('Error bulk marking attendance:', error);
       toast.error('Failed to save attendance');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['attendance', tuitionId],
-        refetchType: 'none'
-      });
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
     },
   });
 }

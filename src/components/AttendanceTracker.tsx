@@ -160,17 +160,18 @@ export function AttendanceTracker({
   const getAttendanceForStudent = useCallback((studentId: string) => {
     return attendance.find(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
-      
-      // Match subject: if selectedSubject is set, must match; if not set, don't filter by subject
+
+      // Strict context match: an empty selection means the record must ALSO have no
+      // subject/faculty — never bleed a "present" mark from another subject into a
+      // different (or empty) context.
       const subjectMatches = selectedSubject
         ? a.subjectId === selectedSubject
-        : true;
-      
-      // Match faculty: if selectedFaculty is set, must match; if not set, don't filter by faculty
+        : !a.subjectId;
+
       const facultyMatches = selectedFaculty
         ? a.facultyId === selectedFaculty
-        : true;
-      
+        : !a.facultyId;
+
       return subjectMatches && facultyMatches;
     });
   }, [attendance, selectedDateStr, selectedSubject, selectedFaculty]);

@@ -1,44 +1,51 @@
-## Goal
+# Fix Attendance "Green Dot" Mismatch
 
-In Tomorrow's Schedule, treat each (class, division) as its own group with its own Copy / Share-to-WhatsApp button, so 10th-A and 10th-B can be sent separately.
+Investigation found the root causes: the UI shows a present indicator that doesn't match the database. Multiple bugs combine — frontend, mutation cache, and database constraints.
 
-## Scope
+## What's actually broken
 
-Single file: `src/components/scheduling/TomorrowSchedule.tsx`. No DB changes — `division_id` already exists on `timetable` and the Add/Edit dialogs already capture it.
+**Database (6,425 conflicting rows exist today across 1,294 students):**
+1. Two parallel attendance flows coexist — one writes `subject_id/faculty_id = NULL`, the other writes real UUIDs. Both rows survive for the same student+date, with conflicting statuses (e.g. null-row=`present`, subject-row=`absent`).
+2. The plain `UNIQUE(student_id, date, subject_id, faculty_id)` constraint is broken because Postgres treats `NULL ≠ NULL`. Two `COALESCE` unique indexes exist as duplicates of each other.
+3. No `updated_at` trigger — modifications can't be audited.
 
-## Changes
+**Frontend (`src/components/AttendanceTracker.tsx`):**
+4. `getAttendanceForStudent` (lines ~160–176): when `selectedSubject` is empty, it returns the *first* attendance row for that student on that date — regardless of subject. So a "present" mark for Math shows as a green dot in the "All subjects" / cleared view.
 
-1. **Group by class + division** in `tomorrowClasses`:
-   - Key becomes `${className}__${divisionId ?? 'all'}`.
-   - Entries with no `divisionId` form an "All Divisions" group (shown only when that class has no division-specific entries, OR always shown if the class has a mix — keep it simple: bucket strictly by the entry's own `divisionId`, "All" bucket renders when entries truly have null divisionId).
-   - Sort groups by class then division name.
+**Mutation hook (`src/hooks/queries/useAttendanceQuery.ts`):**
+5. Optimistic update writes to hardcoded cache key `['attendance', tuitionId, undefined]` (lines 319, 360) — other consumers using filters never see it.
+6. `onSettled` uses `refetchType: 'none'` (lines ~376, 472) — UI is never reconciled with the DB, so silent failures (RLS, upsert collisions) leave a stale green dot for up to 30 min.
+7. Bulk upsert uses `onConflict: 'student_id,date,subject_id,faculty_id'` — fails to dedupe when subject/faculty are NULL, creating duplicate DB rows on every "Mark All Present".
+8. Bulk optimistic temp IDs use `Date.now()` — collisions on rapid loops produce phantom duplicate rows in cache.
 
-2. **Card header per group**:
-   - Title: `Class 10th — Division A` (or `Class 10th — All Divisions` when no division set).
-   - Keep existing Copy + Share-to-WhatsApp buttons, now scoped to that division's entries.
+## Fix plan
 
-3. **WhatsApp message** (`generateWhatsAppMessage`):
-   - Accept the group key (or `{className, divisionId}`) instead of just className.
-   - Header line becomes `🎓 *Class {className} — Division {divisionName}*` (omit division line when null).
-   - Body unchanged.
+### 1. Frontend — `AttendanceTracker.tsx`
+Tighten `getAttendanceForStudent` so a row only matches the current context:
+- If `selectedSubject` is empty, only match rows where `a.subjectId` is also null/empty (not "any subject").
+- Same for `selectedFaculty`.
+- This prevents cross-subject green-dot bleed.
 
-4. **Add Class for Tomorrow** button per group:
-   - Pre-fills both `selectedClassForAdd` and a new `selectedDivisionForAdd` state.
-   - Pass `divisionId` through `onAddEntry` (currently passes `undefined` at position 13 — replace with the group's division).
-   - Add dialog: show division as read-only label (since it's pre-selected from the card).
+### 2. Mutation hook — `src/hooks/queries/useAttendanceQuery.ts`
+- Replace the two hardcoded `['attendance', tuitionId, undefined]` cache writes with `queryClient.getQueriesData({ queryKey: ['attendance', tuitionId] })` / `setQueriesData` so every filter-variant cache is updated.
+- Change `onSettled` from `refetchType: 'none'` to a real invalidation (default `'active'`) on both single and bulk mutations. UI then reconciles with the DB after each write.
+- Fix bulk upsert: switch `onConflict` to the COALESCE-based unique index name (`student_attendance_unique_idx`) or, simpler and safer, do a `select → update existing / insert new` per-record path like the single-mark flow already does. Eliminates NULL-key duplicates.
+- Replace `temp-${Date.now()}-${studentId}` with `temp-${crypto.randomUUID()}` to remove collision risk.
 
-5. **Edit dialog** already forwards `editingEntry.divisionId` — no change needed.
+### 3. Database migration (new timestamped file)
+- Drop the duplicate index `idx_student_attendance_unique` (keep `student_attendance_unique_idx`).
+- Drop the broken plain unique constraint `student_attendance_student_date_subject_faculty_unique`.
+- Backfill cleanup for the 6,425 conflicting pairs: for each `(student_id, date)` with both a null-key row and a subject-key row, delete the null-key row (the subject-specific record is the source of truth from the current flow). Wrap in a single transaction; log counts.
+- Add an `updated_at` trigger using the existing `update_updated_at_column()` function so future edits are traceable.
+- Do **not** widen RLS — current policy is correct; silent failures are now caught by the refetch in step 2.
 
-6. **Empty state**: keep the existing "No classes scheduled for tomorrow" when no groups exist. No global "Add" needed; users add via Schedule Class dialog or the per-group button.
+### 4. Verification
+- Mark one student present for Math → switch subject to Science → student should appear **unmarked** (no green dot bleed).
+- Use "Mark All Present" on a class with no subject context → verify only one row per student per date is created in DB (run `SELECT COUNT(*) GROUP BY student_id, date HAVING COUNT(*)>1`).
+- Mark a student absent → hard refresh → status persists correctly.
+- Confirm the duplicate-row count after cleanup migration is 0.
 
 ## Out of scope
-
-- Weekly / Special / Timeline tabs (Weekly already has division chips).
-- Subject/faculty-per-division mapping.
-- Any DB migration.
-
-## Verification
-
-- 10th class with divisions A and B and entries in both → two separate cards, each with its own Share button producing a message limited to that division.
-- 8th class with no divisions defined → single "All Divisions" card as today.
-- Add Class for Tomorrow from the "10th — A" card creates a special class with `division_id = A`.
+- Redesigning the dual subject/no-subject flows (keeping both, just preventing them from colliding).
+- Changing RLS policies.
+- Any non-attendance code.
