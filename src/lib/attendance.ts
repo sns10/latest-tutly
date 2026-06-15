@@ -20,7 +20,7 @@ export const ALERT_DAILY_ATTENDANCE_PRIORITY: Record<AttendanceStatus, number> =
   present: 4,
 };
 
-export function isAttendingStatus(status: AttendanceStatus): boolean {
+export function isAttendingStatus(status: string): status is AttendanceStatus {
   return status === 'present' || status === 'late';
 }
 
