@@ -15,6 +15,47 @@ interface ReportRequest {
   studentId?: string;
 }
 
+type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
+const ATTENDANCE_PRIORITY: Record<AttendanceStatus, number> = {
+  absent: 1,
+  excused: 2,
+  late: 3,
+  present: 4,
+};
+
+function isAttendanceStatus(value: string): value is AttendanceStatus {
+  return value === 'present' || value === 'absent' || value === 'late' || value === 'excused';
+}
+
+function pickAttendanceStatus(current: AttendanceStatus | undefined, next: AttendanceStatus): AttendanceStatus {
+  if (!current) return next;
+  return ATTENDANCE_PRIORITY[next] >= ATTENDANCE_PRIORITY[current] ? next : current;
+}
+
+function summarizeAttendanceByDay(records: Array<{ date: string; status: string }>) {
+  const byDate = new Map<string, AttendanceStatus>();
+  for (const record of records) {
+    if (!isAttendanceStatus(record.status)) continue;
+    byDate.set(record.date, pickAttendanceStatus(byDate.get(record.date), record.status));
+  }
+
+  let present = 0;
+  let absent = 0;
+  let late = 0;
+  let excused = 0;
+  byDate.forEach((status) => {
+    if (status === 'present') present += 1;
+    else if (status === 'absent') absent += 1;
+    else if (status === 'late') late += 1;
+    else if (status === 'excused') excused += 1;
+  });
+
+  const total = byDate.size;
+  const attendanceRate = total > 0 ? (((present + late) / total) * 100).toFixed(1) : '0.0';
+  return { byDate, total, present, absent, late, excused, attendanceRate };
+}
+
 // Simple in-memory rate limiting (resets on function cold start)
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 const RATE_LIMIT_WINDOW_MS = 60000; // 1 minute
@@ -132,7 +173,7 @@ async function generateAbsenteesReport(
     .from('student_attendance')
     .select(`
       *,
-      students (name, class)
+      students!inner (name, class)
     `)
     .in('status', ['absent', 'excused']);
 
@@ -342,12 +383,13 @@ async function generateStudentReport(supabase: any, studentId: string): Promise<
 
   // Attendance Summary
   if (attendance && attendance.length > 0) {
-    const present = attendance.filter((a: any) => a.status === 'present').length;
-    const absent = attendance.filter((a: any) => a.status === 'absent').length;
-    const late = attendance.filter((a: any) => a.status === 'late').length;
-    const excused = attendance.filter((a: any) => a.status === 'excused').length;
-    const total = attendance.length;
-    const attendanceRate = ((present / total) * 100).toFixed(1);
+    const summary = summarizeAttendanceByDay(attendance);
+    const present = summary.present;
+    const absent = summary.absent;
+    const late = summary.late;
+    const excused = summary.excused;
+    const total = summary.total;
+    const attendanceRate = summary.attendanceRate;
 
     doc.setFontSize(12);
     doc.setFont(undefined, 'bold');
@@ -574,11 +616,12 @@ async function generateAttendanceCalendar(
 
   // Statistics
   if (attendance && attendance.length > 0) {
-    const present = attendance.filter((a: any) => a.status === 'present').length;
-    const absent = attendance.filter((a: any) => a.status === 'absent').length;
-    const late = attendance.filter((a: any) => a.status === 'late').length;
-    const excused = attendance.filter((a: any) => a.status === 'excused').length;
-    const percentage = ((present / attendance.length) * 100).toFixed(2);
+    const summary = summarizeAttendanceByDay(attendance);
+    const present = summary.present;
+    const absent = summary.absent;
+    const late = summary.late;
+    const excused = summary.excused;
+    const percentage = summary.attendanceRate;
 
     doc.setFontSize(10);
     doc.text(`Present: ${present} | Absent: ${absent} | Late: ${late} | Excused: ${excused} | Rate: ${percentage}%`, 15, y);
