@@ -389,7 +389,16 @@ export function AttendanceTracker({
       }
       
       const session = sessionsMap.get(key)!;
-      session.markedCount++;
+      const alreadyCounted = attendance.some(existing =>
+        existing !== a &&
+        existing.date === a.date &&
+        existing.studentId === a.studentId &&
+        (existing.subjectId ?? null) === (a.subjectId ?? null) &&
+        (existing.facultyId ?? null) === (a.facultyId ?? null)
+      );
+      if (!alreadyCounted) {
+        session.markedCount++;
+      }
     });
     
     return Array.from(sessionsMap.values());
