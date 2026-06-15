@@ -741,9 +741,13 @@ export function AttendanceTracker({
             <Button 
               onClick={() => handleBulkAttendance('present')} 
               className="w-full bg-green-600 hover:bg-green-700 h-9 text-sm font-medium" 
-              disabled={!selectedClass || filteredStudentsBase.length === 0}
+              disabled={!selectedClass || unmarkedCount === 0 || isBulkMarking}
             >
-              Mark All Present ({filteredStudentsBase.length})
+              {isBulkMarking
+                ? 'Saving…'
+                : unmarkedCount === 0
+                  ? 'All Marked'
+                  : `Mark All Present (${unmarkedCount})`}
             </Button>
 
             {/* Copy from Previous Class - Show when previous sessions exist */}
