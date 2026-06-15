@@ -407,7 +407,13 @@ export function AttendanceTracker({
     const subjectName = selectedSubject ? subjects.find(s => s.id === selectedSubject)?.name : '';
     const context = subjectName ? ` for ${subjectName}` : '';
     
-    toast.success(`${studentName}${context} marked as ${status}`);
+    // Defer toast to next frame so it doesn't mount in the same tick as the
+    // optimistic re-render — on mobile this can otherwise eat the next tap.
+    if (typeof requestAnimationFrame !== 'undefined') {
+      requestAnimationFrame(() => toast.success(`${studentName}${context} marked as ${status}`));
+    } else {
+      toast.success(`${studentName}${context} marked as ${status}`);
+    }
   }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {

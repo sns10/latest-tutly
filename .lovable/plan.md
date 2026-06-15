@@ -1,78 +1,48 @@
-## Attendance Sector Hardening Plan
+## Problem
 
-Three parallel audits (marking, derivation/reports, DB+edge) found real correctness bugs across the attendance flow. Below is a prioritized fix list. Bulk marking behavior stays as you wanted: **bulk only marks unmarked students; never overwrites**.
+On some phones, tapping Present/Absent in the attendance list doesn't reliably register, or the colored state doesn't appear. After auditing the code I found three mobile-specific issues — all in presentation/interaction code, not in the save logic. The existing dedupe / "only mark unmarked" rules stay exactly as they are.
 
-### 1. Date and context normalization (highest impact)
+### Root causes
 
-- **UTC date bug**: `formatDate` uses `toISOString()` which shifts to UTC. For users in negative-UTC timezones every "today" read/write can land on the wrong calendar day, and special-class detection breaks. Replace with a local-date formatter and apply everywhere (`AttendanceTracker`, `useAttendanceQuery` defaults, `useTodayAttendanceQuery`, smart-detect, today's classes).
-- **`undefined` vs `null` mismatch**: `formatAttendance` stores `subjectId/facultyId` as `undefined`, but several lookups compare against `null`. This silently breaks Copy-from-Previous-Class and "same session" detection. Normalize comparisons to `?? null` and align mapping.
-- **Stats vs row lookup mismatch**: `stats` uses a loose filter while `getAttendanceForStudent` uses a strict null-context filter. Result: chip counts and row state disagree. Make `stats` use the same strict session context as the row lookup so present count, unmarked count, and chip badges always match the visible list.
+1. **Virtualizer remeasures during the tap** (`src/components/attendance/VirtualizedStudentList.tsx`)
+   - Row content (`p-2` + avatar + 2 lines of text + buttons) often renders **taller than the 72px estimate** on small screens.
+   - `measureElement` then reports the real height after first paint, the virtualizer recomputes positions, and on iOS/Android any layout shift between `touchstart` and `touchend` cancels the `click`. Result: the user taps "P", nothing happens, no toast, no green.
+   - The outer wrapper also forces `height: virtualItem.size` while the inner content can be larger → rows visually overlap and the next row's button intercepts the tap.
 
-### 2. Save-path resilience (no inconsistent green dots)
+2. **Touch targets are too small**
+   - P/A/L/E buttons are `h-8 px-2` (~32×26 px). Below the 44px minimum, easy to mistap an adjacent button or miss entirely on cramped phones.
+   - No `touch-action: manipulation` on the buttons themselves → iOS Safari can treat fast repeated taps as double-tap-zoom and swallow the second tap.
 
-- **Partial bulk-failure rollback gap**: Currently only throws when every row fails — partial failures leave optimistic dots that disagree with DB until a later refetch. Surface a real error/rollback when any row fails, and reconcile the failed students immediately rather than relying solely on a delayed invalidation.
-- **Fallback per-student loop race** in copy-from-previous: when bulk handler is missing, the N parallel single mutations race their own snapshots. Route the copy path through a guaranteed bulk handler so there's a single atomic optimistic update.
-- **Narrower cache invalidation key** so marking doesn't refetch unrelated historical/report queries.
+3. **Toast + cache invalidate fires re-render mid-tap**
+   - `handleMarkAttendance` shows a `toast.success` and the mutation's `onSettled` invalidates the whole attendance cache immediately. While the optimistic update paints green correctly, the re-render right after a tap can drop the very next tap on a virtualized row (same mechanism as #1).
 
-### 3. Derivation correctness (reports, student details, portal)
+## Fix (presentation only — no logic, schema, or save-path changes)
 
-The DB model allows multiple rows per student per day (one per subject session). Several derivations treat row count as "total classes/days" — inflating denominators and producing wrong percentages. Fix all of them with a shared, single source of truth:
+### `src/components/attendance/VirtualizedStudentList.tsx`
+- Bump `estimateSize` from 72 → 88 to match actual row height on phones.
+- Keep `measureElement` but make the row wrapper a **min-height container** instead of a fixed-height absolute box: use `minHeight: virtualItem.size` and let the row size itself. This stops the overlap / tap-interception when measured height ≠ estimate.
+- Add `style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}` to the scroll container so scrolling and tapping stay distinct.
 
-- Add a small `lib/attendance` helper exposing per-day deduplication with a clear priority (`present` > `late` > `excused` > `absent`), unique-day counts, and a single "is attending" predicate (`present` and `late` count as attending — chosen to match the reports policy and applied consistently).
-- Use it in:
-  - `MonthlyAttendanceReport` (total/percentage)
-  - `StudentReportCard` (printed/PDF percentage)
-  - `StudentDetailsDialog` overview attendance rate, streak, calendar coloring
-  - `pages/Student.tsx` portal attendance rate
-  - `AttendanceCalendar` day color (priority instead of first-wins)
-  - `useAttendanceStreak` (late counts toward streak — match reports policy)
-  - `useStudentAlerts` (don't let a single excused session suppress an otherwise-absent day)
-- `useDailySummary`: stop double-counting students in both present and absent sets, and stop matching `"undefined-undefined"` keys for classes-with-attendance.
+### `src/components/attendance/VirtualizedStudentList.tsx` → `StudentRow`
+- Buttons: `h-8 px-2` → `h-10 min-w-[40px] px-2.5` and add `touch-action: manipulation` via `style`. Keeps the same compact P/A/L/E look but gives a 40×40 target.
+- Remove `active:scale-95 transition-transform` (the transform during touch is the smallest possible contributor to tap drops; safer to drop it on the list).
+- Use `onPointerUp` fallback: keep `onClick` as the primary handler, but also bind `onPointerDown={e => e.stopPropagation()}` on each button so a parent scroll listener can't claim the gesture.
 
-### 4. Dashboard RPC fix
+### `src/components/AttendanceTracker.tsx`
+- In `handleMarkAttendance`, defer the success toast to the next animation frame (`requestAnimationFrame(() => toast.success(...))`) so the toast mount doesn't run inside the same tick as the optimistic re-render. Pure UX — no behaviour change.
+- No changes to `handleBulkAttendance`, `getAttendanceForStudent`, `stats`, or the "only mark unmarked" rule.
 
-- `get_tuition_dashboard_stats` counts rows, not unique students, so `presentToday/absentToday` are inflated and a student can appear in both. Update the SQL to count distinct students per status with the same priority used in the UI, so any future consumer of the RPC gets the same numbers the UI shows.
+### Not changing
+- `useAttendanceQuery.ts` (save/upsert/optimistic logic, cache keys, invalidation) — untouched.
+- `AttendanceTracker.tsx` filters, smart-detect, stats, copy-from-previous — untouched.
+- Database, RLS, RPCs, edge functions — untouched.
+- "Mark All Present" behaviour (still scoped to unmarked students) — untouched.
 
-### 5. Report generator scoping
+## Verification
 
-- `generate-report` absentees query filters on a related table without `!inner`, which can leak rows from other classes into the PDF. Switch to `students!inner(...)` and apply the class/division filters on the joined side correctly.
-
-### 6. Cleanups (low risk, prevent future regressions)
-
-- Delete the dead `src/components/attendance/AttendanceControls.tsx` (not imported anywhere; diverges from the real bulk interface).
-- Tighten `VirtualizedStudentList` row size with `measureElement` (or larger estimate) so rows don't overlap when names wrap on narrow screens.
-- Leave RLS policies as-is (audit found overlap but no actual leak); document the intended layering.
-
-### Technical details
-
-Files touched:
-- `src/components/AttendanceTracker.tsx`
-- `src/hooks/queries/useAttendanceQuery.ts`
-- `src/lib/attendance.ts` (new — shared helpers)
-- `src/components/MonthlyAttendanceReport.tsx`
-- `src/components/StudentReportCard.tsx`
-- `src/components/StudentDetailsDialog.tsx`
-- `src/pages/Student.tsx`
-- `src/components/AttendanceCalendar.tsx`
-- `src/hooks/useAttendanceStreak.ts`
-- `src/hooks/useStudentAlerts.tsx`
-- `src/hooks/useDailySummary.ts`
-- `src/components/attendance/VirtualizedStudentList.tsx`
-- Delete: `src/components/attendance/AttendanceControls.tsx`
-- `supabase/functions/generate-report/*` (absentees query scoping)
-- One migration to update `get_tuition_dashboard_stats`
-
-Non-goals:
-- Not changing the storage model (per-session rows stay).
-- Not changing bulk behavior (still only marks unmarked).
-- Not altering RLS policies.
-
-### Validation
-- Mark/unmark across multiple subjects on the same day — UI dot state matches DB after refresh.
-- Monthly report and report card show the same percentage for the same period.
-- Student details overview, portal home, and report card all agree on attendance %.
-- Calendar day color uses priority (present > late > excused > absent) — no first-wins flicker.
-- Absence alert fires correctly even when one session of the day is excused.
-- Daily summary numbers add up to ≤ total students.
-- Dashboard RPC returns same totals as the UI.
-- Cross-class leakage check on absentees PDF.
+1. Open `/attendance` in the preview at mobile width (390×844).
+2. Select a class with 10+ students.
+3. Rapidly tap P on 5 different rows — every tap should register a green button and a toast.
+4. Scroll the list, then tap A — should mark absent without scroll being interpreted as the tap.
+5. Tap "Mark All Present" — unmarked count goes to 0, button shows "All Marked".
+6. Confirm no duplicate rows are created (query `student_attendance` for `(student_id, date, subject_id, faculty_id)` uniqueness).
