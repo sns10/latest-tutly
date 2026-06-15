@@ -278,9 +278,17 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
         query = query.is('faculty_id', null);
       }
 
-      const { data: existing, error: checkError } = await query.maybeSingle();
+      // Use limit(1) instead of maybeSingle() — maybeSingle() THROWS on duplicate
+      // rows, which historically broke the whole flow and rolled back the optimistic
+      // green state. limit(1) tolerates accidental duplicates while we still pick a
+      // deterministic existing row to update.
+      const { data: existingRows, error: checkError } = await query
+        .order('created_at', { ascending: true })
+        .limit(1);
 
       if (checkError) throw checkError;
+
+      const existing = existingRows && existingRows[0];
 
       if (existing) {
         const { error } = await supabase
@@ -393,7 +401,12 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       // Postgres treats NULL != NULL, so a plain onConflict on nullable columns
       // would insert duplicates whenever subject/faculty is unset. Use the same
       // select → update/insert pattern as the single-mark flow for each record.
+      // We isolate each record in its own try/catch so a single bad row never
+      // aborts the whole bulk save (which previously rolled back the green dots
+      // for the entire class).
+      const failed: Array<{ studentId: string; error: unknown }> = [];
       for (const r of records) {
+        try {
         const normalizedSubjectId = r.subjectId?.trim() || null;
         const normalizedFacultyId = r.facultyId?.trim() || null;
 
@@ -406,8 +419,11 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
         q = normalizedSubjectId ? q.eq('subject_id', normalizedSubjectId) : q.is('subject_id', null);
         q = normalizedFacultyId ? q.eq('faculty_id', normalizedFacultyId) : q.is('faculty_id', null);
 
-        const { data: existing, error: checkError } = await q.maybeSingle();
+        const { data: existingRows, error: checkError } = await q
+          .order('created_at', { ascending: true })
+          .limit(1);
         if (checkError) throw checkError;
+        const existing = existingRows && existingRows[0];
 
         if (existing) {
           const { error } = await supabase
@@ -432,6 +448,17 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
             });
           if (error) throw error;
         }
+        } catch (err) {
+          console.error('Bulk attendance row failed for student', r.studentId, err);
+          failed.push({ studentId: r.studentId, error: err });
+        }
+      }
+      if (failed.length === records.length && records.length > 0) {
+        // Nothing saved at all — surface as an error so optimistic state rolls back.
+        throw failed[0].error;
+      }
+      if (failed.length > 0) {
+        toast.warning(`Saved ${records.length - failed.length} of ${records.length}. ${failed.length} failed and will reconcile on refresh.`);
       }
       return records;
     },

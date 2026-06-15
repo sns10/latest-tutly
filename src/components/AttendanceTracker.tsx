@@ -32,6 +32,7 @@ interface AttendanceTrackerProps {
     subjectId?: string;
     facultyId?: string;
   }>) => void;
+  isBulkMarking?: boolean;
 }
 
 const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
@@ -52,7 +53,8 @@ export function AttendanceTracker({
   faculty = [], 
   divisions = [],
   onMarkAttendance,
-  onBulkMarkAttendance
+  onBulkMarkAttendance,
+  isBulkMarking = false,
 }: AttendanceTrackerProps) {
   const { isFeatureEnabled } = useTuitionFeatures();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -303,6 +305,18 @@ export function AttendanceTracker({
       const studentAttendance = getAttendanceForStudent(student.id);
       return studentAttendance?.status === 'absent';
     });
+  }, [filteredStudentsBase, getAttendanceForStudent]);
+
+  // Count students that would actually be marked by the bulk action.
+  // The bulk handler only targets students with no attendance yet in the
+  // current subject/faculty session, so the button label and disabled state
+  // must reflect that — otherwise users see "Mark All Present (30)" even
+  // when all 30 are already marked and get a confusing no-op.
+  const unmarkedCount = useMemo(() => {
+    return filteredStudentsBase.reduce(
+      (n, s) => (getAttendanceForStudent(s.id) ? n : n + 1),
+      0,
+    );
   }, [filteredStudentsBase, getAttendanceForStudent]);
 
   // Get late students for WhatsApp message
@@ -727,9 +741,13 @@ export function AttendanceTracker({
             <Button 
               onClick={() => handleBulkAttendance('present')} 
               className="w-full bg-green-600 hover:bg-green-700 h-9 text-sm font-medium" 
-              disabled={!selectedClass || filteredStudentsBase.length === 0}
+              disabled={!selectedClass || unmarkedCount === 0 || isBulkMarking}
             >
-              Mark All Present ({filteredStudentsBase.length})
+              {isBulkMarking
+                ? 'Saving…'
+                : unmarkedCount === 0
+                  ? 'All Marked'
+                  : `Mark All Present (${unmarkedCount})`}
             </Button>
 
             {/* Copy from Previous Class - Show when previous sessions exist */}
