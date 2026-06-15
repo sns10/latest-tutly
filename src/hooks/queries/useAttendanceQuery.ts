@@ -454,12 +454,10 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
           failed.push({ studentId: r.studentId, error: err });
         }
       }
-      if (failed.length === records.length && records.length > 0) {
-        // Nothing saved at all — surface as an error so optimistic state rolls back.
-        throw failed[0].error;
-      }
       if (failed.length > 0) {
-        toast.warning(`Saved ${records.length - failed.length} of ${records.length}. ${failed.length} failed and will reconcile on refresh.`);
+        const error = new Error(`Bulk attendance failed for ${failed.length} student(s)`);
+        (error as Error & { failedStudentIds?: string[] }).failedStudentIds = failed.map(f => f.studentId);
+        throw error;
       }
       return records;
     },
@@ -524,7 +522,8 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       toast.error('Failed to save attendance');
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId, undefined], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId, { date: formatLocalDate(new Date()) }], exact: true });
     },
   });
 }
