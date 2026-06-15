@@ -164,16 +164,21 @@ export function AttendanceTracker({
     return attendance.find(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
 
+      const attendanceSubjectId = a.subjectId ?? null;
+      const attendanceFacultyId = a.facultyId ?? null;
+      const selectedSubjectId = selectedSubject || null;
+      const selectedFacultyId = selectedFaculty || null;
+
       // Strict context match: an empty selection means the record must ALSO have no
       // subject/faculty — never bleed a "present" mark from another subject into a
       // different (or empty) context.
-      const subjectMatches = selectedSubject
-        ? a.subjectId === selectedSubject
-        : !a.subjectId;
+      const subjectMatches = selectedSubjectId
+        ? attendanceSubjectId === selectedSubjectId
+        : attendanceSubjectId === null;
 
-      const facultyMatches = selectedFaculty
-        ? a.facultyId === selectedFaculty
-        : !a.facultyId;
+      const facultyMatches = selectedFacultyId
+        ? attendanceFacultyId === selectedFacultyId
+        : attendanceFacultyId === null;
 
       return subjectMatches && facultyMatches;
     });
@@ -254,12 +259,17 @@ export function AttendanceTracker({
       if (!filteredStudentsBase.some(s => s.id === a.studentId)) return false;
       
       // Match exact subject/faculty context when selected; otherwise don't filter
-      const subjectMatches = selectedSubject
-        ? a.subjectId === selectedSubject
-        : true;
-      const facultyMatches = selectedFaculty
-        ? a.facultyId === selectedFaculty
-        : true;
+      const attendanceSubjectId = a.subjectId ?? null;
+      const attendanceFacultyId = a.facultyId ?? null;
+      const selectedSubjectId = selectedSubject || null;
+      const selectedFacultyId = selectedFaculty || null;
+
+      const subjectMatches = selectedSubjectId
+        ? attendanceSubjectId === selectedSubjectId
+        : attendanceSubjectId === null;
+      const facultyMatches = selectedFacultyId
+        ? attendanceFacultyId === selectedFacultyId
+        : attendanceFacultyId === null;
       
       return subjectMatches && facultyMatches;
     });
