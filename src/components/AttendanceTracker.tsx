@@ -307,6 +307,18 @@ export function AttendanceTracker({
     });
   }, [filteredStudentsBase, getAttendanceForStudent]);
 
+  // Count students that would actually be marked by the bulk action.
+  // The bulk handler only targets students with no attendance yet in the
+  // current subject/faculty session, so the button label and disabled state
+  // must reflect that — otherwise users see "Mark All Present (30)" even
+  // when all 30 are already marked and get a confusing no-op.
+  const unmarkedCount = useMemo(() => {
+    return filteredStudentsBase.reduce(
+      (n, s) => (getAttendanceForStudent(s.id) ? n : n + 1),
+      0,
+    );
+  }, [filteredStudentsBase, getAttendanceForStudent]);
+
   // Get late students for WhatsApp message
   const lateStudents = useMemo(() => {
     return filteredStudentsBase.filter(student => {
