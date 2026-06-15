@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Student, StudentAttendance, WeeklyTest, StudentTestResult } from '@/types';
 import { format } from 'date-fns';
+import { ALERT_DAILY_ATTENDANCE_PRIORITY, buildDailyAttendanceStatusMap } from '@/lib/attendance';
 
 export interface StudentAlert {
   id: string;
@@ -74,17 +75,7 @@ export function useStudentAlerts({
       if (!student) continue;
 
       // Get unique dates sorted descending
-      const dateStatusMap = new Map<string, string>();
-      for (const r of records) {
-        // If student was present in ANY session that day, count as present
-        const existing = dateStatusMap.get(r.date);
-        if (existing === 'present') continue;
-        if (r.status === 'present' || r.status === 'late') {
-          dateStatusMap.set(r.date, 'present');
-        } else {
-          dateStatusMap.set(r.date, r.status);
-        }
-      }
+      const dateStatusMap = buildDailyAttendanceStatusMap(records, ALERT_DAILY_ATTENDANCE_PRIORITY);
 
       const sortedDates = [...dateStatusMap.entries()]
         .sort((a, b) => b[0].localeCompare(a[0]));
