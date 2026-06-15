@@ -358,6 +358,7 @@ export function AttendanceTracker({
       facultyName: string;
       markedCount: number;
     }>();
+    const countedSessionStudents = new Set<string>();
     
     attendance.forEach(a => {
       if (a.date !== selectedDateStr) return;
@@ -389,14 +390,9 @@ export function AttendanceTracker({
       }
       
       const session = sessionsMap.get(key)!;
-      const alreadyCounted = attendance.some(existing =>
-        existing !== a &&
-        existing.date === a.date &&
-        existing.studentId === a.studentId &&
-        (existing.subjectId ?? null) === (a.subjectId ?? null) &&
-        (existing.facultyId ?? null) === (a.facultyId ?? null)
-      );
-      if (!alreadyCounted) {
+      const studentSessionKey = `${key}-${a.studentId}`;
+      if (!countedSessionStudents.has(studentSessionKey)) {
+        countedSessionStudents.add(studentSessionKey);
         session.markedCount++;
       }
     });
