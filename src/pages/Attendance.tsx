@@ -57,6 +57,7 @@ export default function AttendancePage() {
       divisions={divisions}
       onMarkAttendance={markAttendance}
       onBulkMarkAttendance={bulkMarkAttendance}
+      isBulkMarking={bulkMarkAttendanceMutation.isPending}
     />
   );
 }
