@@ -961,7 +961,7 @@ export function StudentDetailsDialog({
                       <p className="text-xs text-muted-foreground">Late</p>
                     </div>
                     <div className="p-2 bg-purple-50 rounded-lg text-center">
-                      <p className="font-bold text-purple-600">{totalAttendance}</p>
+                      <p className="font-bold text-purple-600">{attendanceSummary.totalDays}</p>
                       <p className="text-xs text-muted-foreground">Total</p>
                     </div>
                   </div>
