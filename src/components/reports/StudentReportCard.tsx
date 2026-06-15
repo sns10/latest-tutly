@@ -249,7 +249,7 @@ export function StudentReportCard() {
           <div class="section">
             <h3>📊 Attendance Summary</h3>
             <div class="stats-grid">
-              <div class="stat-box blue"><div class="stat-value">${attendanceStats.total}</div><div class="stat-label">Total Classes</div></div>
+              <div class="stat-box blue"><div class="stat-value">${attendanceStats.total}</div><div class="stat-label">Total Days</div></div>
               <div class="stat-box green"><div class="stat-value">${attendanceStats.present}</div><div class="stat-label">Present</div></div>
               <div class="stat-box red"><div class="stat-value">${attendanceStats.absent}</div><div class="stat-label">Absent</div></div>
               <div class="stat-box yellow"><div class="stat-value">${attendanceStats.percentage}%</div><div class="stat-label">Attendance %</div></div>
