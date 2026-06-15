@@ -324,11 +324,11 @@ export function AttendanceTracker({
   // must reflect that — otherwise users see "Mark All Present (30)" even
   // when all 30 are already marked and get a confusing no-op.
   const unmarkedCount = useMemo(() => {
-    return filteredStudentsBase.reduce(
+    return filteredStudents.reduce(
       (n, s) => (getAttendanceForStudent(s.id) ? n : n + 1),
       0,
     );
-  }, [filteredStudentsBase, getAttendanceForStudent]);
+  }, [filteredStudents, getAttendanceForStudent]);
 
   // Get late students for WhatsApp message
   const lateStudents = useMemo(() => {
@@ -407,7 +407,7 @@ export function AttendanceTracker({
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
     // Collect all students that need marking
-    const studentsToMark = filteredStudentsBase.filter(student => {
+    const studentsToMark = filteredStudents.filter(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
       return !existingAttendance;
     });
@@ -435,7 +435,7 @@ export function AttendanceTracker({
       });
       toast.success(`${studentsToMark.length} students marked as ${status}`);
     }
-  }, [filteredStudentsBase, getAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudents, getAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Copy attendance from a previous class session
   const handleCopyFromPreviousClass = useCallback((sourceSubjectId: string | null, sourceFacultyId: string | null) => {
