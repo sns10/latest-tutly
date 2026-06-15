@@ -230,7 +230,6 @@ export function useStudentData(selectedStudentId?: string | null) {
         supabase
           .from('term_exam_subjects')
           .select('*, subject:subjects(id, name, class)')
-          .in('term_exam_id', (termExamsRes.data || []).map(exam => exam.id).length > 0 ? (termExamsRes.data || []).map(exam => exam.id) : ['00000000-0000-0000-0000-000000000000'])
           .order('created_at', { ascending: true }),
         paginatedFetch(() =>
           supabase.from('term_exam_results').select('*')
@@ -260,7 +259,10 @@ export function useStudentData(selectedStudentId?: string | null) {
       if (announcementsRes.data) setAnnouncements(announcementsRes.data);
       if (homeworkRes.data) setHomework(homeworkRes.data);
       if (termExamsRes.data) setTermExams(termExamsRes.data);
-      if (termExamSubjectsRes.data) setTermExamSubjects(termExamSubjectsRes.data as any);
+      if (termExamSubjectsRes.data) {
+        const allowedExamIds = new Set((termExamsRes.data || []).map(exam => exam.id));
+        setTermExamSubjects((termExamSubjectsRes.data as any[]).filter(subject => allowedExamIds.has(subject.term_exam_id)) as any);
+      }
       setTermExamResults(termExamResultsData);
     };
 
