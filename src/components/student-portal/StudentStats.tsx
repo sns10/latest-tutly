@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Flame, TrendingUp, Trophy, Target, BookOpen } from 'lucide-react';
+import { getAttendanceStreakStats, isAttendingStatus } from '@/lib/attendance';
 
 interface TestResult {
   id: string;
@@ -140,93 +141,28 @@ export function StudentStats({ testResults, tests, attendance, subjects, termExa
   }, [testResults, tests, termExamResults, termExamSubjects, termExams, subjects]);
 
   // Calculate longest streak
-  const streakStats = useMemo(() => {
-    const presentDates = new Set<string>();
-    attendance.forEach(r => {
-      if (r.status === 'present') {
-        presentDates.add(r.date);
-      }
-    });
-
-    const dates = Array.from(presentDates).sort((a, b) =>
-      new Date(a).getTime() - new Date(b).getTime()
-    );
-
-    if (dates.length === 0) return { currentStreak: 0, longestStreak: 0 };
-
-    let longestStreak = 1;
-    let currentRunningStreak = 1;
-
-    for (let i = 1; i < dates.length; i++) {
-      const date = new Date(dates[i]);
-      const prevDate = new Date(dates[i - 1]);
-      const diff = Math.floor((date.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (diff === 1) {
-        currentRunningStreak++;
-        longestStreak = Math.max(longestStreak, currentRunningStreak);
-      } else {
-        currentRunningStreak = 1;
-      }
-    }
-
-    // Calculate current streak
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const sortedDesc = Array.from(presentDates).sort((a, b) =>
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-
-    let currentStreak = 0;
-    if (sortedDesc.length > 0) {
-      const mostRecent = new Date(sortedDesc[0]);
-      mostRecent.setHours(0, 0, 0, 0);
-
-      const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysDiff <= 1) {
-        currentStreak = 1;
-        for (let i = 1; i < sortedDesc.length; i++) {
-          const date = new Date(sortedDesc[i]);
-          date.setHours(0, 0, 0, 0);
-
-          const prevDate = new Date(sortedDesc[i - 1]);
-          prevDate.setHours(0, 0, 0, 0);
-
-          const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-          if (diff === 1) {
-            currentStreak++;
-          } else {
-            break;
-          }
-        }
-      }
-    }
-
-    return { currentStreak, longestStreak };
-  }, [attendance]);
+  const streakStats = useMemo(() => getAttendanceStreakStats(attendance), [attendance]);
 
   // Subject-wise attendance
   const subjectAttendance = useMemo(() => {
     const bySubject: Record<string, { present: number; total: number }> = {};
 
     attendance.forEach(record => {
-      const subjectId = record.subject_id || record.subjectId || 'general';
+      const subjectId = record.subject_id || record.subjectId || '__general__';
       if (!bySubject[subjectId]) {
         bySubject[subjectId] = { present: 0, total: 0 };
       }
       bySubject[subjectId].total++;
-      if (record.status === 'present') {
+      if (isAttendingStatus(record.status)) {
         bySubject[subjectId].present++;
       }
     });
 
     return Object.entries(bySubject).map(([subjectId, data]) => {
-      const subject = subjects.find(s => s.id === subjectId);
+        const subject = subjects.find(s => s.id === subjectId);
       return {
         subjectId,
-        subjectName: subject?.name || 'General',
+          subjectName: subjectId === '__general__' ? 'General' : subject?.name || 'Unknown',
         ...data,
         rate: data.total > 0 ? (data.present / data.total) * 100 : 0
       };
