@@ -230,6 +230,7 @@ export function useStudentData(selectedStudentId?: string | null) {
         supabase
           .from('term_exam_subjects')
           .select('*, subject:subjects(id, name, class)')
+          .in('term_exam_id', (termExamsRes.data || []).map(exam => exam.id).length > 0 ? (termExamsRes.data || []).map(exam => exam.id) : ['00000000-0000-0000-0000-000000000000'])
           .order('created_at', { ascending: true }),
         paginatedFetch(() =>
           supabase.from('term_exam_results').select('*')
