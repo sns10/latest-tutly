@@ -15,6 +15,7 @@ import { WhatsAppMessageDialog } from './attendance/WhatsAppMessageDialog';
 import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp, MessageCircle, Copy } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
+import { formatLocalDate } from '@/lib/dateWindows';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -74,7 +75,7 @@ export function AttendanceTracker({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
-  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  const formatDate = formatLocalDate;
   const selectedDateStr = formatDate(selectedDate);
 
   // When navigating away from today, stop using the auto-detected subject/faculty context.
@@ -95,7 +96,7 @@ export function AttendanceTracker({
     if (isManualMode) return;
 
     // Only auto-detect for today's date
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatDate(new Date());
     if (selectedDateStr !== today) {
       // For previous dates, don't auto-detect - let user select manually
       return;
@@ -201,7 +202,7 @@ export function AttendanceTracker({
   // Get today's scheduled classes from timetable
   const todaysClasses = useMemo(() => {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = formatDate(now);
     const currentDay = now.getDay();
 
     // Get special classes for today
