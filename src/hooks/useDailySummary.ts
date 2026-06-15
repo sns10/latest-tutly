@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { format, addDays, parseISO, startOfDay } from 'date-fns';
 import { Student, WeeklyTest, StudentAttendance, StudentFee, Timetable, Subject, Faculty } from '@/types';
-import { buildDailyAttendanceStatusMap, isAttendingStatus } from '@/lib/attendance';
+import { AttendanceStatus, buildDailyAttendanceStatusMap, isAttendingStatus } from '@/lib/attendance';
 
 interface UpcomingTest {
   name: string;
@@ -81,7 +81,7 @@ export function useDailySummary({
     // === ATTENDANCE STATUS ===
     const todayAttendance = attendance.filter(a => a.date === todayStr);
     
-    const studentStatusMap = new Map<string, ReturnType<typeof buildDailyAttendanceStatusMap> extends Map<string, infer T> ? T : never>();
+    const studentStatusMap = new Map<string, AttendanceStatus>();
     const byStudent = new Map<string, StudentAttendance[]>();
     todayAttendance.forEach((record) => {
       byStudent.set(record.studentId, [...(byStudent.get(record.studentId) || []), record]);
