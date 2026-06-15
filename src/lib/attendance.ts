@@ -2,6 +2,10 @@ import { StudentAttendance } from '@/types';
 
 export type AttendanceStatus = StudentAttendance['status'];
 
+export function isAttendanceStatus(value: string): value is AttendanceStatus {
+  return value === 'present' || value === 'absent' || value === 'late' || value === 'excused';
+}
+
 export const DEFAULT_DAILY_ATTENDANCE_PRIORITY: Record<AttendanceStatus, number> = {
   absent: 1,
   excused: 2,
@@ -29,13 +33,14 @@ export function pickPreferredAttendanceStatus(
   return priority[next] >= priority[current] ? next : current;
 }
 
-export function buildDailyAttendanceStatusMap<T extends { date: string; status: AttendanceStatus }>(
+export function buildDailyAttendanceStatusMap<T extends { date: string; status: string }>(
   records: T[],
   priority: Record<AttendanceStatus, number> = DEFAULT_DAILY_ATTENDANCE_PRIORITY,
 ): Map<string, AttendanceStatus> {
   const byDate = new Map<string, AttendanceStatus>();
 
   for (const record of records) {
+    if (!isAttendanceStatus(record.status)) continue;
     byDate.set(
       record.date,
       pickPreferredAttendanceStatus(byDate.get(record.date), record.status, priority),
@@ -45,7 +50,7 @@ export function buildDailyAttendanceStatusMap<T extends { date: string; status: 
   return byDate;
 }
 
-export function getAttendanceSummary<T extends { date: string; status: AttendanceStatus }>(
+export function getAttendanceSummary<T extends { date: string; status: string }>(
   records: T[],
   priority: Record<AttendanceStatus, number> = DEFAULT_DAILY_ATTENDANCE_PRIORITY,
 ) {
@@ -78,7 +83,7 @@ export function getAttendanceSummary<T extends { date: string; status: Attendanc
   };
 }
 
-export function getAttendanceStreakStats<T extends { date: string; status: AttendanceStatus }>(
+export function getAttendanceStreakStats<T extends { date: string; status: string }>(
   records: T[],
   priority: Record<AttendanceStatus, number> = DEFAULT_DAILY_ATTENDANCE_PRIORITY,
 ) {
