@@ -18,6 +18,7 @@ import { HomeworkSection } from '@/components/student-portal/HomeworkSection';
 import { StudentStats } from '@/components/student-portal/StudentStats';
 import { TuitionBranding } from '@/components/TuitionBranding';
 import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, LogOut, ArrowLeft, Flame } from 'lucide-react';
+import { getAttendanceStreakStats, getAttendanceSummary, isAttendingStatus } from '@/lib/attendance';
 
 export default function Student() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -48,47 +49,7 @@ export default function Student() {
   // Calculate attendance streak - must be before any returns
   const attendanceStreak = useMemo(() => {
     if (!attendance || attendance.length === 0) return 0;
-
-    const presentDates = new Set<string>();
-    attendance.forEach(r => {
-      if (r.status === 'present') {
-        presentDates.add(r.date);
-      }
-    });
-
-    const dates = Array.from(presentDates).sort((a, b) =>
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-
-    if (dates.length === 0) return 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const mostRecent = new Date(dates[0]);
-    mostRecent.setHours(0, 0, 0, 0);
-
-    const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysDiff > 1) return 0;
-
-    let streak = 1;
-    for (let i = 1; i < dates.length; i++) {
-      const date = new Date(dates[i]);
-      date.setHours(0, 0, 0, 0);
-
-      const prevDate = new Date(dates[i - 1]);
-      prevDate.setHours(0, 0, 0, 0);
-
-      const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (diff === 1) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-
-    return streak;
+    return getAttendanceStreakStats(attendance).currentStreak;
   }, [attendance]);
 
   // Show auth screen if not logged in
@@ -246,20 +207,19 @@ export default function Student() {
     };
   });
 
-  const totalAttendanceDays = attendance.length;
-  const presentDays = attendance.filter(a => a.status === 'present').length;
-  const attendanceRate = totalAttendanceDays > 0 ? (presentDays / totalAttendanceDays) * 100 : 0;
+  const attendanceSummary = useMemo(() => getAttendanceSummary(attendance), [attendance]);
+  const attendanceRate = attendanceSummary.attendanceRate;
 
   // Group attendance by subject
   const attendanceBySubject = attendance.reduce((acc, record) => {
-    const subjectId = record.subject_id || 'general';
+    const subjectId = record.subject_id || '__general__';
     if (!acc[subjectId]) {
-      acc[subjectId] = { total: 0, present: 0 };
+      acc[subjectId] = { total: 0, attended: 0 };
     }
     acc[subjectId].total++;
-    if (record.status === 'present') acc[subjectId].present++;
+    if (isAttendingStatus(record.status)) acc[subjectId].attended++;
     return acc;
-  }, {} as Record<string, { total: number; present: number }>);
+  }, {} as Record<string, { total: number; attended: number }>);
 
   const totalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
   const paidFees = fees.filter(f => f.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
@@ -504,17 +464,17 @@ export default function Student() {
                     <div className="space-y-3">
                       {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
                         const subject = subjects.find(s => s.id === subjectId);
-                        const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                        const rate = stats.total > 0 ? (stats.attended / stats.total) * 100 : 0;
                         return (
                           <div key={subjectId} className="p-3 border rounded">
                             <div className="flex justify-between items-center mb-2">
-                              <div className="font-medium">{subject?.name || 'General'}</div>
+                        <div className="font-medium">{subjectId === '__general__' ? 'General' : subject?.name || 'Unknown'}</div>
                               <Badge variant={rate >= 75 ? 'default' : rate >= 60 ? 'secondary' : 'destructive'}>
                                 {rate.toFixed(1)}%
                               </Badge>
                             </div>
                             <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                              <span>Present: {stats.present}</span>
+                              <span>Attended: {stats.attended}</span>
                               <span>Total: {stats.total}</span>
                             </div>
                             <Progress value={rate} className="h-2" />

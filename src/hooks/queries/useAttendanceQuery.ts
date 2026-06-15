@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { StudentAttendance } from '@/types';
 import { toast } from 'sonner';
+import { formatLocalDate } from '@/lib/dateWindows';
 
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes - balanced cache to reduce cloud calls
 const GC_TIME = 30 * 60 * 1000; // 30 minutes
@@ -21,8 +22,8 @@ const formatAttendance = (data: any[]): StudentAttendance[] => {
     date: attendance.date,
     status: attendance.status as 'present' | 'absent' | 'late' | 'excused',
     notes: attendance.notes || undefined,
-    subjectId: attendance.subject_id || undefined,
-    facultyId: attendance.faculty_id || undefined,
+    subjectId: attendance.subject_id ?? undefined,
+    facultyId: attendance.faculty_id ?? undefined,
     createdAt: attendance.created_at,
     updatedAt: attendance.updated_at,
   }));
@@ -62,7 +63,7 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
         } else if (filters?.startDate && filters?.endDate) {
           query = query.gte('date', filters.startDate).lte('date', filters.endDate);
         } else {
-          query = query.gte('date', thirtyDaysAgo.toISOString().split('T')[0]);
+          query = query.gte('date', formatLocalDate(thirtyDaysAgo));
         }
 
         if (filters?.studentId) {
@@ -238,7 +239,7 @@ export function useStudentAttendanceQuery(tuitionId: string | null, studentId: s
 
 // For current day attendance - most common use case
 export function useTodayAttendanceQuery(tuitionId: string | null) {
-  const today = new Date().toISOString().split('T')[0];
+  const today = formatLocalDate(new Date());
   return useAttendanceQuery(tuitionId, { date: today });
 }
 
@@ -453,12 +454,10 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
           failed.push({ studentId: r.studentId, error: err });
         }
       }
-      if (failed.length === records.length && records.length > 0) {
-        // Nothing saved at all — surface as an error so optimistic state rolls back.
-        throw failed[0].error;
-      }
       if (failed.length > 0) {
-        toast.warning(`Saved ${records.length - failed.length} of ${records.length}. ${failed.length} failed and will reconcile on refresh.`);
+        const error = new Error(`Bulk attendance failed for ${failed.length} student(s)`);
+        (error as Error & { failedStudentIds?: string[] }).failedStudentIds = failed.map(f => f.studentId);
+        throw error;
       }
       return records;
     },

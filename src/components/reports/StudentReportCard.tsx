@@ -13,6 +13,7 @@ import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { useUserTuition } from '@/hooks/useUserTuition';
 import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
+import { getAttendanceSummary } from '@/lib/attendance';
 
 export function StudentReportCard() {
   const { tuitionId } = useUserTuition();
@@ -63,12 +64,13 @@ export function StudentReportCard() {
       return isWithinInterval(attendanceDate, { start, end });
     });
 
-    const total = studentAttendance.length;
-    const present = studentAttendance.filter(a => a.status === 'present').length;
-    const absent = studentAttendance.filter(a => a.status === 'absent').length;
-    const late = studentAttendance.filter(a => a.status === 'late').length;
-    const excused = studentAttendance.filter(a => a.status === 'excused').length;
-    const percentage = total > 0 ? Math.round((present + late) / total * 100) : 0;
+    const summary = getAttendanceSummary(studentAttendance);
+    const total = summary.totalDays;
+    const present = summary.present;
+    const absent = summary.absent;
+    const late = summary.late;
+    const excused = summary.excused;
+    const percentage = Math.round(summary.attendanceRate);
 
     return { total, present, absent, late, excused, percentage };
   }, [student, attendance, startDate, endDate]);
@@ -247,7 +249,7 @@ export function StudentReportCard() {
           <div class="section">
             <h3>📊 Attendance Summary</h3>
             <div class="stats-grid">
-              <div class="stat-box blue"><div class="stat-value">${attendanceStats.total}</div><div class="stat-label">Total Classes</div></div>
+              <div class="stat-box blue"><div class="stat-value">${attendanceStats.total}</div><div class="stat-label">Total Days</div></div>
               <div class="stat-box green"><div class="stat-value">${attendanceStats.present}</div><div class="stat-label">Present</div></div>
               <div class="stat-box red"><div class="stat-value">${attendanceStats.absent}</div><div class="stat-label">Absent</div></div>
               <div class="stat-box yellow"><div class="stat-value">${attendanceStats.percentage}%</div><div class="stat-label">Attendance %</div></div>

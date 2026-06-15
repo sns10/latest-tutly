@@ -20,6 +20,7 @@ import { Trash2, Trophy, Calendar, BookOpen, CreditCard, Pencil, X, Check, Mail,
 import { Textarea } from '@/components/ui/textarea';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getYear, getMonth, setMonth, setYear } from 'date-fns';
 import { AssignStudentEmailDialog } from './AssignStudentEmailDialog';
+import { buildDailyAttendanceStatusMap, getAttendanceStreakStats, getAttendanceSummary, isAttendingStatus } from '@/lib/attendance';
 
 interface FeePayment {
   id: string;
@@ -148,102 +149,37 @@ export function StudentDetailsDialog({
   };
 
   // Calculate statistics
-  const presentCount = attendance.filter(a => a.status === 'present').length;
-  const absentCount = attendance.filter(a => a.status === 'absent').length;
-  const lateCount = attendance.filter(a => a.status === 'late').length;
-  const totalAttendance = attendance.length;
-  const attendanceRate = totalAttendance > 0 ? Math.round((presentCount / totalAttendance) * 100) : 0;
+  const attendanceSummary = useMemo(() => getAttendanceSummary(attendance), [attendance]);
+  const presentCount = attendanceSummary.present;
+  const absentCount = attendanceSummary.absent;
+  const lateCount = attendanceSummary.late;
+  const attendanceRate = Math.round(attendanceSummary.attendanceRate);
 
   // Calculate streaks
-  const streakStats = useMemo(() => {
-    const presentDates = new Set<string>();
-    attendance.forEach(r => {
-      if (r.status === 'present') {
-        presentDates.add(r.date);
-      }
-    });
-
-    const dates = Array.from(presentDates).sort((a, b) =>
-      new Date(a).getTime() - new Date(b).getTime()
-    );
-
-    if (dates.length === 0) return { currentStreak: 0, longestStreak: 0 };
-
-    let longestStreak = 1;
-    let currentRunningStreak = 1;
-
-    for (let i = 1; i < dates.length; i++) {
-      const date = new Date(dates[i]);
-      const prevDate = new Date(dates[i - 1]);
-      const diff = Math.floor((date.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (diff === 1) {
-        currentRunningStreak++;
-        longestStreak = Math.max(longestStreak, currentRunningStreak);
-      } else {
-        currentRunningStreak = 1;
-      }
-    }
-
-    // Calculate current streak
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const sortedDesc = Array.from(presentDates).sort((a, b) =>
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-
-    let currentStreak = 0;
-    if (sortedDesc.length > 0) {
-      const mostRecent = new Date(sortedDesc[0]);
-      mostRecent.setHours(0, 0, 0, 0);
-
-      const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
-      if (daysDiff <= 1) {
-        currentStreak = 1;
-        for (let i = 1; i < sortedDesc.length; i++) {
-          const date = new Date(sortedDesc[i]);
-          date.setHours(0, 0, 0, 0);
-
-          const prevDate = new Date(sortedDesc[i - 1]);
-          prevDate.setHours(0, 0, 0, 0);
-
-          const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-          if (diff === 1) {
-            currentStreak++;
-          } else {
-            break;
-          }
-        }
-      }
-    }
-
-    return { currentStreak, longestStreak };
-  }, [attendance]);
+  const streakStats = useMemo(() => getAttendanceStreakStats(attendance), [attendance]);
 
   // Subject-wise attendance
   const subjectAttendance = useMemo(() => {
-    const bySubject: Record<string, { present: number; total: number }> = {};
+    const bySubject: Record<string, { attended: number; total: number }> = {};
 
     attendance.forEach(record => {
-      const subjectId = record.subjectId || 'general';
+      const subjectId = record.subjectId || '__general__';
       if (!bySubject[subjectId]) {
-        bySubject[subjectId] = { present: 0, total: 0 };
+        bySubject[subjectId] = { attended: 0, total: 0 };
       }
       bySubject[subjectId].total++;
-      if (record.status === 'present') {
-        bySubject[subjectId].present++;
+      if (isAttendingStatus(record.status)) {
+        bySubject[subjectId].attended++;
       }
     });
 
     return Object.entries(bySubject).map(([subjectId, data]) => {
-      const subject = subjects.find(s => s.id === subjectId);
+        const subject = subjects.find(s => s.id === subjectId);
       return {
         subjectId,
-        subjectName: subject?.name || 'General',
+          subjectName: subjectId === '__general__' ? 'General' : subject?.name || 'Unknown',
         ...data,
-        rate: data.total > 0 ? (data.present / data.total) * 100 : 0
+          rate: data.total > 0 ? (data.attended / data.total) * 100 : 0
       };
     }).sort((a, b) => b.rate - a.rate);
   }, [attendance, subjects]);
@@ -379,10 +315,8 @@ export function StudentDetailsDialog({
 
   const attendanceByDate = useMemo(() => {
     const map: Record<string, string> = {};
-    filteredAttendance.forEach(a => {
-      if (!map[a.date]) {
-        map[a.date] = a.status;
-      }
+    buildDailyAttendanceStatusMap(filteredAttendance).forEach((status, date) => {
+      map[date] = status;
     });
     return map;
   }, [filteredAttendance]);
@@ -1027,7 +961,7 @@ export function StudentDetailsDialog({
                       <p className="text-xs text-muted-foreground">Late</p>
                     </div>
                     <div className="p-2 bg-purple-50 rounded-lg text-center">
-                      <p className="font-bold text-purple-600">{totalAttendance}</p>
+                      <p className="font-bold text-purple-600">{attendanceSummary.totalDays}</p>
                       <p className="text-xs text-muted-foreground">Total</p>
                     </div>
                   </div>
@@ -1052,7 +986,7 @@ export function StudentDetailsDialog({
                               {subject.rate.toFixed(1)}%
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {subject.present}/{subject.total}
+                              {subject.attended}/{subject.total}
                             </span>
                           </div>
                         </div>

@@ -13,6 +13,7 @@ import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 import { format, subDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { getAttendanceSummary } from '@/lib/attendance';
 
 interface StudentAttendanceStats {
   studentId: string;
@@ -20,7 +21,7 @@ interface StudentAttendanceStats {
   rollNo: number | null;
   className: string;
   divisionName: string;
-  totalClasses: number;
+  totalDays: number;
   present: number;
   absent: number;
   late: number;
@@ -70,12 +71,13 @@ export function MonthlyAttendanceReport() {
         return isWithinInterval(attendanceDate, { start, end });
       });
 
-      const totalClasses = studentAttendance.length;
-      const present = studentAttendance.filter(a => a.status === 'present').length;
-      const absent = studentAttendance.filter(a => a.status === 'absent').length;
-      const late = studentAttendance.filter(a => a.status === 'late').length;
-      const excused = studentAttendance.filter(a => a.status === 'excused').length;
-      const percentage = totalClasses > 0 ? Math.round((present + late) / totalClasses * 100) : 0;
+      const summary = getAttendanceSummary(studentAttendance);
+      const totalDays = summary.totalDays;
+      const present = summary.present;
+      const absent = summary.absent;
+      const late = summary.late;
+      const excused = summary.excused;
+      const percentage = Math.round(summary.attendanceRate);
 
       const division = divisions.find(d => d.id === student.divisionId);
 
@@ -85,7 +87,7 @@ export function MonthlyAttendanceReport() {
         rollNo: student.rollNo,
         className: student.class,
         divisionName: division?.name || '-',
-        totalClasses,
+        totalDays,
         present,
         absent,
         late,
@@ -122,7 +124,7 @@ export function MonthlyAttendanceReport() {
   );
 
   const bottomPerformers = useMemo(() => 
-    [...attendanceStats].filter(s => s.totalClasses > 0).sort((a, b) => a.percentage - b.percentage).slice(0, 5),
+    [...attendanceStats].filter(s => s.totalDays > 0).sort((a, b) => a.percentage - b.percentage).slice(0, 5),
     [attendanceStats]
   );
 
@@ -149,7 +151,7 @@ export function MonthlyAttendanceReport() {
       'Student Name': s.studentName,
       'Class': s.className,
       'Division': s.divisionName,
-      'Total Classes': s.totalClasses,
+      'Total Days': s.totalDays,
       'Present': s.present,
       'Absent': s.absent,
       'Late': s.late,
@@ -220,7 +222,7 @@ export function MonthlyAttendanceReport() {
                   <td>${s.rollNo || '-'}</td>
                   <td>${s.studentName}</td>
                   <td>${s.className} ${s.divisionName !== '-' ? s.divisionName : ''}</td>
-                  <td>${s.totalClasses}</td>
+                      <td>${s.totalDays}</td>
                   <td>${s.present}</td>
                   <td>${s.absent}</td>
                   <td>${s.late}</td>
@@ -440,7 +442,7 @@ export function MonthlyAttendanceReport() {
                       <TableCell className="text-muted-foreground">#{s.rollNo || '-'}</TableCell>
                       <TableCell className="font-medium">{s.studentName}</TableCell>
                       <TableCell>{s.className} {s.divisionName !== '-' && s.divisionName}</TableCell>
-                      <TableCell className="text-center">{s.totalClasses}</TableCell>
+                       <TableCell className="text-center">{s.totalDays}</TableCell>
                       <TableCell className="text-center text-green-600">{s.present}</TableCell>
                       <TableCell className="text-center text-red-600">{s.absent}</TableCell>
                       <TableCell className="text-center text-yellow-600">{s.late}</TableCell>

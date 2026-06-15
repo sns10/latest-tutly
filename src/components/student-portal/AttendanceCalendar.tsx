@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, addMonths, subMonths, getYear, getMonth, setMonth, setYear } from 'date-fns';
+import { buildDailyAttendanceStatusMap } from '@/lib/attendance';
 
 interface AttendanceRecord {
   id: string;
@@ -55,11 +56,8 @@ export function AttendanceCalendar({ attendance, subjects = [], showSubjectFilte
 
   const attendanceByDate = useMemo(() => {
     const map: Record<string, string> = {};
-    filteredAttendance.forEach(a => {
-      // Use most recent status if multiple entries for same day
-      if (!map[a.date]) {
-        map[a.date] = a.status;
-      }
+    buildDailyAttendanceStatusMap(filteredAttendance).forEach((status, date) => {
+      map[date] = status;
     });
     return map;
   }, [filteredAttendance]);

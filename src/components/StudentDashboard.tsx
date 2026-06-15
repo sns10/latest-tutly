@@ -7,6 +7,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { CalendarDays, TrendingUp, Award } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
+import { buildDailyAttendanceStatusMap, getAttendanceSummary, isAttendingStatus } from '@/lib/attendance';
 
 interface StudentDashboardProps {
   student: Student;
@@ -48,28 +49,27 @@ export function StudentDashboard({
 
   // Group attendance by subject
   const attendanceBySubject = attendance.reduce((acc, record) => {
-    const subjectId = record.subjectId || 'general';
+    const subjectId = record.subjectId || '__general__';
     if (!acc[subjectId]) {
       acc[subjectId] = {
         total: 0,
-        present: 0,
+        attended: 0,
         absent: 0,
         late: 0,
         excused: 0
       };
     }
     acc[subjectId].total++;
-    if (record.status === 'present') acc[subjectId].present++;
+    if (isAttendingStatus(record.status)) acc[subjectId].attended++;
     if (record.status === 'absent') acc[subjectId].absent++;
     if (record.status === 'late') acc[subjectId].late++;
     if (record.status === 'excused') acc[subjectId].excused++;
     return acc;
-  }, {} as Record<string, { total: number; present: number; absent: number; late: number; excused: number }>);
+  }, {} as Record<string, { total: number; attended: number; absent: number; late: number; excused: number }>);
 
-  // Attendance statistics
-  const totalAttendanceDays = attendance.length;
-  const presentDays = attendance.filter(a => a.status === 'present').length;
-  const attendanceRate = totalAttendanceDays > 0 ? (presentDays / totalAttendanceDays) * 100 : 0;
+  const attendanceSummary = useMemo(() => getAttendanceSummary(attendance), [attendance]);
+  const presentDays = attendanceSummary.present;
+  const attendanceRate = attendanceSummary.attendanceRate;
 
   // Fee statistics
   const totalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
@@ -281,11 +281,12 @@ export function StudentDashboard({
   );
 
   const renderAttendance = () => {
+    const attendanceByDate = buildDailyAttendanceStatusMap(attendance);
     const modifiers = {
-      present: attendance.filter(a => a.status === 'present').map(a => new Date(a.date)),
-      absent: attendance.filter(a => a.status === 'absent').map(a => new Date(a.date)),
-      late: attendance.filter(a => a.status === 'late').map(a => new Date(a.date)),
-      excused: attendance.filter(a => a.status === 'excused').map(a => new Date(a.date)),
+      present: Array.from(attendanceByDate.entries()).filter(([, status]) => status === 'present').map(([date]) => new Date(date)),
+      absent: Array.from(attendanceByDate.entries()).filter(([, status]) => status === 'absent').map(([date]) => new Date(date)),
+      late: Array.from(attendanceByDate.entries()).filter(([, status]) => status === 'late').map(([date]) => new Date(date)),
+      excused: Array.from(attendanceByDate.entries()).filter(([, status]) => status === 'excused').map(([date]) => new Date(date)),
     };
 
     const modifiersStyles = {
@@ -307,7 +308,7 @@ export function StudentDashboard({
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-center text-red-600">
-                {attendance.filter(a => a.status === 'absent').length}
+                {attendanceSummary.absent}
               </div>
               <div className="text-sm text-muted-foreground text-center">Absent</div>
             </CardContent>
@@ -315,7 +316,7 @@ export function StudentDashboard({
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-center text-yellow-600">
-                {attendance.filter(a => a.status === 'late').length}
+                {attendanceSummary.late}
               </div>
               <div className="text-sm text-muted-foreground text-center">Late</div>
             </CardContent>
@@ -369,19 +370,19 @@ export function StudentDashboard({
             <div className="space-y-3">
               {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
                 const subject = subjects.find(s => s.id === subjectId);
-                const attendanceRate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                const attendanceRate = stats.total > 0 ? (stats.attended / stats.total) * 100 : 0;
                 return (
                   <div key={subjectId} className="p-3 border rounded space-y-2">
                     <div className="flex justify-between items-center">
-                      <div className="font-medium">{subject?.name || 'General'}</div>
+                        <div className="font-medium">{subjectId === '__general__' ? 'General' : subject?.name || 'Unknown'}</div>
                       <Badge variant={attendanceRate >= 75 ? 'default' : attendanceRate >= 60 ? 'secondary' : 'destructive'}>
                         {attendanceRate.toFixed(1)}%
                       </Badge>
                     </div>
                     <div className="grid grid-cols-4 gap-2 text-sm">
                       <div className="text-center">
-                        <div className="text-green-600 font-bold">{stats.present}</div>
-                        <div className="text-xs text-muted-foreground">Present</div>
+                        <div className="text-green-600 font-bold">{stats.attended}</div>
+                        <div className="text-xs text-muted-foreground">Attended</div>
                       </div>
                       <div className="text-center">
                         <div className="text-red-600 font-bold">{stats.absent}</div>

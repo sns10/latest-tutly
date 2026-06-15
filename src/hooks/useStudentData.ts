@@ -259,7 +259,10 @@ export function useStudentData(selectedStudentId?: string | null) {
       if (announcementsRes.data) setAnnouncements(announcementsRes.data);
       if (homeworkRes.data) setHomework(homeworkRes.data);
       if (termExamsRes.data) setTermExams(termExamsRes.data);
-      if (termExamSubjectsRes.data) setTermExamSubjects(termExamSubjectsRes.data as any);
+      if (termExamSubjectsRes.data) {
+        const allowedExamIds = new Set((termExamsRes.data || []).map(exam => exam.id));
+        setTermExamSubjects((termExamSubjectsRes.data as any[]).filter(subject => allowedExamIds.has(subject.term_exam_id)) as any);
+      }
       setTermExamResults(termExamResultsData);
     };
 

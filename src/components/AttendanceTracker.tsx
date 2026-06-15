@@ -15,6 +15,7 @@ import { WhatsAppMessageDialog } from './attendance/WhatsAppMessageDialog';
 import { Clock, BookOpen, UserCircle, Search, AlertCircle, RefreshCw, CalendarDays, Users, ChevronDown, ChevronUp, MessageCircle, Copy } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useTuitionFeatures } from '@/hooks/useTuitionFeatures';
+import { formatLocalDate } from '@/lib/dateWindows';
 
 interface AttendanceTrackerProps {
   students: Student[];
@@ -74,7 +75,7 @@ export function AttendanceTracker({
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
 
-  const formatDate = (date: Date) => date.toISOString().split('T')[0];
+  const formatDate = formatLocalDate;
   const selectedDateStr = formatDate(selectedDate);
 
   // When navigating away from today, stop using the auto-detected subject/faculty context.
@@ -95,7 +96,7 @@ export function AttendanceTracker({
     if (isManualMode) return;
 
     // Only auto-detect for today's date
-    const today = new Date().toISOString().split('T')[0];
+    const today = formatDate(new Date());
     if (selectedDateStr !== today) {
       // For previous dates, don't auto-detect - let user select manually
       return;
@@ -163,16 +164,21 @@ export function AttendanceTracker({
     return attendance.find(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
 
+      const attendanceSubjectId = a.subjectId ?? null;
+      const attendanceFacultyId = a.facultyId ?? null;
+      const selectedSubjectId = selectedSubject || null;
+      const selectedFacultyId = selectedFaculty || null;
+
       // Strict context match: an empty selection means the record must ALSO have no
       // subject/faculty — never bleed a "present" mark from another subject into a
       // different (or empty) context.
-      const subjectMatches = selectedSubject
-        ? a.subjectId === selectedSubject
-        : !a.subjectId;
+      const subjectMatches = selectedSubjectId
+        ? attendanceSubjectId === selectedSubjectId
+        : attendanceSubjectId === null;
 
-      const facultyMatches = selectedFaculty
-        ? a.facultyId === selectedFaculty
-        : !a.facultyId;
+      const facultyMatches = selectedFacultyId
+        ? attendanceFacultyId === selectedFacultyId
+        : attendanceFacultyId === null;
 
       return subjectMatches && facultyMatches;
     });
@@ -201,7 +207,7 @@ export function AttendanceTracker({
   // Get today's scheduled classes from timetable
   const todaysClasses = useMemo(() => {
     const now = new Date();
-    const today = now.toISOString().split('T')[0];
+    const today = formatDate(now);
     const currentDay = now.getDay();
 
     // Get special classes for today
@@ -253,12 +259,17 @@ export function AttendanceTracker({
       if (!filteredStudentsBase.some(s => s.id === a.studentId)) return false;
       
       // Match exact subject/faculty context when selected; otherwise don't filter
-      const subjectMatches = selectedSubject
-        ? a.subjectId === selectedSubject
-        : true;
-      const facultyMatches = selectedFaculty
-        ? a.facultyId === selectedFaculty
-        : true;
+      const attendanceSubjectId = a.subjectId ?? null;
+      const attendanceFacultyId = a.facultyId ?? null;
+      const selectedSubjectId = selectedSubject || null;
+      const selectedFacultyId = selectedFaculty || null;
+
+      const subjectMatches = selectedSubjectId
+        ? attendanceSubjectId === selectedSubjectId
+        : attendanceSubjectId === null;
+      const facultyMatches = selectedFacultyId
+        ? attendanceFacultyId === selectedFacultyId
+        : attendanceFacultyId === null;
       
       return subjectMatches && facultyMatches;
     });
@@ -313,11 +324,11 @@ export function AttendanceTracker({
   // must reflect that — otherwise users see "Mark All Present (30)" even
   // when all 30 are already marked and get a confusing no-op.
   const unmarkedCount = useMemo(() => {
-    return filteredStudentsBase.reduce(
+    return filteredStudents.reduce(
       (n, s) => (getAttendanceForStudent(s.id) ? n : n + 1),
       0,
     );
-  }, [filteredStudentsBase, getAttendanceForStudent]);
+  }, [filteredStudents, getAttendanceForStudent]);
 
   // Get late students for WhatsApp message
   const lateStudents = useMemo(() => {
@@ -347,18 +358,19 @@ export function AttendanceTracker({
       facultyName: string;
       markedCount: number;
     }>();
+    const countedSessionStudents = new Set<string>();
     
     attendance.forEach(a => {
       if (a.date !== selectedDateStr) return;
       if (!classStudentIds.includes(a.studentId)) return;
       
       // Skip current selection (only if both subject AND faculty match current)
-      const isSameSession = a.subjectId === (selectedSubject || null) && 
-                            a.facultyId === (selectedFaculty || null);
+      const isSameSession = (a.subjectId ?? null) === (selectedSubject || null) && 
+                            (a.facultyId ?? null) === (selectedFaculty || null);
       if (isSameSession) return;
       
       // Create unique key for this session (subject + faculty combination)
-      const key = `${a.subjectId || 'null'}-${a.facultyId || 'null'}`;
+      const key = `${a.subjectId ?? 'null'}-${a.facultyId ?? 'null'}`;
       
       if (!sessionsMap.has(key)) {
         const subjectName = a.subjectId 
@@ -378,7 +390,11 @@ export function AttendanceTracker({
       }
       
       const session = sessionsMap.get(key)!;
-      session.markedCount++;
+      const studentSessionKey = `${key}-${a.studentId}`;
+      if (!countedSessionStudents.has(studentSessionKey)) {
+        countedSessionStudents.add(studentSessionKey);
+        session.markedCount++;
+      }
     });
     
     return Array.from(sessionsMap.values());
@@ -396,7 +412,7 @@ export function AttendanceTracker({
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
     // Collect all students that need marking
-    const studentsToMark = filteredStudentsBase.filter(student => {
+    const studentsToMark = filteredStudents.filter(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
       return !existingAttendance;
     });
@@ -424,7 +440,7 @@ export function AttendanceTracker({
       });
       toast.success(`${studentsToMark.length} students marked as ${status}`);
     }
-  }, [filteredStudentsBase, getAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudents, getAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Copy attendance from a previous class session
   const handleCopyFromPreviousClass = useCallback((sourceSubjectId: string | null, sourceFacultyId: string | null) => {
@@ -438,8 +454,8 @@ export function AttendanceTracker({
       const sourceAttendance = attendance.find(a => 
         a.studentId === student.id && 
         a.date === selectedDateStr &&
-        a.subjectId === sourceSubjectId &&
-        a.facultyId === sourceFacultyId
+        (a.subjectId ?? null) === sourceSubjectId &&
+        (a.facultyId ?? null) === sourceFacultyId
       );
       return !!sourceAttendance;
     });
@@ -454,8 +470,8 @@ export function AttendanceTracker({
       const sourceAttendance = attendance.find(a => 
         a.studentId === student.id && 
         a.date === selectedDateStr &&
-        a.subjectId === sourceSubjectId &&
-        a.facultyId === sourceFacultyId
+        (a.subjectId ?? null) === sourceSubjectId &&
+        (a.facultyId ?? null) === sourceFacultyId
       )!;
       
       return {
@@ -468,15 +484,11 @@ export function AttendanceTracker({
       };
     });
 
-    // Use bulk handler if available
-    if (onBulkMarkAttendance) {
-      onBulkMarkAttendance(records);
-    } else {
-      // Fallback to individual calls
-      records.forEach(record => {
-        onMarkAttendance(record.studentId, record.date, record.status, record.notes, record.subjectId, record.facultyId);
-      });
+    if (!onBulkMarkAttendance) {
+      toast.error('Bulk copy is unavailable right now');
+      return;
     }
+    onBulkMarkAttendance(records);
 
     // Get source session name for toast
     const sourceSubjectName = sourceSubjectId 
@@ -484,7 +496,7 @@ export function AttendanceTracker({
       : 'Previous Class';
     
     toast.success(`Copied attendance from ${sourceSubjectName} for ${records.length} students`);
-  }, [filteredStudentsBase, getAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance, onMarkAttendance, subjects]);
+  }, [filteredStudentsBase, getAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance, subjects]);
 
   const handleSwitchToManual = () => {
     setIsManualMode(true);

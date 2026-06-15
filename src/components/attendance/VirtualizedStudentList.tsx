@@ -116,7 +116,8 @@ export const VirtualizedStudentList = memo(function VirtualizedStudentList({
   const virtualizer = useVirtualizer({
     count: studentsWithStatus.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 56, // Estimated row height
+    estimateSize: () => 72,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? 72,
     overscan: 5, // Render 5 extra items above/below viewport
   });
 
@@ -127,7 +128,7 @@ export const VirtualizedStudentList = memo(function VirtualizedStudentList({
   }
 
   // Calculate dynamic height - min 200px, max 50vh, or content height if smaller
-  const contentHeight = studentsWithStatus.length * 56;
+  const contentHeight = studentsWithStatus.length * 72;
   const maxHeight = typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400;
   const containerHeight = Math.min(Math.max(contentHeight, 200), maxHeight);
 
