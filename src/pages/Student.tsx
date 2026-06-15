@@ -214,12 +214,12 @@ export default function Student() {
   const attendanceBySubject = attendance.reduce((acc, record) => {
     const subjectId = record.subject_id || '__general__';
     if (!acc[subjectId]) {
-      acc[subjectId] = { total: 0, present: 0 };
+      acc[subjectId] = { total: 0, attended: 0 };
     }
     acc[subjectId].total++;
-    if (isAttendingStatus(record.status)) acc[subjectId].present++;
+    if (isAttendingStatus(record.status)) acc[subjectId].attended++;
     return acc;
-  }, {} as Record<string, { total: number; present: number }>);
+  }, {} as Record<string, { total: number; attended: number }>);
 
   const totalFees = fees.reduce((sum, fee) => sum + fee.amount, 0);
   const paidFees = fees.filter(f => f.status === 'paid').reduce((sum, fee) => sum + fee.amount, 0);
@@ -464,7 +464,7 @@ export default function Student() {
                     <div className="space-y-3">
                       {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
                         const subject = subjects.find(s => s.id === subjectId);
-                        const rate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                        const rate = stats.total > 0 ? (stats.attended / stats.total) * 100 : 0;
                         return (
                           <div key={subjectId} className="p-3 border rounded">
                             <div className="flex justify-between items-center mb-2">
@@ -474,7 +474,7 @@ export default function Student() {
                               </Badge>
                             </div>
                             <div className="flex justify-between text-sm text-muted-foreground mb-2">
-                              <span>Present: {stats.present}</span>
+                              <span>Attended: {stats.attended}</span>
                               <span>Total: {stats.total}</span>
                             </div>
                             <Progress value={rate} className="h-2" />
