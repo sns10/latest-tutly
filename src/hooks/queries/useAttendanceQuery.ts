@@ -380,8 +380,10 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
       toast.error('Failed to mark attendance');
     },
     onSettled: () => {
-      // Reconcile UI with the database — otherwise silent failures leave a stale green dot.
-      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
+      // Mark caches stale WITHOUT forcing an immediate refetch — the optimistic
+      // dot stays on screen until the next mount/focus instead of flickering
+      // back to "unmarked" while a 30-day pagination refetch is in flight.
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId], refetchType: 'none' });
     },
   });
 }
@@ -399,67 +401,21 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       subjectId?: string;
       facultyId?: string;
     }>) => {
-      // Postgres treats NULL != NULL, so a plain onConflict on nullable columns
-      // would insert duplicates whenever subject/faculty is unset. Use the same
-      // select → update/insert pattern as the single-mark flow for each record.
-      // We isolate each record in its own try/catch so a single bad row never
-      // aborts the whole bulk save (which previously rolled back the green dots
-      // for the entire class).
-      const failed: Array<{ studentId: string; error: unknown }> = [];
-      for (const r of records) {
-        try {
-        const normalizedSubjectId = r.subjectId?.trim() || null;
-        const normalizedFacultyId = r.facultyId?.trim() || null;
+      // Single-call set-based upsert via SECURITY DEFINER RPC. Replaces the
+      // previous N-round-trip loop (select-then-insert/update per student)
+      // which made "Mark All Present" take 10–30s on a real mobile network.
+      const payload = records.map(r => ({
+        student_id: r.studentId,
+        date: r.date,
+        status: r.status,
+        notes: r.notes ?? null,
+        subject_id: r.subjectId?.trim() || null,
+        faculty_id: r.facultyId?.trim() || null,
+      }));
 
-        let q = supabase
-          .from('student_attendance')
-          .select('id')
-          .eq('student_id', r.studentId)
-          .eq('date', r.date);
-
-        q = normalizedSubjectId ? q.eq('subject_id', normalizedSubjectId) : q.is('subject_id', null);
-        q = normalizedFacultyId ? q.eq('faculty_id', normalizedFacultyId) : q.is('faculty_id', null);
-
-        const { data: existingRows, error: checkError } = await q
-          .order('created_at', { ascending: true })
-          .limit(1);
-        if (checkError) throw checkError;
-        const existing = existingRows && existingRows[0];
-
-        if (existing) {
-          const { error } = await supabase
-            .from('student_attendance')
-            .update({
-              status: r.status,
-              notes: r.notes || null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', existing.id);
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .from('student_attendance')
-            .insert({
-              student_id: r.studentId,
-              date: r.date,
-              status: r.status,
-              notes: r.notes || null,
-              subject_id: normalizedSubjectId,
-              faculty_id: normalizedFacultyId,
-            });
-          if (error) throw error;
-        }
-        } catch (err) {
-          console.error('Bulk attendance row failed for student', r.studentId, err);
-          failed.push({ studentId: r.studentId, error: err });
-        }
-      }
-      if (failed.length > 0) {
-        const error = new Error(`Bulk attendance failed for ${failed.length} student(s)`);
-        (error as Error & { failedStudentIds?: string[] }).failedStudentIds = failed.map(f => f.studentId);
-        throw error;
-      }
-      return records;
+      const { data, error } = await supabase.rpc('bulk_mark_attendance', { _records: payload });
+      if (error) throw error;
+      return formatAttendance(data || []);
     },
     // Optimistic update for bulk operations
     onMutate: async (records) => {
@@ -521,8 +477,33 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       console.error('Error bulk marking attendance:', error);
       toast.error('Failed to save attendance');
     },
+    onSuccess: (savedRows) => {
+      // Merge real rows into every cached attendance list, replacing matching
+      // optimistic temp entries so the green dots stay on screen seamlessly.
+      if (!Array.isArray(savedRows) || savedRows.length === 0) return;
+      const caches = queryClient.getQueriesData<StudentAttendance[]>({
+        queryKey: ['attendance', tuitionId],
+      });
+      caches.forEach(([key, previous]) => {
+        if (!Array.isArray(previous)) return;
+        const next = [...previous];
+        savedRows.forEach((row) => {
+          const idx = next.findIndex(a =>
+            a.studentId === row.studentId &&
+            a.date === row.date &&
+            (a.subjectId ?? null) === (row.subjectId ?? null) &&
+            (a.facultyId ?? null) === (row.facultyId ?? null)
+          );
+          if (idx >= 0) next[idx] = { ...next[idx], ...row };
+          else next.unshift(row);
+        });
+        queryClient.setQueryData(key, next);
+      });
+    },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
+      // Stale-mark only — do not trigger an immediate refetch that would visibly
+      // wipe the optimistic / freshly-merged rows.
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId], refetchType: 'none' });
     },
   });
 }

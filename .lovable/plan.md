@@ -1,48 +1,66 @@
-## Problem
+## What the video actually shows
 
-On some phones, tapping Present/Absent in the attendance list doesn't reliably register, or the colored state doesn't appear. After auditing the code I found three mobile-specific issues — all in presentation/interaction code, not in the save logic. The existing dedupe / "only mark unmarked" rules stay exactly as they are.
+When you tap "Mark All Present", the green dots show up almost instantly (optimistic update), but then most students flip back to "unmarked" for several seconds before settling. Yes — attendance does eventually get saved, but the UI lies to you in the middle, and the save itself is genuinely slow. There are two distinct problems stacked on top of each other.
 
-### Root causes
+## Root causes
 
-1. **Virtualizer remeasures during the tap** (`src/components/attendance/VirtualizedStudentList.tsx`)
-   - Row content (`p-2` + avatar + 2 lines of text + buttons) often renders **taller than the 72px estimate** on small screens.
-   - `measureElement` then reports the real height after first paint, the virtualizer recomputes positions, and on iOS/Android any layout shift between `touchstart` and `touchend` cancels the `click`. Result: the user taps "P", nothing happens, no toast, no green.
-   - The outer wrapper also forces `height: virtualItem.size` while the inner content can be larger → rows visually overlap and the next row's button intercepts the tap.
+### 1. Bulk save makes N×2 sequential network calls
+`useBulkMarkAttendanceMutation` in `src/hooks/queries/useAttendanceQuery.ts` loops `for (const r of records)` with `await` inside, and for **each student** runs:
+1. a `SELECT` to check if a row exists, then
+2. an `INSERT` or `UPDATE`.
 
-2. **Touch targets are too small**
-   - P/A/L/E buttons are `h-8 px-2` (~32×26 px). Below the 44px minimum, easy to mistap an adjacent button or miss entirely on cramped phones.
-   - No `touch-action: manipulation` on the buttons themselves → iOS Safari can treat fast repeated taps as double-tap-zoom and swallow the second tap.
+For a class of 40 students that's ~80 serial round trips to the database. On a mobile network this easily takes 10–30 seconds. The single-mark path has the same shape but it's only one student, so you don't notice.
 
-3. **Toast + cache invalidate fires re-render mid-tap**
-   - `handleMarkAttendance` shows a `toast.success` and the mutation's `onSettled` invalidates the whole attendance cache immediately. While the optimistic update paints green correctly, the re-render right after a tap can drop the very next tap on a virtualized row (same mechanism as #1).
+### 2. The refetch immediately overwrites the optimistic green dots
+After the mutation settles, `onSettled` calls `queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] })`. That invalidates **every** attendance cache entry for the tuition (today, 30-day, student details, etc.) and triggers a refetch of the main 30-day window with full pagination. Until that refetch returns, React Query keeps the previous data — but because the previous data was the optimistic snapshot that's now considered stale, in practice the list visibly empties and refills as the bulky 30-day pagination loop completes. That's the "everyone goes unmarked, then comes back" flicker you saw.
 
-## Fix (presentation only — no logic, schema, or save-path changes)
+### 3. Secondary issue (already partly handled): premature `toast.success`
+`handleMarkAttendance` fires success toasts before the mutation resolves. Not the cause of the flicker, but it amplifies user confusion when a save is actually still in-flight.
 
-### `src/components/attendance/VirtualizedStudentList.tsx`
-- Bump `estimateSize` from 72 → 88 to match actual row height on phones.
-- Keep `measureElement` but make the row wrapper a **min-height container** instead of a fixed-height absolute box: use `minHeight: virtualItem.size` and let the row size itself. This stops the overlap / tap-interception when measured height ≠ estimate.
-- Add `style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}` to the scroll container so scrolling and tapping stay distinct.
+## Plan — fix slow bulk + flicker without changing the green-only-unmarked rule
 
-### `src/components/attendance/VirtualizedStudentList.tsx` → `StudentRow`
-- Buttons: `h-8 px-2` → `h-10 min-w-[40px] px-2.5` and add `touch-action: manipulation` via `style`. Keeps the same compact P/A/L/E look but gives a 40×40 target.
-- Remove `active:scale-95 transition-transform` (the transform during touch is the smallest possible contributor to tap drops; safer to drop it on the list).
-- Use `onPointerUp` fallback: keep `onClick` as the primary handler, but also bind `onPointerDown={e => e.stopPropagation()}` on each button so a parent scroll listener can't claim the gesture.
+### A. One round-trip bulk save via an RPC
 
-### `src/components/AttendanceTracker.tsx`
-- In `handleMarkAttendance`, defer the success toast to the next animation frame (`requestAnimationFrame(() => toast.success(...))`) so the toast mount doesn't run inside the same tick as the optimistic re-render. Pure UX — no behaviour change.
-- No changes to `handleBulkAttendance`, `getAttendanceForStudent`, `stats`, or the "only mark unmarked" rule.
+Add a SECURITY DEFINER Postgres function `bulk_mark_attendance(_records jsonb)` that:
 
-### Not changing
-- `useAttendanceQuery.ts` (save/upsert/optimistic logic, cache keys, invalidation) — untouched.
-- `AttendanceTracker.tsx` filters, smart-detect, stats, copy-from-previous — untouched.
-- Database, RLS, RPCs, edge functions — untouched.
-- "Mark All Present" behaviour (still scoped to unmarked students) — untouched.
+- Reads each record `{student_id, date, status, notes, subject_id, faculty_id}` from the jsonb array.
+- Verifies all `student_id`s belong to the caller's tuition (via `get_user_tuition_id(auth.uid())`) — rejects cross-tenant writes.
+- Performs a single `INSERT ... SELECT ... ON CONFLICT (student_attendance_unique_idx) DO UPDATE SET status = EXCLUDED.status, notes = EXCLUDED.notes, updated_at = now()` against the existing partial unique index that already coalesces null subject/faculty.
+- Returns the affected rows so the client can hydrate cache directly.
 
-## Verification
+Front-end change in `useBulkMarkAttendanceMutation`:
+- Replace the `for...of` select/insert/update loop with a single `supabase.rpc('bulk_mark_attendance', { _records })` call.
+- Keep the existing `onMutate` optimistic snapshot logic exactly as-is (no behaviour change).
+- Keep the per-row error tolerance: the RPC returns per-row status so partial failures are still surfaced.
 
-1. Open `/attendance` in the preview at mobile width (390×844).
-2. Select a class with 10+ students.
-3. Rapidly tap P on 5 different rows — every tap should register a green button and a toast.
-4. Scroll the list, then tap A — should mark absent without scroll being interpreted as the tap.
-5. Tap "Mark All Present" — unmarked count goes to 0, button shows "All Marked".
-6. Confirm no duplicate rows are created (query `student_attendance` for `(student_id, date, subject_id, faculty_id)` uniqueness).
+This turns the 80-call loop into 1 call. Save time drops from ~10–30 s to well under a second for a typical class.
+
+### B. Stop the post-save flicker
+
+In `onSettled` for both `useMarkAttendanceMutation` and `useBulkMarkAttendanceMutation`:
+- Use `queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId], refetchType: 'none' })` — marks caches stale without triggering an immediate visible refetch.
+- Then merge the rows returned by the RPC into the existing caches with `setQueryData`, replacing any `temp-…` ids with real ones. The optimistic green dots stay on screen and become the real data, with no empty/refill cycle.
+- A normal background refetch will still happen the next time a query mounts or window regains focus — so the eventual consistency guarantee is preserved.
+
+### C. Small UX tightening (no logic change)
+
+- In `AttendanceTracker.handleMarkAttendance`, move the `toast.success` from a fire-and-forget `requestAnimationFrame` into the mutation's `onSuccess` (returned from the page via the existing `onMarkAttendance` callback), so users never see "Marked present" for a save that ultimately failed.
+- Show a single inline saving indicator on the "Mark All Present" button while the RPC is in flight (we already have `isBulkMarking`); no spinner per row.
+
+### Out of scope (deliberately not touching now)
+
+- The 30-day default window in `useAttendanceQuery`, the strict subject/faculty silo in `getAttendanceForStudent`, and the RLS "allow all authenticated" policy. The sub-agents flagged these as separate consistency concerns, but none of them are the cause of the slow/flicker behaviour in this video, and changing them now risks breaking the rules you already locked in ("only mark unmarked", "no cross-subject bleed"). Happy to do them in a follow-up pass.
+
+## Technical summary
+
+- **New migration**: `bulk_mark_attendance(_records jsonb)` RPC, `SECURITY DEFINER`, `search_path = public`, tuition ownership check, single set-based upsert against the existing unique index, returns affected rows.
+- **`src/hooks/queries/useAttendanceQuery.ts`**: rewrite `useBulkMarkAttendanceMutation.mutationFn` to call the RPC; change `onSettled` in both mutations to `invalidateQueries({..., refetchType: 'none'})` plus a `setQueryData` merge of real rows.
+- **`src/components/AttendanceTracker.tsx`**: defer the per-mark toast to the mutation's `onSuccess` instead of `requestAnimationFrame`. No changes to filter/stats/derivation logic.
+- **No schema changes** to `student_attendance` itself; reuses the existing `student_attendance_unique_idx`.
+
+## Expected outcome
+
+- "Mark All Present" for a 40-student class returns in well under 1 s on a normal mobile connection.
+- Green dots appear immediately and stay — no temporary "unmarked" flash.
+- Attendance is genuinely persisted (verifiable by reloading the page or opening Reports).
+- No change to the "only mark unmarked students" rule or to any other behaviour.

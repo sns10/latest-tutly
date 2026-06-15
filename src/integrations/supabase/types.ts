@@ -1412,6 +1412,20 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_mark_attendance: {
+        Args: { _records: Json }
+        Returns: {
+          created_at: string
+          date: string
+          faculty_id: string
+          id: string
+          notes: string
+          status: string
+          student_id: string
+          subject_id: string
+          updated_at: string
+        }[]
+      }
       edit_fee_payment: {
         Args: {
           p_amount: number
