@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { format, addDays, parseISO, startOfDay } from 'date-fns';
 import { Student, WeeklyTest, StudentAttendance, StudentFee, Timetable, Subject, Faculty } from '@/types';
+import { buildDailyAttendanceStatusMap, isAttendingStatus } from '@/lib/attendance';
 
 interface UpcomingTest {
   name: string;
@@ -80,22 +81,29 @@ export function useDailySummary({
     // === ATTENDANCE STATUS ===
     const todayAttendance = attendance.filter(a => a.date === todayStr);
     
-    // Unique students present/absent today (across all classes)
-    const presentStudentIds = new Set(
-      todayAttendance.filter(a => a.status === 'present').map(a => a.studentId)
-    );
-    const absentStudentIds = new Set(
-      todayAttendance.filter(a => a.status === 'absent').map(a => a.studentId)
-    );
-    
-    const presentCount = presentStudentIds.size;
-    const absentCount = absentStudentIds.size;
+    const studentStatusMap = new Map<string, ReturnType<typeof buildDailyAttendanceStatusMap> extends Map<string, infer T> ? T : never>();
+    const byStudent = new Map<string, StudentAttendance[]>();
+    todayAttendance.forEach((record) => {
+      byStudent.set(record.studentId, [...(byStudent.get(record.studentId) || []), record]);
+    });
+
+    byStudent.forEach((records, studentId) => {
+      const dailyStatus = buildDailyAttendanceStatusMap(records).get(todayStr);
+      if (dailyStatus) {
+        studentStatusMap.set(studentId, dailyStatus);
+      }
+    });
+
+    const presentCount = Array.from(studentStatusMap.values()).filter(isAttendingStatus).length;
+    const absentCount = Array.from(studentStatusMap.values()).filter(status => status === 'absent').length;
     const totalMarked = presentCount + absentCount;
     const attendanceRate = totalMarked > 0 ? Math.round((presentCount / totalMarked) * 100) : 0;
     
     // Classes with attendance marked (unique subject-faculty combinations)
     const classesWithAttendanceSet = new Set(
-      todayAttendance.map(a => `${a.subjectId}-${a.facultyId}`)
+      todayAttendance
+        .filter(a => a.subjectId && a.facultyId)
+        .map(a => `${a.subjectId}-${a.facultyId}`)
     );
     
     // Match against today's scheduled classes
