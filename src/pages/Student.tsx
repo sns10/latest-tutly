@@ -468,7 +468,7 @@ export default function Student() {
                         return (
                           <div key={subjectId} className="p-3 border rounded">
                             <div className="flex justify-between items-center mb-2">
-                              <div className="font-medium">{subject?.name || 'General'}</div>
+                        <div className="font-medium">{subjectId === '__general__' ? 'General' : subject?.name || 'Unknown'}</div>
                               <Badge variant={rate >= 75 ? 'default' : rate >= 60 ? 'secondary' : 'destructive'}>
                                 {rate.toFixed(1)}%
                               </Badge>
