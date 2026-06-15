@@ -308,7 +308,7 @@ export function StudentDashboard({
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-center text-red-600">
-                {attendance.filter(a => a.status === 'absent').length}
+                {attendanceSummary.absent}
               </div>
               <div className="text-sm text-muted-foreground text-center">Absent</div>
             </CardContent>
@@ -316,7 +316,7 @@ export function StudentDashboard({
           <Card>
             <CardContent className="p-4">
               <div className="text-2xl font-bold text-center text-yellow-600">
-                {attendance.filter(a => a.status === 'late').length}
+                {attendanceSummary.late}
               </div>
               <div className="text-sm text-muted-foreground text-center">Late</div>
             </CardContent>
