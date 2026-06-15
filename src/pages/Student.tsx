@@ -18,6 +18,7 @@ import { HomeworkSection } from '@/components/student-portal/HomeworkSection';
 import { StudentStats } from '@/components/student-portal/StudentStats';
 import { TuitionBranding } from '@/components/TuitionBranding';
 import { Loader2, TrendingUp, CalendarDays, Award, DollarSign, Bell, LogOut, ArrowLeft, Flame } from 'lucide-react';
+import { getAttendanceStreakStats, getAttendanceSummary, isAttendingStatus } from '@/lib/attendance';
 
 export default function Student() {
   const { user, loading: authLoading, signOut } = useAuth();
@@ -48,47 +49,7 @@ export default function Student() {
   // Calculate attendance streak - must be before any returns
   const attendanceStreak = useMemo(() => {
     if (!attendance || attendance.length === 0) return 0;
-
-    const presentDates = new Set<string>();
-    attendance.forEach(r => {
-      if (r.status === 'present') {
-        presentDates.add(r.date);
-      }
-    });
-
-    const dates = Array.from(presentDates).sort((a, b) =>
-      new Date(b).getTime() - new Date(a).getTime()
-    );
-
-    if (dates.length === 0) return 0;
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const mostRecent = new Date(dates[0]);
-    mostRecent.setHours(0, 0, 0, 0);
-
-    const daysDiff = Math.floor((today.getTime() - mostRecent.getTime()) / (1000 * 60 * 60 * 24));
-    if (daysDiff > 1) return 0;
-
-    let streak = 1;
-    for (let i = 1; i < dates.length; i++) {
-      const date = new Date(dates[i]);
-      date.setHours(0, 0, 0, 0);
-
-      const prevDate = new Date(dates[i - 1]);
-      prevDate.setHours(0, 0, 0, 0);
-
-      const diff = Math.floor((prevDate.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-
-      if (diff === 1) {
-        streak++;
-      } else {
-        break;
-      }
-    }
-
-    return streak;
+    return getAttendanceStreakStats(attendance).currentStreak;
   }, [attendance]);
 
   // Show auth screen if not logged in
@@ -246,18 +207,17 @@ export default function Student() {
     };
   });
 
-  const totalAttendanceDays = attendance.length;
-  const presentDays = attendance.filter(a => a.status === 'present').length;
-  const attendanceRate = totalAttendanceDays > 0 ? (presentDays / totalAttendanceDays) * 100 : 0;
+  const attendanceSummary = useMemo(() => getAttendanceSummary(attendance), [attendance]);
+  const attendanceRate = attendanceSummary.attendanceRate;
 
   // Group attendance by subject
   const attendanceBySubject = attendance.reduce((acc, record) => {
-    const subjectId = record.subject_id || 'general';
+    const subjectId = record.subject_id || '__general__';
     if (!acc[subjectId]) {
       acc[subjectId] = { total: 0, present: 0 };
     }
     acc[subjectId].total++;
-    if (record.status === 'present') acc[subjectId].present++;
+    if (isAttendingStatus(record.status)) acc[subjectId].present++;
     return acc;
   }, {} as Record<string, { total: number; present: number }>);
 
