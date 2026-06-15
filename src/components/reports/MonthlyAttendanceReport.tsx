@@ -72,7 +72,7 @@ export function MonthlyAttendanceReport() {
       });
 
       const summary = getAttendanceSummary(studentAttendance);
-      const totalClasses = summary.totalDays;
+      const totalDays = summary.totalDays;
       const present = summary.present;
       const absent = summary.absent;
       const late = summary.late;
@@ -87,7 +87,7 @@ export function MonthlyAttendanceReport() {
         rollNo: student.rollNo,
         className: student.class,
         divisionName: division?.name || '-',
-        totalDays: totalClasses,
+        totalDays,
         present,
         absent,
         late,
