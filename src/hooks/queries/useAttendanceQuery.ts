@@ -381,7 +381,8 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
     },
     onSettled: () => {
       // Reconcile UI with the database — otherwise silent failures leave a stale green dot.
-      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId] });
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId, undefined], exact: true });
+      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId, { date: formatLocalDate(new Date()) }], exact: true });
     },
   });
 }
