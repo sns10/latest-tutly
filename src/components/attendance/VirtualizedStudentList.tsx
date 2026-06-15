@@ -29,6 +29,9 @@ const StudentRow = memo(function StudentRow({
   const handleLate = useCallback(() => onMarkAttendance(student.id, 'late'), [student.id, onMarkAttendance]);
   const handleExcused = useCallback(() => onMarkAttendance(student.id, 'excused'), [student.id, onMarkAttendance]);
 
+  const buttonTouchStyle = { touchAction: 'manipulation' as const, WebkitTapHighlightColor: 'transparent' };
+  const stopParentGesture = useCallback((e: React.PointerEvent) => { e.stopPropagation(); }, []);
+
   return (
     <div className="flex items-center justify-between gap-2 p-2 border rounded-lg bg-slate-50/50 touch-manipulation">
       <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -48,7 +51,9 @@ const StudentRow = memo(function StudentRow({
           size="sm" 
           variant={status === 'present' ? 'default' : 'outline'}
           onClick={handlePresent}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
+          onPointerDown={stopParentGesture}
+          style={buttonTouchStyle}
+          className={`h-10 min-w-[40px] px-2.5 text-xs font-medium ${
             status === 'present' 
               ? 'bg-green-600 hover:bg-green-700 text-white' 
               : 'hover:bg-green-50 hover:text-green-700 hover:border-green-300'
@@ -60,7 +65,9 @@ const StudentRow = memo(function StudentRow({
           size="sm" 
           variant={status === 'absent' ? 'destructive' : 'outline'}
           onClick={handleAbsent}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
+          onPointerDown={stopParentGesture}
+          style={buttonTouchStyle}
+          className={`h-10 min-w-[40px] px-2.5 text-xs font-medium ${
             status === 'absent' 
               ? '' 
               : 'hover:bg-red-50 hover:text-red-700 hover:border-red-300'
@@ -72,7 +79,9 @@ const StudentRow = memo(function StudentRow({
           size="sm" 
           variant={status === 'late' ? 'secondary' : 'outline'}
           onClick={handleLate}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
+          onPointerDown={stopParentGesture}
+          style={buttonTouchStyle}
+          className={`h-10 min-w-[40px] px-2.5 text-xs font-medium ${
             status === 'late' 
               ? 'bg-yellow-500 hover:bg-yellow-600 text-white' 
               : 'hover:bg-yellow-50 hover:text-yellow-700 hover:border-yellow-300'
@@ -84,7 +93,9 @@ const StudentRow = memo(function StudentRow({
           size="sm" 
           variant={status === 'excused' ? 'default' : 'outline'}
           onClick={handleExcused}
-          className={`h-8 px-2 text-xs font-medium active:scale-95 transition-transform ${
+          onPointerDown={stopParentGesture}
+          style={buttonTouchStyle}
+          className={`h-10 min-w-[40px] px-2.5 text-xs font-medium ${
             status === 'excused' 
               ? 'bg-blue-500 hover:bg-blue-600 text-white' 
               : 'hover:bg-blue-50 hover:text-blue-700 hover:border-blue-300'
@@ -116,8 +127,8 @@ export const VirtualizedStudentList = memo(function VirtualizedStudentList({
   const virtualizer = useVirtualizer({
     count: studentsWithStatus.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 72,
-    measureElement: (element) => element?.getBoundingClientRect().height ?? 72,
+    estimateSize: () => 88,
+    measureElement: (element) => element?.getBoundingClientRect().height ?? 88,
     overscan: 5, // Render 5 extra items above/below viewport
   });
 
@@ -128,7 +139,7 @@ export const VirtualizedStudentList = memo(function VirtualizedStudentList({
   }
 
   // Calculate dynamic height - min 200px, max 50vh, or content height if smaller
-  const contentHeight = studentsWithStatus.length * 72;
+  const contentHeight = studentsWithStatus.length * 88;
   const maxHeight = typeof window !== 'undefined' ? window.innerHeight * 0.5 : 400;
   const containerHeight = Math.min(Math.max(contentHeight, 200), maxHeight);
 
@@ -139,7 +150,9 @@ export const VirtualizedStudentList = memo(function VirtualizedStudentList({
       style={{ 
         height: `${containerHeight}px`,
         minHeight: '200px',
-        maxHeight: '50vh'
+        maxHeight: '50vh',
+        touchAction: 'pan-y',
+        WebkitOverflowScrolling: 'touch',
       }}
     >
       <div
@@ -154,12 +167,14 @@ export const VirtualizedStudentList = memo(function VirtualizedStudentList({
           return (
             <div
               key={student.id}
+              data-index={virtualItem.index}
+              ref={virtualizer.measureElement}
               style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
                 width: '100%',
-                height: `${virtualItem.size}px`,
+                minHeight: `${virtualItem.size}px`,
                 transform: `translateY(${virtualItem.start}px)`,
               }}
               className="py-1"
