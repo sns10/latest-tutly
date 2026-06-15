@@ -53,19 +53,19 @@ export function StudentDashboard({
     if (!acc[subjectId]) {
       acc[subjectId] = {
         total: 0,
-        present: 0,
+        attended: 0,
         absent: 0,
         late: 0,
         excused: 0
       };
     }
     acc[subjectId].total++;
-    if (isAttendingStatus(record.status)) acc[subjectId].present++;
+    if (isAttendingStatus(record.status)) acc[subjectId].attended++;
     if (record.status === 'absent') acc[subjectId].absent++;
     if (record.status === 'late') acc[subjectId].late++;
     if (record.status === 'excused') acc[subjectId].excused++;
     return acc;
-  }, {} as Record<string, { total: number; present: number; absent: number; late: number; excused: number }>);
+  }, {} as Record<string, { total: number; attended: number; absent: number; late: number; excused: number }>);
 
   const attendanceSummary = useMemo(() => getAttendanceSummary(attendance), [attendance]);
   const presentDays = attendanceSummary.present;
@@ -370,7 +370,7 @@ export function StudentDashboard({
             <div className="space-y-3">
               {Object.entries(attendanceBySubject).map(([subjectId, stats]) => {
                 const subject = subjects.find(s => s.id === subjectId);
-                const attendanceRate = stats.total > 0 ? (stats.present / stats.total) * 100 : 0;
+                const attendanceRate = stats.total > 0 ? (stats.attended / stats.total) * 100 : 0;
                 return (
                   <div key={subjectId} className="p-3 border rounded space-y-2">
                     <div className="flex justify-between items-center">
@@ -381,8 +381,8 @@ export function StudentDashboard({
                     </div>
                     <div className="grid grid-cols-4 gap-2 text-sm">
                       <div className="text-center">
-                        <div className="text-green-600 font-bold">{stats.present}</div>
-                        <div className="text-xs text-muted-foreground">Present</div>
+                        <div className="text-green-600 font-bold">{stats.attended}</div>
+                        <div className="text-xs text-muted-foreground">Attended</div>
                       </div>
                       <div className="text-center">
                         <div className="text-red-600 font-bold">{stats.absent}</div>
