@@ -21,7 +21,7 @@ interface StudentAttendanceStats {
   rollNo: number | null;
   className: string;
   divisionName: string;
-  totalClasses: number;
+  totalDays: number;
   present: number;
   absent: number;
   late: number;
@@ -87,7 +87,7 @@ export function MonthlyAttendanceReport() {
         rollNo: student.rollNo,
         className: student.class,
         divisionName: division?.name || '-',
-        totalClasses,
+        totalDays: totalClasses,
         present,
         absent,
         late,
@@ -151,7 +151,7 @@ export function MonthlyAttendanceReport() {
       'Student Name': s.studentName,
       'Class': s.className,
       'Division': s.divisionName,
-      'Total Classes': s.totalClasses,
+      'Total Days': s.totalDays,
       'Present': s.present,
       'Absent': s.absent,
       'Late': s.late,
@@ -222,7 +222,7 @@ export function MonthlyAttendanceReport() {
                   <td>${s.rollNo || '-'}</td>
                   <td>${s.studentName}</td>
                   <td>${s.className} ${s.divisionName !== '-' ? s.divisionName : ''}</td>
-                  <td>${s.totalClasses}</td>
+                      <td>${s.totalDays}</td>
                   <td>${s.present}</td>
                   <td>${s.absent}</td>
                   <td>${s.late}</td>
@@ -442,7 +442,7 @@ export function MonthlyAttendanceReport() {
                       <TableCell className="text-muted-foreground">#{s.rollNo || '-'}</TableCell>
                       <TableCell className="font-medium">{s.studentName}</TableCell>
                       <TableCell>{s.className} {s.divisionName !== '-' && s.divisionName}</TableCell>
-                      <TableCell className="text-center">{s.totalClasses}</TableCell>
+                       <TableCell className="text-center">{s.totalDays}</TableCell>
                       <TableCell className="text-center text-green-600">{s.present}</TableCell>
                       <TableCell className="text-center text-red-600">{s.absent}</TableCell>
                       <TableCell className="text-center text-yellow-600">{s.late}</TableCell>
