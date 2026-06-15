@@ -364,12 +364,12 @@ export function AttendanceTracker({
       if (!classStudentIds.includes(a.studentId)) return;
       
       // Skip current selection (only if both subject AND faculty match current)
-      const isSameSession = a.subjectId === (selectedSubject || null) && 
-                            a.facultyId === (selectedFaculty || null);
+      const isSameSession = (a.subjectId ?? null) === (selectedSubject || null) && 
+                            (a.facultyId ?? null) === (selectedFaculty || null);
       if (isSameSession) return;
       
       // Create unique key for this session (subject + faculty combination)
-      const key = `${a.subjectId || 'null'}-${a.facultyId || 'null'}`;
+      const key = `${a.subjectId ?? 'null'}-${a.facultyId ?? 'null'}`;
       
       if (!sessionsMap.has(key)) {
         const subjectName = a.subjectId 
@@ -449,8 +449,8 @@ export function AttendanceTracker({
       const sourceAttendance = attendance.find(a => 
         a.studentId === student.id && 
         a.date === selectedDateStr &&
-        a.subjectId === sourceSubjectId &&
-        a.facultyId === sourceFacultyId
+        (a.subjectId ?? null) === sourceSubjectId &&
+        (a.facultyId ?? null) === sourceFacultyId
       );
       return !!sourceAttendance;
     });
@@ -465,8 +465,8 @@ export function AttendanceTracker({
       const sourceAttendance = attendance.find(a => 
         a.studentId === student.id && 
         a.date === selectedDateStr &&
-        a.subjectId === sourceSubjectId &&
-        a.facultyId === sourceFacultyId
+        (a.subjectId ?? null) === sourceSubjectId &&
+        (a.facultyId ?? null) === sourceFacultyId
       )!;
       
       return {
@@ -479,15 +479,11 @@ export function AttendanceTracker({
       };
     });
 
-    // Use bulk handler if available
-    if (onBulkMarkAttendance) {
-      onBulkMarkAttendance(records);
-    } else {
-      // Fallback to individual calls
-      records.forEach(record => {
-        onMarkAttendance(record.studentId, record.date, record.status, record.notes, record.subjectId, record.facultyId);
-      });
+    if (!onBulkMarkAttendance) {
+      toast.error('Bulk copy is unavailable right now');
+      return;
     }
+    onBulkMarkAttendance(records);
 
     // Get source session name for toast
     const sourceSubjectName = sourceSubjectId 
@@ -495,7 +491,7 @@ export function AttendanceTracker({
       : 'Previous Class';
     
     toast.success(`Copied attendance from ${sourceSubjectName} for ${records.length} students`);
-  }, [filteredStudentsBase, getAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance, onMarkAttendance, subjects]);
+  }, [filteredStudentsBase, getAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance, subjects]);
 
   const handleSwitchToManual = () => {
     setIsManualMode(true);
