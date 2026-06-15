@@ -278,9 +278,17 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
         query = query.is('faculty_id', null);
       }
 
-      const { data: existing, error: checkError } = await query.maybeSingle();
+      // Use limit(1) instead of maybeSingle() — maybeSingle() THROWS on duplicate
+      // rows, which historically broke the whole flow and rolled back the optimistic
+      // green state. limit(1) tolerates accidental duplicates while we still pick a
+      // deterministic existing row to update.
+      const { data: existingRows, error: checkError } = await query
+        .order('created_at', { ascending: true })
+        .limit(1);
 
       if (checkError) throw checkError;
+
+      const existing = existingRows && existingRows[0];
 
       if (existing) {
         const { error } = await supabase
