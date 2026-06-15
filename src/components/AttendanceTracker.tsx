@@ -32,6 +32,7 @@ interface AttendanceTrackerProps {
     subjectId?: string;
     facultyId?: string;
   }>) => void;
+  isBulkMarking?: boolean;
 }
 
 const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
@@ -52,7 +53,8 @@ export function AttendanceTracker({
   faculty = [], 
   divisions = [],
   onMarkAttendance,
-  onBulkMarkAttendance
+  onBulkMarkAttendance,
+  isBulkMarking = false,
 }: AttendanceTrackerProps) {
   const { isFeatureEnabled } = useTuitionFeatures();
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
