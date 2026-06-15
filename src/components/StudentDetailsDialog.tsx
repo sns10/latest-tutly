@@ -160,16 +160,16 @@ export function StudentDetailsDialog({
 
   // Subject-wise attendance
   const subjectAttendance = useMemo(() => {
-    const bySubject: Record<string, { present: number; total: number }> = {};
+    const bySubject: Record<string, { attended: number; total: number }> = {};
 
     attendance.forEach(record => {
       const subjectId = record.subjectId || '__general__';
       if (!bySubject[subjectId]) {
-        bySubject[subjectId] = { present: 0, total: 0 };
+        bySubject[subjectId] = { attended: 0, total: 0 };
       }
       bySubject[subjectId].total++;
       if (isAttendingStatus(record.status)) {
-        bySubject[subjectId].present++;
+        bySubject[subjectId].attended++;
       }
     });
 
@@ -179,7 +179,7 @@ export function StudentDetailsDialog({
         subjectId,
           subjectName: subjectId === '__general__' ? 'General' : subject?.name || 'Unknown',
         ...data,
-        rate: data.total > 0 ? (data.present / data.total) * 100 : 0
+          rate: data.total > 0 ? (data.attended / data.total) * 100 : 0
       };
     }).sort((a, b) => b.rate - a.rate);
   }, [attendance, subjects]);
@@ -986,7 +986,7 @@ export function StudentDetailsDialog({
                               {subject.rate.toFixed(1)}%
                             </Badge>
                             <span className="text-xs text-muted-foreground">
-                              {subject.present}/{subject.total}
+                              {subject.attended}/{subject.total}
                             </span>
                           </div>
                         </div>
