@@ -124,7 +124,7 @@ export function MonthlyAttendanceReport() {
   );
 
   const bottomPerformers = useMemo(() => 
-    [...attendanceStats].filter(s => s.totalClasses > 0).sort((a, b) => a.percentage - b.percentage).slice(0, 5),
+    [...attendanceStats].filter(s => s.totalDays > 0).sort((a, b) => a.percentage - b.percentage).slice(0, 5),
     [attendanceStats]
   );
 
