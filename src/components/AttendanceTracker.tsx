@@ -438,7 +438,6 @@ export function AttendanceTracker({
         facultyId: selectedFaculty || undefined,
       }));
       onBulkMarkAttendance(records);
-      toast.success(`${studentsToMark.length} students marked as ${status}`);
     } else {
       // Fallback to individual calls
       studentsToMark.forEach(student => {
@@ -495,13 +494,6 @@ export function AttendanceTracker({
       return;
     }
     onBulkMarkAttendance(records);
-
-    // Get source session name for toast
-    const sourceSubjectName = sourceSubjectId 
-      ? subjects.find(s => s.id === sourceSubjectId)?.name || 'Previous Class'
-      : 'Previous Class';
-    
-    toast.success(`Copied attendance from ${sourceSubjectName} for ${records.length} students`);
   }, [filteredStudentsBase, getAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance, subjects]);
 
   const handleSwitchToManual = () => {
