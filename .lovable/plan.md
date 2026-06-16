@@ -1,32 +1,50 @@
-Root cause seen from the recording
+The live request is failing in the backend, not on the phone UI.
 
-- The green P buttons appear first because the app applies an optimistic update immediately.
-- Then the bulk save fails, React Query rolls back to the previous attendance cache, and the green marks disappear.
-- The “students marked as present” toast is currently shown before the save finishes, so it can say success even when the backend later rejects the bulk request.
-- The most likely backend failure is inside the new `bulk_mark_attendance` database function: its returned column names (`student_id`, `date`, `status`, etc.) collide with same-named SQL columns in the `RETURN QUERY` statement, which can make the function throw at runtime and roll back the optimistic UI.
+**Actual issue**
+- The `Mark All Present` button first paints green because the app does an optimistic UI update.
+- The backend then rejects the bulk save with:
+  - `column reference "student_id" is ambiguous`
+- Because save failed, React Query correctly rolls back the green marks and shows `Failed to save attendance`.
+- So for this failed click, attendance is **not saved**; the UI rollback is protecting data consistency.
 
-Plan
+**Do I know what the issue is?**
+Yes. The database function returns columns named `student_id`, `date`, `status`, etc. In PL/pgSQL those returned column names become hidden variables. Inside the same function, the `ON CONFLICT (student_id, date, ...)` clause uses the same names, so Postgres cannot decide whether `student_id` means the attendance table column or the function output variable.
 
-1. Fix the bulk attendance backend function safely
-   - Replace the body of `bulk_mark_attendance(_records jsonb)` with an alias-safe version.
-   - Use internal column aliases like `record_student_id`, `record_date`, `record_status` so Postgres cannot confuse function output variables with table/CTE columns.
-   - Keep the same security behavior: authenticated user required, tuition ownership check, super admin bypass, same `student_attendance` table, same subject/faculty context matching.
-   - Keep the existing single set-based upsert so “Mark All Present” stays fast.
-   - Deduplicate identical records inside the function to avoid `ON CONFLICT DO UPDATE command cannot affect row a second time` if the client ever sends duplicate rows.
+**Files / areas involved**
+- Backend function: `public.bulk_mark_attendance(jsonb)`
+- Frontend caller: `src/hooks/queries/useAttendanceQuery.ts`
+- UI trigger: `src/components/AttendanceTracker.tsx`
 
-2. Fix the misleading success message
-   - Remove the immediate `toast.success(...)` from `AttendanceTracker.handleBulkAttendance` and `handleCopyFromPreviousClass`.
-   - Show the success toast only in `useBulkMarkAttendanceMutation.onSuccess`, after the backend confirms saved rows.
-   - Keep the current rollback and “Failed to save attendance” toast on error.
+**Plan**
+1. Replace only the `bulk_mark_attendance` backend function with an ambiguity-safe version.
+   - Remove `RETURNS TABLE(...)` output-variable ambiguity by returning `SETOF public.student_attendance`, or otherwise force SQL names to resolve as table columns.
+   - Keep the existing same-tenant safety checks.
+   - Keep the same bulk upsert behavior and same returned fields.
+   - Keep duplicate payload protection.
+2. Add clearer backend validation for bad payloads.
+   - Reject unauthenticated calls.
+   - Reject invalid status values before saving.
+   - Keep subject/faculty null handling unchanged.
+3. Verify the attendance unique index is still correct.
+   - The live database already has the expected expression unique index.
+   - No table structure changes are needed.
+4. Make a tiny frontend improvement if needed.
+   - Keep optimistic UI.
+   - Keep rollback on real failure.
+   - Do not overwrite individual attendance logic.
+   - Preserve success toast only after backend confirmation.
+5. Validate after migration.
+   - Re-check the function definition.
+   - Confirm the failing ambiguous `student_id` error is gone.
+   - User can retry `Mark All Present`; if it succeeds, the green marks should remain.
 
-3. Keep attendance logic unchanged
-   - Do not change the “mark only unmarked students” rule.
-   - Do not change subject/faculty matching.
-   - Do not overwrite already-marked attendance in bulk from the UI, because the UI still only sends unmarked students.
-   - Do not change reports/student detail derivation in this fix.
+**Important safety note**
+This fix will not change who can mark attendance or which students are marked. It only fixes the backend bulk-save function name conflict that is currently causing the rollback.
 
-4. Verify after implementation
-   - Confirm the database function definition is updated.
-   - Check that the frontend no longer shows success while the button still says “Saving…”.
-   - Confirm cache merge still keeps green marks visible after a successful save.
-   - If the backend still rejects, inspect the exact RPC/network error next rather than changing attendance logic blindly.
+<presentation-actions>
+  <presentation-open-history>View History</presentation-open-history>
+</presentation-actions>
+
+<presentation-actions>
+<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
+</presentation-actions>

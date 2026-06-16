@@ -1417,14 +1417,20 @@ export type Database = {
         Returns: {
           created_at: string
           date: string
-          faculty_id: string
+          faculty_id: string | null
           id: string
-          notes: string
+          notes: string | null
           status: string
-          student_id: string
-          subject_id: string
+          student_id: string | null
+          subject_id: string | null
           updated_at: string
         }[]
+        SetofOptions: {
+          from: "*"
+          to: "student_attendance"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       edit_fee_payment: {
         Args: {
