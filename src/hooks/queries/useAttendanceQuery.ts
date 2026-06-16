@@ -480,7 +480,10 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
     onSuccess: (savedRows) => {
       // Merge real rows into every cached attendance list, replacing matching
       // optimistic temp entries so the green dots stay on screen seamlessly.
-      if (!Array.isArray(savedRows) || savedRows.length === 0) return;
+      if (!Array.isArray(savedRows) || savedRows.length === 0) {
+        toast.error('Failed to save attendance');
+        return;
+      }
       const caches = queryClient.getQueriesData<StudentAttendance[]>({
         queryKey: ['attendance', tuitionId],
       });
@@ -499,6 +502,7 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
         });
         queryClient.setQueryData(key, next);
       });
+      toast.success(`${savedRows.length} student${savedRows.length === 1 ? '' : 's'} saved`);
     },
     onSettled: () => {
       // Stale-mark only — do not trigger an immediate refetch that would visibly
