@@ -1,50 +1,30 @@
-The live request is failing in the backend, not on the phone UI.
+## Mobile attendance name visibility fix
 
-**Actual issue**
-- The `Mark All Present` button first paints green because the app does an optimistic UI update.
-- The backend then rejects the bulk save with:
-  - `column reference "student_id" is ambiguous`
-- Because save failed, React Query correctly rolls back the green marks and shows `Failed to save attendance`.
-- So for this failed click, attendance is **not saved**; the UI rollback is protecting data consistency.
+### Problem
+In the mobile attendance view, each student row renders the name and the P/A/L/E action buttons on a single horizontal line. Because the buttons are large touch targets (40px each) and the font stays at `text-sm`, the name column is truncated and teachers can't read full student names, leading to confusion when marking attendance.
 
-**Do I know what the issue is?**
-Yes. The database function returns columns named `student_id`, `date`, `status`, etc. In PL/pgSQL those returned column names become hidden variables. Inside the same function, the `ON CONFLICT (student_id, date, ...)` clause uses the same names, so Postgres cannot decide whether `student_id` means the attendance table column or the function output variable.
+### What we'll change
+Only one component: `src/components/attendance/VirtualizedStudentList.tsx`.
 
-**Files / areas involved**
-- Backend function: `public.bulk_mark_attendance(jsonb)`
-- Frontend caller: `src/hooks/queries/useAttendanceQuery.ts`
-- UI trigger: `src/components/AttendanceTracker.tsx`
+1. **Responsive row layout**  
+   Change the row from a single horizontal flex to a stacked vertical layout on mobile and keep the existing horizontal layout on `sm` and up:
+   - Mobile: avatar + name on one full-width line; P/A/L/E buttons on a second full-width line below.
+   - Desktop/tablet: unchanged single-row layout.
 
-**Plan**
-1. Replace only the `bulk_mark_attendance` backend function with an ambiguity-safe version.
-   - Remove `RETURNS TABLE(...)` output-variable ambiguity by returning `SETOF public.student_attendance`, or otherwise force SQL names to resolve as table columns.
-   - Keep the existing same-tenant safety checks.
-   - Keep the same bulk upsert behavior and same returned fields.
-   - Keep duplicate payload protection.
-2. Add clearer backend validation for bad payloads.
-   - Reject unauthenticated calls.
-   - Reject invalid status values before saving.
-   - Keep subject/faculty null handling unchanged.
-3. Verify the attendance unique index is still correct.
-   - The live database already has the expected expression unique index.
-   - No table structure changes are needed.
-4. Make a tiny frontend improvement if needed.
-   - Keep optimistic UI.
-   - Keep rollback on real failure.
-   - Do not overwrite individual attendance logic.
-   - Preserve success toast only after backend confirmation.
-5. Validate after migration.
-   - Re-check the function definition.
-   - Confirm the failing ambiguous `student_id` error is gone.
-   - User can retry `Mark All Present`; if it succeeds, the green marks should remain.
+2. **Smaller name font on mobile**  
+   Use `text-xs` on small screens and `text-sm` on `sm` and up, so longer names fit without truncation.
 
-**Important safety note**
-This fix will not change who can mark attendance or which students are marked. It only fixes the backend bulk-save function name conflict that is currently causing the rollback.
+3. **Preserve virtualizer behavior**  
+   The `@tanstack/react-virtual` setup already uses `measureElement`, so the row height will automatically adapt from the mobile stacked height to the desktop compact height. No hard-coded height changes are required.
 
-<presentation-actions>
-  <presentation-open-history>View History</presentation-open-history>
-</presentation-actions>
+4. **No touch-target reduction**  
+   Buttons remain `h-10 min-w-[40px]` so they stay easy to tap on mobile.
 
-<presentation-actions>
-<presentation-link url="https://docs.lovable.dev/tips-tricks/troubleshooting">Troubleshooting docs</presentation-link>
-</presentation-actions>
+### What we won't touch
+- No backend, database, or RPC changes.
+- No attendance saving logic, optimistic updates, or mutation behavior.
+- No desktop/tablet layout changes above the `sm` breakpoint.
+- No other components besides `VirtualizedStudentList.tsx`.
+
+### Validation
+After the change, verify the preview in a mobile viewport: each student row should show the full name on its own line, buttons should be clearly tappable below, and the desktop layout should remain identical to before.
