@@ -18,22 +18,17 @@ const GC_TIME = 30 * 60 * 1000; // 30 minutes
 // already-merged saved rows — the "save vanished after a second" glitch the
 // user reported.
 //
-// Two mitigations live here:
-//   1. `recentlySavedRows` — every successfully saved row is kept in memory
-//      with a TTL. Any attendance fetch result is reconciled against this
-//      buffer before being committed, so a stale snapshot can never hide a
-//      row the user just saved.
-//   2. `refetchSuppressedUntil` — for a few seconds after a save we short-
-//      circuit the queryFn and return the current cache untouched. This
-//      prevents an immediate reconnect-driven refetch from clobbering the
-//      freshly-merged data.
+// Mitigation: `recentlySavedRows` — every successfully saved row is kept in
+// memory with a TTL. Any attendance fetch result is reconciled against this
+// buffer before being committed, so a stale snapshot can never hide a row
+// the user just saved. Combined with `refetchOnReconnect: false` and
+// `networkMode: 'online'` on the attendance queries this prevents the
+// "save vanishes after a second" glitch on iPhone Safari / weak networks.
 // ---------------------------------------------------------------------------
 
 type AttendanceKey = string; // `${tuitionId}|${studentId}|${date}|${subjectId??''}|${facultyId??''}`
 const SAVED_ROW_TTL_MS = 90 * 1000;
-const REFETCH_SUPPRESS_MS = 6 * 1000;
 const recentlySavedRows = new Map<AttendanceKey, { row: StudentAttendance; expiresAt: number }>();
-const refetchSuppressedUntil = new Map<string, number>();
 
 const rowKey = (tuitionId: string | null, r: { studentId: string; date: string; subjectId?: string | null; facultyId?: string | null }) =>
   `${tuitionId ?? ''}|${r.studentId}|${r.date}|${r.subjectId ?? ''}|${r.facultyId ?? ''}`;
@@ -41,22 +36,6 @@ const rowKey = (tuitionId: string | null, r: { studentId: string; date: string; 
 const rememberSavedRows = (tuitionId: string | null, rows: StudentAttendance[]) => {
   const expiresAt = Date.now() + SAVED_ROW_TTL_MS;
   rows.forEach(row => recentlySavedRows.set(rowKey(tuitionId, row), { row, expiresAt }));
-};
-
-const suppressRefetch = (tuitionId: string | null) => {
-  if (!tuitionId) return;
-  refetchSuppressedUntil.set(tuitionId, Date.now() + REFETCH_SUPPRESS_MS);
-};
-
-const isRefetchSuppressed = (tuitionId: string | null) => {
-  if (!tuitionId) return false;
-  const until = refetchSuppressedUntil.get(tuitionId) ?? 0;
-  if (until === 0) return false;
-  if (Date.now() >= until) {
-    refetchSuppressedUntil.delete(tuitionId);
-    return false;
-  }
-  return true;
 };
 
 /** Merge any in-memory saved rows the server hasn't echoed yet into a freshly
