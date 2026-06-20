@@ -7,6 +7,68 @@ import { formatLocalDate } from '@/lib/dateWindows';
 const STALE_TIME = 5 * 60 * 1000; // 5 minutes - balanced cache to reduce cloud calls
 const GC_TIME = 30 * 60 * 1000; // 30 minutes
 
+// ---------------------------------------------------------------------------
+// Network-resilience layer for attendance saves
+//
+// On iPhone Safari (during/after a phone call the tab is suspended) and on
+// low-bandwidth Android (VoLTE bursts briefly drop the radio), TanStack's
+// `refetchOnReconnect` keeps firing full 30-day attendance refetches. Those
+// refetches started with a stale Postgres snapshot, so when they finally
+// resolve they overwrite the cache and wipe both optimistic state AND
+// already-merged saved rows — the "save vanished after a second" glitch the
+// user reported.
+//
+// Mitigation: `recentlySavedRows` — every successfully saved row is kept in
+// memory with a TTL. Any attendance fetch result is reconciled against this
+// buffer before being committed, so a stale snapshot can never hide a row
+// the user just saved. Combined with `refetchOnReconnect: false` and
+// `networkMode: 'online'` on the attendance queries this prevents the
+// "save vanishes after a second" glitch on iPhone Safari / weak networks.
+// ---------------------------------------------------------------------------
+
+type AttendanceKey = string; // `${tuitionId}|${studentId}|${date}|${subjectId??''}|${facultyId??''}`
+const SAVED_ROW_TTL_MS = 90 * 1000;
+const recentlySavedRows = new Map<AttendanceKey, { row: StudentAttendance; expiresAt: number }>();
+
+const rowKey = (tuitionId: string | null, r: { studentId: string; date: string; subjectId?: string | null; facultyId?: string | null }) =>
+  `${tuitionId ?? ''}|${r.studentId}|${r.date}|${r.subjectId ?? ''}|${r.facultyId ?? ''}`;
+
+const rememberSavedRows = (tuitionId: string | null, rows: StudentAttendance[]) => {
+  const expiresAt = Date.now() + SAVED_ROW_TTL_MS;
+  rows.forEach(row => recentlySavedRows.set(rowKey(tuitionId, row), { row, expiresAt }));
+};
+
+/** Merge any in-memory saved rows the server hasn't echoed yet into a freshly
+ *  fetched attendance list. Drops expired entries as a side effect. */
+const reconcileWithRecentSaves = (tuitionId: string | null, fetched: StudentAttendance[]): StudentAttendance[] => {
+  if (recentlySavedRows.size === 0) return fetched;
+  const now = Date.now();
+  const fetchedByKey = new Map<AttendanceKey, number>();
+  fetched.forEach((row, idx) => fetchedByKey.set(rowKey(tuitionId, row), idx));
+
+  const out = [...fetched];
+  recentlySavedRows.forEach((entry, key) => {
+    if (entry.expiresAt < now) {
+      recentlySavedRows.delete(key);
+      return;
+    }
+    // Only reconcile entries for this tuition (key is prefixed with tuitionId).
+    if (!key.startsWith(`${tuitionId ?? ''}|`)) return;
+    const idx = fetchedByKey.get(key);
+    if (idx === undefined) {
+      out.unshift(entry.row);
+    } else {
+      // Server snapshot may be older than the in-memory row — prefer the more
+      // recent updatedAt so we never overwrite a fresh save with a stale read.
+      const existing = out[idx];
+      const existingTs = Date.parse(existing.updatedAt || existing.createdAt || '') || 0;
+      const savedTs = Date.parse(entry.row.updatedAt || entry.row.createdAt || '') || 0;
+      if (savedTs >= existingTs) out[idx] = { ...existing, ...entry.row };
+    }
+  });
+  return out;
+};
+
 interface AttendanceFilters {
   date?: string;
   startDate?: string;
@@ -82,11 +144,16 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
         from += PAGE_SIZE;
       }
 
-      return formatAttendance(allData);
+      return reconcileWithRecentSaves(tuitionId, formatAttendance(allData));
     },
     enabled: !!tuitionId,
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
+    // Low-bandwidth / iPhone-call resilience: an in-flight tab suspension
+    // or radio drop must not trigger a 30-day refetch that could wipe a
+    // freshly-saved attendance row.
+    refetchOnReconnect: false,
+    networkMode: 'online',
   });
 }
 
@@ -234,6 +301,8 @@ export function useStudentAttendanceQuery(tuitionId: string | null, studentId: s
     enabled: !!tuitionId && !!studentId,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnReconnect: false,
+    networkMode: 'online',
   });
 }
 
@@ -379,6 +448,23 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
       console.error('Error marking attendance:', error);
       toast.error('Failed to mark attendance');
     },
+    onSuccess: (saved) => {
+      // Remember this save so any in-flight or imminent refetch that returns
+      // a stale snapshot (Postgres replica lag, slow 4G, iPhone tab suspend)
+      // can still reconcile the row back in via `reconcileWithRecentSaves`.
+      const now = new Date().toISOString();
+      rememberSavedRows(tuitionId, [{
+        id: `recent-${saved.studentId}-${saved.date}`,
+        studentId: saved.studentId,
+        date: saved.date,
+        status: saved.status,
+        notes: saved.notes,
+        subjectId: saved.subjectId ?? undefined,
+        facultyId: saved.facultyId ?? undefined,
+        createdAt: now,
+        updatedAt: now,
+      }]);
+    },
     onSettled: () => {
       // Mark caches stale WITHOUT forcing an immediate refetch — the optimistic
       // dot stays on screen until the next mount/focus instead of flickering
@@ -484,6 +570,10 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
         toast.error('Failed to save attendance');
         return;
       }
+      // Persist the saved rows in the resilience buffer so a stale refetch
+      // (e.g. fired by network reconnect during a phone-call tab suspend on
+      // iPhone) can't drop them out of the list.
+      rememberSavedRows(tuitionId, savedRows);
       const caches = queryClient.getQueriesData<StudentAttendance[]>({
         queryKey: ['attendance', tuitionId],
       });
