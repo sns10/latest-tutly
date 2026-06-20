@@ -570,6 +570,10 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
         toast.error('Failed to save attendance');
         return;
       }
+      // Persist the saved rows in the resilience buffer so a stale refetch
+      // (e.g. fired by network reconnect during a phone-call tab suspend on
+      // iPhone) can't drop them out of the list.
+      rememberSavedRows(tuitionId, savedRows);
       const caches = queryClient.getQueriesData<StudentAttendance[]>({
         queryKey: ['attendance', tuitionId],
       });
