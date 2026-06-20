@@ -97,9 +97,10 @@ export function TermExamReport() {
         const subject = subjects.find(s => s.id === es.subjectId);
         const subjectName = subject?.name || es.subjectId;
         
-        subjectMarks[subjectName] = result?.marks ?? null;
+        const isAbsent = !!result?.isAbsent;
+        subjectMarks[subjectName] = isAbsent ? null : (result?.marks ?? null);
         totalMaxMarks += es.maxMarks;
-        if (result?.marks !== null && result?.marks !== undefined) {
+        if (!isAbsent && result?.marks !== null && result?.marks !== undefined) {
           totalMarks += result.marks;
         }
       });

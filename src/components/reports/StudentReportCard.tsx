@@ -89,9 +89,10 @@ export function StudentReportCard() {
 
     return relevantTests.map(test => {
       const result = testResults.find(r => r.studentId === student.id && r.testId === test.id);
-      const marks = result?.marks ?? null;
+      const isAbsent = !!result?.isAbsent;
+      const marks = result && !isAbsent ? result.marks : null;
       const percentage = marks !== null ? Math.round((marks / test.maxMarks) * 100) : null;
-      const grade = percentage !== null ? getGrade(percentage) : '-';
+      const grade = percentage !== null ? getGrade(percentage) : isAbsent ? 'AB' : '-';
 
       return {
         testId: test.id,
@@ -151,16 +152,18 @@ export function StudentReportCard() {
       const subjectResults = examSubjects.map(es => {
         const result = results.find(r => r.subjectId === es.subjectId);
         const subj = subjects.find(s => s.id === es.subjectId);
-        if (result?.marks !== null && result?.marks !== undefined) {
+        const isAbsent = !!result?.isAbsent;
+        if (!isAbsent && result?.marks !== null && result?.marks !== undefined) {
           totalMarks += result.marks;
           totalMaxMarks += es.maxMarks;
         }
         return {
           subjectId: es.subjectId,
           subjectName: es.subject?.name || subj?.name || 'Unknown',
-          marks: result?.marks,
+          marks: isAbsent ? null : result?.marks,
           maxMarks: es.maxMarks,
-          grade: result?.grade
+          grade: isAbsent ? 'AB' : result?.grade,
+          isAbsent,
         };
       });
       
