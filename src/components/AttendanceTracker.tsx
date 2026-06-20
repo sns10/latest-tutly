@@ -161,27 +161,36 @@ export function AttendanceTracker({
 
   // Memoize attendance lookup for performance - prevents stale closures
   const getAttendanceForStudent = useCallback((studentId: string) => {
-    return attendance.find(a => {
+    const selectedSubjectId = selectedSubject || null;
+    const selectedFacultyId = selectedFaculty || null;
+
+    // First pass: strict context match. We always prefer a record saved under
+    // the exact subject/faculty the user is currently looking at.
+    const exact = attendance.find(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
-
-      const attendanceSubjectId = a.subjectId ?? null;
-      const attendanceFacultyId = a.facultyId ?? null;
-      const selectedSubjectId = selectedSubject || null;
-      const selectedFacultyId = selectedFaculty || null;
-
-      // Strict context match: an empty selection means the record must ALSO have no
-      // subject/faculty — never bleed a "present" mark from another subject into a
-      // different (or empty) context.
-      const subjectMatches = selectedSubjectId
-        ? attendanceSubjectId === selectedSubjectId
-        : attendanceSubjectId === null;
-
-      const facultyMatches = selectedFacultyId
-        ? attendanceFacultyId === selectedFacultyId
-        : attendanceFacultyId === null;
-
+      const aSubject = a.subjectId ?? null;
+      const aFaculty = a.facultyId ?? null;
+      const subjectMatches = selectedSubjectId ? aSubject === selectedSubjectId : aSubject === null;
+      const facultyMatches = selectedFacultyId ? aFaculty === selectedFacultyId : aFaculty === null;
       return subjectMatches && facultyMatches;
     });
+    if (exact) return exact;
+
+    // Fallback: when a subject/faculty filter is active but there is no record
+    // for that exact context, surface a same-day record saved without any
+    // subject/faculty (a "general" Mark All Present). This stops the row from
+    // looking unmarked just because the user changed the subject filter after
+    // saving — which on slow / mobile networks happens constantly and was the
+    // main source of the "save disappeared" glitch.
+    if (selectedSubjectId || selectedFacultyId) {
+      return attendance.find(a =>
+        a.studentId === studentId &&
+        a.date === selectedDateStr &&
+        (a.subjectId ?? null) === null &&
+        (a.facultyId ?? null) === null,
+      );
+    }
+    return undefined;
   }, [attendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Filter students by class, division and search query
