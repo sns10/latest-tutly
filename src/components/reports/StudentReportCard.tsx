@@ -89,9 +89,10 @@ export function StudentReportCard() {
 
     return relevantTests.map(test => {
       const result = testResults.find(r => r.studentId === student.id && r.testId === test.id);
-      const marks = result?.marks ?? null;
+      const isAbsent = !!result?.isAbsent;
+      const marks = result && !isAbsent ? result.marks : null;
       const percentage = marks !== null ? Math.round((marks / test.maxMarks) * 100) : null;
-      const grade = percentage !== null ? getGrade(percentage) : '-';
+      const grade = percentage !== null ? getGrade(percentage) : isAbsent ? 'AB' : '-';
 
       return {
         testId: test.id,
