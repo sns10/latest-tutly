@@ -121,6 +121,17 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
     queryFn: async () => {
       if (!tuitionId) return [];
 
+      // If we just saved, return the current cache untouched so a stale
+      // snapshot can't wipe the freshly-saved rows. The user's just-saved
+      // dots remain on screen; the next natural refetch (after the cooldown)
+      // will reconcile cleanly via `reconcileWithRecentSaves` below.
+      if (isRefetchSuppressed(tuitionId)) {
+        const cached = (typeof window !== 'undefined'
+          ? (window as any).__lovableQueryClient?.getQueryData?.(queryKey)
+          : undefined) as StudentAttendance[] | undefined;
+        if (Array.isArray(cached)) return cached;
+      }
+
       // Default to last 30 days if no specific date provided
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -165,11 +176,16 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
         from += PAGE_SIZE;
       }
 
-      return formatAttendance(allData);
+      return reconcileWithRecentSaves(tuitionId, formatAttendance(allData));
     },
     enabled: !!tuitionId,
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
+    // Low-bandwidth / iPhone-call resilience: an in-flight tab suspension
+    // or radio drop must not trigger a 30-day refetch that could wipe a
+    // freshly-saved attendance row.
+    refetchOnReconnect: false,
+    networkMode: 'online',
   });
 }
 
