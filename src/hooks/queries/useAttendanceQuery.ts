@@ -448,6 +448,23 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
       console.error('Error marking attendance:', error);
       toast.error('Failed to mark attendance');
     },
+    onSuccess: (saved) => {
+      // Remember this save so any in-flight or imminent refetch that returns
+      // a stale snapshot (Postgres replica lag, slow 4G, iPhone tab suspend)
+      // can still reconcile the row back in via `reconcileWithRecentSaves`.
+      const now = new Date().toISOString();
+      rememberSavedRows(tuitionId, [{
+        id: `recent-${saved.studentId}-${saved.date}`,
+        studentId: saved.studentId,
+        date: saved.date,
+        status: saved.status,
+        notes: saved.notes,
+        subjectId: saved.subjectId ?? undefined,
+        facultyId: saved.facultyId ?? undefined,
+        createdAt: now,
+        updatedAt: now,
+      }]);
+    },
     onSettled: () => {
       // Mark caches stale WITHOUT forcing an immediate refetch — the optimistic
       // dot stays on screen until the next mount/focus instead of flickering
