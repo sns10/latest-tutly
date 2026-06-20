@@ -68,7 +68,7 @@ export function ConsolidatedTestReport() {
     const stats: StudentTestStats[] = filteredStudents.map(student => {
       const result = testResults.find(r => r.studentId === student.id && r.testId === selectedTest);
       const division = divisions.find(d => d.id === student.divisionId);
-      const marks = result ? result.marks : 'A';
+      const marks: number | 'A' = result && !result.isAbsent ? result.marks : 'A';
       const percentage = typeof marks === 'number' ? Math.round((marks / selectedTestData.maxMarks) * 100) : 0;
       const passingPercentage = 35;
 
