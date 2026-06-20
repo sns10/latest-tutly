@@ -301,6 +301,8 @@ export function useStudentAttendanceQuery(tuitionId: string | null, studentId: s
     enabled: !!tuitionId && !!studentId,
     staleTime: 5 * 60 * 1000,
     gcTime: 30 * 60 * 1000,
+    refetchOnReconnect: false,
+    networkMode: 'online',
   });
 }
 
