@@ -152,16 +152,18 @@ export function StudentReportCard() {
       const subjectResults = examSubjects.map(es => {
         const result = results.find(r => r.subjectId === es.subjectId);
         const subj = subjects.find(s => s.id === es.subjectId);
-        if (result?.marks !== null && result?.marks !== undefined) {
+        const isAbsent = !!result?.isAbsent;
+        if (!isAbsent && result?.marks !== null && result?.marks !== undefined) {
           totalMarks += result.marks;
           totalMaxMarks += es.maxMarks;
         }
         return {
           subjectId: es.subjectId,
           subjectName: es.subject?.name || subj?.name || 'Unknown',
-          marks: result?.marks,
+          marks: isAbsent ? null : result?.marks,
           maxMarks: es.maxMarks,
-          grade: result?.grade
+          grade: isAbsent ? 'AB' : result?.grade,
+          isAbsent,
         };
       });
       
