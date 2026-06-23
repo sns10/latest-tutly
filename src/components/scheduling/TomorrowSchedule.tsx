@@ -192,14 +192,30 @@ export function TomorrowSchedule({
       const startTimeStr = formatTimeForWhatsApp(entry.startTime);
       const endTimeStr = formatTimeForWhatsApp(entry.endTime);
       const subjectName = entry.subject?.name || 'Unknown Subject';
-      
-      message += `📚 *${subjectName}*\n`;
+
+      const eventTypeRaw = entry.type === 'special' ? (entry.eventType || 'Special Class') : '';
+      const isExam = /exam/i.test(eventTypeRaw);
+      const eventLabel = eventTypeRaw
+        ? eventTypeRaw
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (c) => c.toUpperCase())
+        : '';
+
+      const icon = isExam ? '📝' : '📚';
+      message += `${icon} *${subjectName}*`;
+      if (eventLabel && eventLabel.toLowerCase() !== 'regular') {
+        message += ` _(${eventLabel})_`;
+      }
+      message += `\n`;
       message += `⏰ Time: ${startTimeStr} - ${endTimeStr}`;
       if (entry.faculty) {
         message += `\n👨‍🏫 Teacher: ${entry.faculty.name}`;
       }
       if (entry.room) {
         message += `\n🏫 Room: ${entry.room.name}`;
+      }
+      if (entry.notes) {
+        message += `\n📌 Note: ${entry.notes}`;
       }
       
       // Add spacing between classes
