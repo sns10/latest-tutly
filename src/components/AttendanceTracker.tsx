@@ -258,58 +258,20 @@ export function AttendanceTracker({
     return faculty.filter(f => f.subjects?.some(s => s.id === selectedSubject));
   }, [faculty, selectedSubject]);
 
-  // Calculate attendance statistics - count UNIQUE students, not records
+  // Calculate attendance statistics from the same lookup used by rows, so the
+  // counters never disagree with what the teacher sees in the list.
   const stats = useMemo(() => {
     const totalStudents = filteredStudentsBase.length;
-    
-    // Get attendance records for the selected date and filtered students
-    const dateAttendance = attendance.filter(a => {
-      if (a.date !== selectedDateStr) return false;
-      if (!filteredStudentsBase.some(s => s.id === a.studentId)) return false;
-      
-      // Match exact subject/faculty context when selected; otherwise don't filter
-      const attendanceSubjectId = a.subjectId ?? null;
-      const attendanceFacultyId = a.facultyId ?? null;
-      const selectedSubjectId = selectedSubject || null;
-      const selectedFacultyId = selectedFaculty || null;
-
-      const subjectMatches = selectedSubjectId
-        ? attendanceSubjectId === selectedSubjectId
-        : attendanceSubjectId === null;
-      const facultyMatches = selectedFacultyId
-        ? attendanceFacultyId === selectedFacultyId
-        : attendanceFacultyId === null;
-      
-      return subjectMatches && facultyMatches;
-    });
-    
-    // When no subject/faculty filter is selected, a student might have multiple 
-    // attendance records (one per subject). We need to count unique students per status.
-    // Priority: If a student has any 'present' record, count as present. 
-    // Otherwise, use the most recent or first record found.
-    const studentStatusMap = new Map<string, string>();
-    
-    dateAttendance.forEach(a => {
-      const currentStatus = studentStatusMap.get(a.studentId);
-      if (!currentStatus) {
-        // First record for this student
-        studentStatusMap.set(a.studentId, a.status);
-      } else if (a.status === 'present' && currentStatus !== 'present') {
-        // If student is marked present in any class, count as present
-        studentStatusMap.set(a.studentId, 'present');
-      }
-      // Otherwise keep the first status found
-    });
-    
-    // Count unique students by status
     let present = 0, absent = 0, late = 0, excused = 0;
-    studentStatusMap.forEach((status) => {
+
+    filteredStudentsBase.forEach(student => {
+      const status = getAttendanceForStudent(student.id)?.status;
       if (status === 'present') present++;
       else if (status === 'absent') absent++;
       else if (status === 'late') late++;
       else if (status === 'excused') excused++;
     });
-    
+
     return {
       totalStudents,
       present,
@@ -317,7 +279,7 @@ export function AttendanceTracker({
       late,
       excused,
     };
-  }, [filteredStudentsBase, attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [filteredStudentsBase, getAttendanceForStudent]);
 
   // Get absentees for WhatsApp message
   const absentees = useMemo(() => {
@@ -327,14 +289,11 @@ export function AttendanceTracker({
     });
   }, [filteredStudentsBase, getAttendanceForStudent]);
 
-  // Count students that would actually be marked by the bulk action.
-  // The bulk handler only targets students with no attendance yet in the
-  // current subject/faculty session, so the button label and disabled state
-  // must reflect that — otherwise users see "Mark All Present (30)" even
-  // when all 30 are already marked and get a confusing no-op.
-  const unmarkedCount = useMemo(() => {
+  // Count students that would actually change when tapping Mark All Present.
+  // It should convert absent/late/excused rows to present, not only fill blanks.
+  const markAllPresentCount = useMemo(() => {
     return filteredStudents.reduce(
-      (n, s) => (getAttendanceForStudent(s.id) ? n : n + 1),
+      (n, s) => (getAttendanceForStudent(s.id)?.status === 'present' ? n : n + 1),
       0,
     );
   }, [filteredStudents, getAttendanceForStudent]);
@@ -426,14 +385,16 @@ export function AttendanceTracker({
   }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
-    // Collect all students that need marking
+    // Collect all students that need marking. For Mark All Present, convert
+    // every visible non-present row (blank/absent/late/excused) to present.
     const studentsToMark = filteredStudents.filter(student => {
       const existingAttendance = getAttendanceForStudent(student.id);
+      if (status === 'present') return existingAttendance?.status !== 'present';
       return !existingAttendance;
     });
     
     if (studentsToMark.length === 0) {
-      toast.info('All students already have attendance marked');
+      toast.info(status === 'present' ? 'All visible students are already present' : 'All students already have attendance marked');
       return;
     }
 
@@ -446,6 +407,7 @@ export function AttendanceTracker({
         subjectId: selectedSubject || undefined,
         facultyId: selectedFaculty || undefined,
       }));
+      toast.info(`Saving ${records.length} student${records.length === 1 ? '' : 's'} as ${status}…`);
       onBulkMarkAttendance(records);
     } else {
       // Fallback to individual calls
@@ -760,13 +722,13 @@ export function AttendanceTracker({
             <Button 
               onClick={() => handleBulkAttendance('present')} 
               className="w-full bg-green-600 hover:bg-green-700 h-9 text-sm font-medium" 
-              disabled={!selectedClass || unmarkedCount === 0 || isBulkMarking}
+              disabled={!selectedClass || markAllPresentCount === 0 || isBulkMarking}
             >
               {isBulkMarking
                 ? 'Saving…'
-                : unmarkedCount === 0
-                  ? 'All Marked'
-                  : `Mark All Present (${unmarkedCount})`}
+                : markAllPresentCount === 0
+                  ? 'All Present'
+                  : `Mark All Present (${markAllPresentCount})`}
             </Button>
 
             {/* Copy from Previous Class - Show when previous sessions exist */}
