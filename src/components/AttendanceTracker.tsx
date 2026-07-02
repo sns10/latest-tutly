@@ -722,7 +722,7 @@ export function AttendanceTracker({
             <Button 
               onClick={() => handleBulkAttendance('present')} 
               className="w-full bg-green-600 hover:bg-green-700 h-9 text-sm font-medium" 
-              disabled={!selectedClass || unmarkedCount === 0 || isBulkMarking}
+              disabled={!selectedClass || markAllPresentCount === 0 || isBulkMarking}
             >
               {isBulkMarking
                 ? 'Saving…'
