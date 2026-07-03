@@ -436,7 +436,7 @@ export function AttendanceTracker({
     // Get students who don't have attendance in current session but do have it in source session
     const studentsToCopy = filteredStudentsBase.filter(student => {
       // Skip if already has attendance in current session
-      const existingAttendance = getAttendanceForStudent(student.id);
+      const existingAttendance = getExactAttendanceForStudent(student.id);
       if (existingAttendance) return false;
       
       // Check if student has attendance in source session
@@ -478,7 +478,7 @@ export function AttendanceTracker({
       return;
     }
     onBulkMarkAttendance(records);
-  }, [filteredStudentsBase, getAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance, subjects]);
+  }, [filteredStudentsBase, getExactAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance]);
 
   const handleSwitchToManual = () => {
     setIsManualMode(true);
@@ -701,11 +701,11 @@ export function AttendanceTracker({
             {/* Row 3: Status Filter */}
             <div className="flex gap-1 flex-wrap">
               {[
-                { value: 'all', label: 'All', count: filteredStudentsBase.length },
+                { value: 'all', label: 'All', count: targetStudents.length },
                 { value: 'present', label: 'Present', count: stats.present, color: 'bg-green-100 text-green-700' },
                 { value: 'absent', label: 'Absent', count: stats.absent, color: 'bg-red-100 text-red-700' },
                 { value: 'late', label: 'Late', count: stats.late, color: 'bg-yellow-100 text-yellow-700' },
-                { value: 'unmarked', label: 'Unmarked', count: filteredStudentsBase.length - (stats.present + stats.absent + stats.late + stats.excused) },
+                { value: 'unmarked', label: 'Unmarked', count: targetStudents.length - (stats.present + stats.absent + stats.late + stats.excused) },
               ].map(({ value, label, count, color }) => (
                 <Button
                   key={value}
