@@ -180,6 +180,8 @@ export function AttendanceTracker({
   // otherwise a general present row can make the selected subject/faculty
   // session look complete while exact rows are still missing.
   const getAttendanceForStudent = useCallback((studentId: string) => {
+    const selectedSubjectId = selectedSubject || null;
+    const selectedFacultyId = selectedFaculty || null;
     const exact = getExactAttendanceForStudent(studentId);
     if (exact) return exact;
 
