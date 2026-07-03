@@ -159,14 +159,13 @@ export function AttendanceTracker({
     return divisions.filter(d => d.class === selectedClass);
   }, [divisions, selectedClass]);
 
-  // Memoize attendance lookup for performance - prevents stale closures
-  const getAttendanceForStudent = useCallback((studentId: string) => {
+  // Exact current-session lookup: student + date + selected subject/faculty.
+  // This is the source of truth for stats, filters and bulk-save decisions.
+  const getExactAttendanceForStudent = useCallback((studentId: string) => {
     const selectedSubjectId = selectedSubject || null;
     const selectedFacultyId = selectedFaculty || null;
 
-    // First pass: strict context match. We always prefer a record saved under
-    // the exact subject/faculty the user is currently looking at.
-    const exact = attendance.find(a => {
+    return attendance.find(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
       const aSubject = a.subjectId ?? null;
       const aFaculty = a.facultyId ?? null;
@@ -174,6 +173,14 @@ export function AttendanceTracker({
       const facultyMatches = selectedFacultyId ? aFaculty === selectedFacultyId : aFaculty === null;
       return subjectMatches && facultyMatches;
     });
+  }, [attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+
+  // Display lookup: exact session first, then fallback to general same-day
+  // attendance only for row rendering. Bulk actions must not use this fallback,
+  // otherwise a general present row can make the selected subject/faculty
+  // session look complete while exact rows are still missing.
+  const getAttendanceForStudent = useCallback((studentId: string) => {
+    const exact = getExactAttendanceForStudent(studentId);
     if (exact) return exact;
 
     // Fallback: when a subject/faculty filter is active but there is no record
@@ -191,27 +198,34 @@ export function AttendanceTracker({
       );
     }
     return undefined;
-  }, [attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [attendance, selectedDateStr, selectedSubject, selectedFaculty, getExactAttendanceForStudent]);
 
-  // Filter students by class, division and search query
-  const filteredStudentsBase = useMemo(() => {
+  // Students in the selected attendance target scope. Bulk actions operate on
+  // this full class/division set, regardless of search/status filters.
+  const targetStudents = useMemo(() => {
     if (!selectedClass) return [];
     return students
       .filter(s => s.class === selectedClass)
-      .filter(s => !selectedDivision || s.divisionId === selectedDivision)
-      .filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
-  }, [students, selectedClass, selectedDivision, searchQuery]);
+      .filter(s => !selectedDivision || s.divisionId === selectedDivision);
+  }, [students, selectedClass, selectedDivision]);
+
+  // Filter students by class, division and search query for list display.
+  const filteredStudentsBase = useMemo(() => {
+    return targetStudents.filter(s =>
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [targetStudents, searchQuery]);
 
   // Apply status filter
   const filteredStudents = useMemo(() => {
     if (statusFilter === 'all') return filteredStudentsBase;
     
     return filteredStudentsBase.filter(student => {
-      const studentAttendance = getAttendanceForStudent(student.id);
+      const studentAttendance = getExactAttendanceForStudent(student.id);
       if (statusFilter === 'unmarked') return !studentAttendance;
       return studentAttendance?.status === statusFilter;
     });
-  }, [filteredStudentsBase, statusFilter, getAttendanceForStudent]);
+  }, [filteredStudentsBase, statusFilter, getExactAttendanceForStudent]);
 
   // Get today's scheduled classes from timetable
   const todaysClasses = useMemo(() => {
@@ -258,14 +272,14 @@ export function AttendanceTracker({
     return faculty.filter(f => f.subjects?.some(s => s.id === selectedSubject));
   }, [faculty, selectedSubject]);
 
-  // Calculate attendance statistics from the same lookup used by rows, so the
-  // counters never disagree with what the teacher sees in the list.
+  // Calculate attendance statistics from exact current-session rows. Display
+  // fallback rows must not make the selected session look fully saved.
   const stats = useMemo(() => {
-    const totalStudents = filteredStudentsBase.length;
+    const totalStudents = targetStudents.length;
     let present = 0, absent = 0, late = 0, excused = 0;
 
-    filteredStudentsBase.forEach(student => {
-      const status = getAttendanceForStudent(student.id)?.status;
+    targetStudents.forEach(student => {
+      const status = getExactAttendanceForStudent(student.id)?.status;
       if (status === 'present') present++;
       else if (status === 'absent') absent++;
       else if (status === 'late') late++;
@@ -279,42 +293,38 @@ export function AttendanceTracker({
       late,
       excused,
     };
-  }, [filteredStudentsBase, getAttendanceForStudent]);
+  }, [targetStudents, getExactAttendanceForStudent]);
 
   // Get absentees for WhatsApp message
   const absentees = useMemo(() => {
-    return filteredStudentsBase.filter(student => {
-      const studentAttendance = getAttendanceForStudent(student.id);
+    return targetStudents.filter(student => {
+      const studentAttendance = getExactAttendanceForStudent(student.id);
       return studentAttendance?.status === 'absent';
     });
-  }, [filteredStudentsBase, getAttendanceForStudent]);
+  }, [targetStudents, getExactAttendanceForStudent]);
 
-  // Count students that would actually change when tapping Mark All Present.
-  // It should convert absent/late/excused rows to present, not only fill blanks.
+  // Count students that need an exact current-session present row. A general
+  // fallback present row must still be written into the selected session.
   const markAllPresentCount = useMemo(() => {
-    return filteredStudents.reduce(
-      (n, s) => (getAttendanceForStudent(s.id)?.status === 'present' ? n : n + 1),
+    return targetStudents.reduce(
+      (n, s) => (getExactAttendanceForStudent(s.id)?.status === 'present' ? n : n + 1),
       0,
     );
-  }, [filteredStudents, getAttendanceForStudent]);
+  }, [targetStudents, getExactAttendanceForStudent]);
 
   // Get late students for WhatsApp message
   const lateStudents = useMemo(() => {
-    return filteredStudentsBase.filter(student => {
-      const studentAttendance = getAttendanceForStudent(student.id);
+    return targetStudents.filter(student => {
+      const studentAttendance = getExactAttendanceForStudent(student.id);
       return studentAttendance?.status === 'late';
     });
-  }, [filteredStudentsBase, getAttendanceForStudent]);
+  }, [targetStudents, getExactAttendanceForStudent]);
 
   // Detect previous attendance sessions for the same class/date but different subject/faculty
   const previousAttendanceSessions = useMemo(() => {
     if (!selectedClass || !selectedDateStr) return [];
     
-    // Get student IDs in the selected class (and optionally division)
-    const classStudentIds = students
-      .filter(s => s.class === selectedClass)
-      .filter(s => !selectedDivision || s.divisionId === selectedDivision)
-      .map(s => s.id);
+    const classStudentIds = targetStudents.map(s => s.id);
     
     if (classStudentIds.length === 0) return [];
     
@@ -366,7 +376,7 @@ export function AttendanceTracker({
     });
     
     return Array.from(sessionsMap.values());
-  }, [attendance, students, selectedClass, selectedDivision, selectedDateStr, selectedSubject, selectedFaculty, subjects, faculty]);
+  }, [attendance, targetStudents, selectedClass, selectedDateStr, selectedSubject, selectedFaculty, subjects, faculty]);
 
   const handleMarkAttendance = useCallback((studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
@@ -385,10 +395,11 @@ export function AttendanceTracker({
   }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
-    // Collect all students that need marking. For Mark All Present, convert
-    // every visible non-present row (blank/absent/late/excused) to present.
-    const studentsToMark = filteredStudents.filter(student => {
-      const existingAttendance = getAttendanceForStudent(student.id);
+    // Collect all students in the selected class/division that need marking.
+    // For Mark All Present, convert every exact-session non-present/missing row
+    // to present. Display fallback rows are intentionally ignored here.
+    const studentsToMark = targetStudents.filter(student => {
+      const existingAttendance = getExactAttendanceForStudent(student.id);
       if (status === 'present') return existingAttendance?.status !== 'present';
       return !existingAttendance;
     });
@@ -416,7 +427,7 @@ export function AttendanceTracker({
       });
       toast.success(`${studentsToMark.length} students marked as ${status}`);
     }
-  }, [filteredStudents, getAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [targetStudents, getExactAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
 
   // Copy attendance from a previous class session
   const handleCopyFromPreviousClass = useCallback((sourceSubjectId: string | null, sourceFacultyId: string | null) => {

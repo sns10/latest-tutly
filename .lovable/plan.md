@@ -1,56 +1,61 @@
-## Problem identified
+## What I found
 
-`Mark All Present` is likely failing visually for two reasons in the current attendance screen:
+The latest bulk save request did reach the backend and returned success. For the latest class/session I checked, the database has the saved `present` rows.
 
-1. **Bulk action only marks “unmarked” students**
-   - If a student already has an attendance row as `absent`, `late`, or `excused`, `Mark All Present` skips them.
-   - So the button can look like it should make everyone present, but it only fills blank rows and does not convert existing absentees to present.
+So the recurring failure is not simply “backend did not save”. The remaining bug is in the attendance screen logic:
 
-2. **Stats use stricter matching than row display**
-   - Row display has a fallback that shows general attendance when subject/faculty is selected.
-   - The summary counts still only count exact subject/faculty matches.
-   - Result: rows may show marked, but counters still show unmarked/present incorrectly, especially after subject/faculty changes or auto-detection.
+1. **The UI uses fallback attendance as if it were current-session attendance**
+   - If a student has a general same-day attendance row, the row can look present even when the selected subject/faculty session has no exact record.
+   - Then `Mark All Present` skips that student because it thinks they are already present.
+   - Result: the button appears to work visually, but the exact class/session still remains incomplete.
 
-3. **Bulk save only shows final success/failure after backend response**
-   - On iPhone/low network, the UI can feel like nothing happened while saving, or a stale refetch can make the action appear unreliable.
+2. **The bulk button currently targets the filtered visible list**
+   - If a status filter/search is active, `Mark All Present` can mark only that subset, not the whole selected class/division.
+   - This makes the behavior feel inconsistent and is likely why it keeps “coming back”.
+
+3. **Stats were changed to match row display, but that can hide missing exact rows**
+   - The previous fix made counters match what the rows show.
+   - But because rows can use fallback attendance, the counters can also show “present” even when the exact selected session was not written.
 
 ## Fix plan
 
-### 1. Make `Mark All Present` actually set all visible students to present
-- Change the bulk action behavior from “only blank students” to “all visible students who are not already present”.
-- This means:
-  - blank → present
-  - absent → present
-  - late → present
-  - excused → present
-  - already present → skipped
+### 1. Split attendance lookup into two meanings
+- Add an **exact session lookup**:
+  - student + date + selected subject + selected faculty
+  - used for saving, bulk decisions, and session completeness.
+- Keep a **display lookup**:
+  - exact session first, then general same-day fallback
+  - used only when rendering the row status.
 
-### 2. Rename/count the button honestly
-- Button count will represent students that will change to present, not only unmarked students.
-- Example labels:
-  - `Mark All Present (56)` when 56 students will change
-  - `All Present` when every visible student is already present
-  - `Saving…` while the bulk mutation is running
+### 2. Make `Mark All Present` write exact current-session rows
+- For selected subject/faculty, it will mark every target student who does **not** already have an exact `present` row for that session.
+- A fallback/general `present` row will no longer cause the student to be skipped.
+- This ensures the selected class session is actually saved, not just visually inferred.
 
-### 3. Fix attendance summary counting
-- Make stats use the same lookup logic as student rows (`getAttendanceForStudent`) instead of separately filtering attendance records.
-- This keeps `Present / Absent / Late / Unmarked` aligned with what the rows actually show.
+### 3. Make the bulk target predictable
+- `Mark All Present` will operate on the selected class/division target set, not the current status-filter subset.
+- The status filter remains only for viewing students.
+- The button label/count will reflect the real number of students that still need exact `present` rows for the selected session.
 
-### 4. Improve bulk-save feedback
-- Show an immediate saving toast/message for bulk actions.
-- Keep the existing final `X students saved` success toast from the mutation.
-- Prevent duplicate taps while saving using the existing `isBulkMarking` disabled state.
+### 4. Show clearer session state
+- Keep rows readable, but make stats/counts based on exact current-session records so teachers can trust whether this class session is complete.
+- If fallback attendance is being shown, avoid letting it mask missing exact session rows.
 
-### 5. Keep backend unchanged
-- No database/RPC changes are needed.
-- The existing bulk RPC already supports upsert/update; the bug is in frontend selection/counting logic.
+### 5. Verify after implementation
+- Test the flow on `/attendance`:
+  - select class/session
+  - mark one/two students absent
+  - click `Mark All Present`
+  - confirm stats become all present
+  - confirm the backend request returns the same number of rows requested
+  - confirm refreshing/reopening the page still shows all present for that exact session
 
 ## Files to update
 
 - `src/components/AttendanceTracker.tsx`
-  - Bulk selection logic
-  - Button count/label
-  - Stats calculation
-  - Immediate saving feedback
+  - exact vs display attendance lookup
+  - bulk target/count logic
+  - stats/session completeness logic
+  - button label behavior
 
-No changes to database policies, functions, or table schema.
+No database schema change is planned unless verification shows the backend saved-row count is wrong.
