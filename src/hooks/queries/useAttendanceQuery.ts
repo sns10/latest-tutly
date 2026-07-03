@@ -595,10 +595,13 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       });
       toast.success(`${savedRows.length} student${savedRows.length === 1 ? '' : 's'} saved`);
     },
-    onSettled: () => {
-      // Stale-mark only — do not trigger an immediate refetch that would visibly
-      // wipe the optimistic / freshly-merged rows.
-      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId], refetchType: 'none' });
-    },
+    // NOTE: we intentionally do NOT invalidate on settle. The onSuccess merge
+    // has already written the authoritative post-mutation rows into every
+    // cached attendance list, and the recentlySavedRows buffer will keep them
+    // safe against any future refetch for `SAVED_ROW_TTL_MS`. Invalidating
+    // here previously marked the cache stale, which on some devices triggered
+    // a 9-page 30-day refetch that visibly wiped the freshly saved green rows
+    // before the reconcile could re-apply them — the exact "attendance saved
+    // but buttons stayed unmarked" glitch users reported.
   });
 }
