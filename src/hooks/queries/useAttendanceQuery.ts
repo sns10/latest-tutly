@@ -58,12 +58,13 @@ const reconcileWithRecentSaves = (tuitionId: string | null, fetched: StudentAtte
     if (idx === undefined) {
       out.unshift(entry.row);
     } else {
-      // Server snapshot may be older than the in-memory row — prefer the more
-      // recent updatedAt so we never overwrite a fresh save with a stale read.
+      // Server snapshot may be older than the in-memory row — the saved buffer
+      // is the source of truth for anything the user just changed, so it always
+      // wins here. Comparing timestamps was fragile because Postgres and the
+      // client can produce identical `updated_at` strings for the same write,
+      // making the outcome depend on tie-breaking that isn't guaranteed.
       const existing = out[idx];
-      const existingTs = Date.parse(existing.updatedAt || existing.createdAt || '') || 0;
-      const savedTs = Date.parse(entry.row.updatedAt || entry.row.createdAt || '') || 0;
-      if (savedTs >= existingTs) out[idx] = { ...existing, ...entry.row };
+      out[idx] = { ...existing, ...entry.row };
     }
   });
   return out;
