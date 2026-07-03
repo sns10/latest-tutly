@@ -58,12 +58,13 @@ const reconcileWithRecentSaves = (tuitionId: string | null, fetched: StudentAtte
     if (idx === undefined) {
       out.unshift(entry.row);
     } else {
-      // Server snapshot may be older than the in-memory row — prefer the more
-      // recent updatedAt so we never overwrite a fresh save with a stale read.
+      // Server snapshot may be older than the in-memory row — the saved buffer
+      // is the source of truth for anything the user just changed, so it always
+      // wins here. Comparing timestamps was fragile because Postgres and the
+      // client can produce identical `updated_at` strings for the same write,
+      // making the outcome depend on tie-breaking that isn't guaranteed.
       const existing = out[idx];
-      const existingTs = Date.parse(existing.updatedAt || existing.createdAt || '') || 0;
-      const savedTs = Date.parse(entry.row.updatedAt || entry.row.createdAt || '') || 0;
-      if (savedTs >= existingTs) out[idx] = { ...existing, ...entry.row };
+      out[idx] = { ...existing, ...entry.row };
     }
   });
   return out;
@@ -594,10 +595,13 @@ export function useBulkMarkAttendanceMutation(tuitionId: string | null) {
       });
       toast.success(`${savedRows.length} student${savedRows.length === 1 ? '' : 's'} saved`);
     },
-    onSettled: () => {
-      // Stale-mark only — do not trigger an immediate refetch that would visibly
-      // wipe the optimistic / freshly-merged rows.
-      queryClient.invalidateQueries({ queryKey: ['attendance', tuitionId], refetchType: 'none' });
-    },
+    // NOTE: we intentionally do NOT invalidate on settle. The onSuccess merge
+    // has already written the authoritative post-mutation rows into every
+    // cached attendance list, and the recentlySavedRows buffer will keep them
+    // safe against any future refetch for `SAVED_ROW_TTL_MS`. Invalidating
+    // here previously marked the cache stale, which on some devices triggered
+    // a 9-page 30-day refetch that visibly wiped the freshly saved green rows
+    // before the reconcile could re-apply them — the exact "attendance saved
+    // but buttons stayed unmarked" glitch users reported.
   });
 }
