@@ -42,12 +42,10 @@ import { FeatureGate } from "@/components/FeatureGate";
 import { PortalEmailConfig } from "@/components/PortalEmailConfig";
 import { HomeworkManager } from "@/components/HomeworkManager";
 import { BackupDashboard } from "@/components/BackupDashboard";
-import { AttendanceNotificationAlert } from "@/components/AttendanceNotificationAlert";
 import { StudentAlertsCard } from "@/components/StudentAlertsCard";
 import { useStudentAlerts } from "@/hooks/useStudentAlerts";
 import { SubscriptionExpiryAlert } from "@/components/SubscriptionExpiryAlert";
 import { BirthdayWishesBanner } from "@/components/BirthdayWishesBanner";
-import { useAttendanceNotification } from "@/hooks/useAttendanceNotification";
 import { useDailySummary } from "@/hooks/useDailySummary";
 import { useTodayPaymentsQuery, usePaymentsQuery } from "@/hooks/queries/useFeesQuery";
 import { Student, WeeklyTest, StudentTestResult, XPCategory, Challenge, Announcement, StudentFee, TeamName } from "@/types";
@@ -195,11 +193,6 @@ const Index = () => {
     updateClassFeeMut.mutate({ className, amount });
   };
 
-  // Attendance notification system
-  const { pendingClass, dismissNotification, ignoreNotification } = useAttendanceNotification(
-    timetable || [], attendance, subjects, faculty
-  );
-
   const { data: todayPayments = 0 } = useTodayPaymentsQuery(tuitionId);
 
   const dailySummary = useDailySummary({
@@ -239,11 +232,6 @@ const Index = () => {
 
   return (
     <>
-      <AttendanceNotificationAlert
-        pendingClass={pendingClass}
-        onDismiss={dismissNotification}
-        onIgnore={ignoreNotification}
-      />
       <Routes>
         <Route path="/" element={
         <div className="w-full px-3 py-4 sm:px-4 space-y-3 sm:space-y-4 bg-background">
