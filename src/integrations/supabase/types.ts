@@ -14,69 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      academic_materials: {
-        Row: {
-          class: string
-          created_at: string
-          description: string | null
-          file_name: string
-          file_size: number | null
-          file_url: string
-          id: string
-          material_type: string
-          subject_id: string | null
-          title: string
-          tuition_id: string
-          updated_at: string
-          uploaded_by: string | null
-        }
-        Insert: {
-          class: string
-          created_at?: string
-          description?: string | null
-          file_name: string
-          file_size?: number | null
-          file_url: string
-          id?: string
-          material_type: string
-          subject_id?: string | null
-          title: string
-          tuition_id: string
-          updated_at?: string
-          uploaded_by?: string | null
-        }
-        Update: {
-          class?: string
-          created_at?: string
-          description?: string | null
-          file_name?: string
-          file_size?: number | null
-          file_url?: string
-          id?: string
-          material_type?: string
-          subject_id?: string | null
-          title?: string
-          tuition_id?: string
-          updated_at?: string
-          uploaded_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "academic_materials_subject_id_fkey"
-            columns: ["subject_id"]
-            isOneToOne: false
-            referencedRelation: "subjects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "academic_materials_tuition_id_fkey"
-            columns: ["tuition_id"]
-            isOneToOne: false
-            referencedRelation: "tuitions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       announcements: {
         Row: {
           body: string

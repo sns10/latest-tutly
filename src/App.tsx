@@ -55,7 +55,6 @@ const Students = lazyWithRetry(() => import("./pages/Students"));
 const Fees = lazyWithRetry(() => import("./pages/Fees"));
 const Reports = lazyWithRetry(() => import("./pages/Reports"));
 const Timetable = lazyWithRetry(() => import("./pages/Timetable"));
-const Materials = lazyWithRetry(() => import("./pages/Materials"));
 const Classes = lazyWithRetry(() => import("./pages/Classes"));
 
 const StudentRegistration = lazyWithRetry(() => import("./pages/StudentRegistration"));
