@@ -310,6 +310,15 @@ export function AttendanceTracker({
     return faculty.filter(f => f.subjects?.some(s => s.id === selectedSubject));
   }, [faculty, selectedSubject]);
 
+  // Never keep a faculty selected who does not teach the selected subject —
+  // it would save attendance against a session that does not exist.
+  useEffect(() => {
+    if (!selectedSubject || !selectedFaculty) return;
+    if (!availableFaculty.some(f => f.id === selectedFaculty)) {
+      setSelectedFaculty('');
+    }
+  }, [selectedSubject, selectedFaculty, availableFaculty]);
+
   // Calculate attendance statistics from exact current-session rows. Display
   // fallback rows must not make the selected session look fully saved.
   const stats = useMemo(() => {
