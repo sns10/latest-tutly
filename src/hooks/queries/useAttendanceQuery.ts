@@ -76,7 +76,14 @@ interface AttendanceFilters {
   endDate?: string;
   studentId?: string;
   classFilter?: string;
+  /** Rolling window (in days) used when no date / range is given. Default 30. */
+  days?: number;
 }
+
+// Only the columns the app actually reads — `select('*')` plus the joined
+// student object roughly doubled the transfer size of every attendance fetch.
+const ATTENDANCE_COLUMNS =
+  'id, student_id, date, status, notes, subject_id, faculty_id, created_at, updated_at, students!inner(tuition_id)';
 
 const formatAttendance = (data: any[]): StudentAttendance[] => {
   return data.map((attendance) => ({
@@ -93,7 +100,11 @@ const formatAttendance = (data: any[]): StudentAttendance[] => {
 };
 
 // Optimized: Only fetch attendance for specific date or short date range
-export function useAttendanceQuery(tuitionId: string | null, filters?: AttendanceFilters) {
+export function useAttendanceQuery(
+  tuitionId: string | null,
+  filters?: AttendanceFilters,
+  options?: { enabled?: boolean },
+) {
   const queryKey = ['attendance', tuitionId, filters];
 
   return useQuery({
@@ -101,9 +112,9 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
     queryFn: async () => {
       if (!tuitionId) return [];
 
-      // Default to last 30 days if no specific date provided
-      const thirtyDaysAgo = new Date();
-      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      // Default window when no specific date/range is provided.
+      const windowStart = new Date();
+      windowStart.setDate(windowStart.getDate() - (filters?.days ?? 30));
       
       // Paginated fetch to avoid silent data truncation
       const allData: any[] = [];
@@ -115,7 +126,7 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
       while (true) {
         let query = supabase
           .from('student_attendance')
-          .select('*, students!inner(tuition_id)')
+          .select(ATTENDANCE_COLUMNS)
           .eq('students.tuition_id', tuitionId)
           .order('date', { ascending: false })
           .order('created_at', { ascending: false });
@@ -126,7 +137,7 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
         } else if (filters?.startDate && filters?.endDate) {
           query = query.gte('date', filters.startDate).lte('date', filters.endDate);
         } else {
-          query = query.gte('date', formatLocalDate(thirtyDaysAgo));
+          query = query.gte('date', formatLocalDate(windowStart));
         }
 
         if (filters?.studentId) {
@@ -147,7 +158,7 @@ export function useAttendanceQuery(tuitionId: string | null, filters?: Attendanc
 
       return reconcileWithRecentSaves(tuitionId, formatAttendance(allData));
     },
-    enabled: !!tuitionId,
+    enabled: !!tuitionId && options?.enabled !== false,
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
     // Low-bandwidth / iPhone-call resilience: an in-flight tab suspension
