@@ -188,7 +188,7 @@ export function useHistoricalAttendanceQuery(tuitionId: string | null, startDate
       while (hasMore) {
         let query = supabase
           .from('student_attendance')
-          .select('*, students!inner(tuition_id)')
+          .select(ATTENDANCE_COLUMNS)
           .eq('students.tuition_id', tuitionId)
           .order('date', { ascending: false })
           .order('created_at', { ascending: false })
