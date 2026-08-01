@@ -95,7 +95,9 @@ const Index = () => {
   const { data: divisions = [] } = useDivisionsQuery(tuitionId);
   const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { data: faculty = [] } = useFacultyQuery(tuitionId);
-  const { data: attendance = [] } = useAttendanceQuery(tuitionId);
+  // Dashboard only needs today's numbers plus a short recent history for the
+  // absence alerts — a 14-day window halves this payload.
+  const { data: attendance = [] } = useAttendanceQuery(tuitionId, { days: 14 });
   const { data: timetable = [] } = useTimetableQuery(tuitionId);
   const { data: fees = [] } = useFeesQuery(tuitionId);
   const { data: allPayments = [] } = usePaymentsQuery(tuitionId);
