@@ -43,7 +43,6 @@ export default function StudentsPage() {
   
   const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
   const { data: divisions = [] } = useDivisionsQuery(tuitionId);
-  const { data: attendance = [] } = useAttendanceQuery(tuitionId);
   const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { data: faculty = [] } = useFacultyQuery(tuitionId);
   const { data: weeklyTests = [] } = useWeeklyTestsQuery(tuitionId);
@@ -62,6 +61,14 @@ export default function StudentsPage() {
 
   const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
   const { termExams, termExamSubjects, termExamResults, loading: termExamLoading } = useTermExamData();
+
+  // Tuition-wide attendance here is only used for the streak badge, which is
+  // gamification-only. Fetch a short window, and only when it is rendered.
+  const { data: attendance = [] } = useAttendanceQuery(
+    tuitionId,
+    { days: 14 },
+    { enabled: isFeatureEnabled('gamification') },
+  );
 
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');

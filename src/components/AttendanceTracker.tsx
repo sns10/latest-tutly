@@ -34,6 +34,9 @@ interface AttendanceTrackerProps {
     facultyId?: string;
   }>) => void;
   isBulkMarking?: boolean;
+  /** Controlled selected date — lets the page fetch only that day's rows. */
+  selectedDate?: Date;
+  onDateChange?: (date: Date) => void;
 }
 
 const CLASSES: ClassName[] = ['4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th'];
@@ -56,9 +59,16 @@ export function AttendanceTracker({
   onMarkAttendance,
   onBulkMarkAttendance,
   isBulkMarking = false,
+  selectedDate: controlledDate,
+  onDateChange,
 }: AttendanceTrackerProps) {
   const { isFeatureEnabled } = useTuitionFeatures();
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [internalDate, setInternalDate] = useState<Date>(new Date());
+  const selectedDate = controlledDate ?? internalDate;
+  const setSelectedDate = useCallback((date: Date) => {
+    if (onDateChange) onDateChange(date);
+    else setInternalDate(date);
+  }, [onDateChange]);
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedDivision, setSelectedDivision] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');

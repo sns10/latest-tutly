@@ -11,16 +11,21 @@ import {
 } from '@/hooks/queries';
 import { AttendanceTracker } from '@/components/AttendanceTracker';
 import { Loader2 } from 'lucide-react';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
+import { formatLocalDate } from '@/lib/dateWindows';
 
 export default function AttendancePage() {
   const { tuitionId } = useUserTuition();
+  // The tracker only ever shows one day, so fetch exactly that day instead of
+  // downloading a 30-day tuition-wide window on every visit.
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const selectedDateStr = formatLocalDate(selectedDate);
 
   const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
   const { data: divisions = [] } = useDivisionsQuery(tuitionId);
   const { data: subjects = [] } = useSubjectsQuery(tuitionId);
   const { data: faculty = [] } = useFacultyQuery(tuitionId);
-  const { data: attendance = [] } = useAttendanceQuery(tuitionId);
+  const { data: attendance = [] } = useAttendanceQuery(tuitionId, { date: selectedDateStr });
   const { data: timetable = [] } = useTimetableQuery(tuitionId);
 
   const markAttendanceMutation = useMarkAttendanceMutation(tuitionId);
@@ -51,6 +56,8 @@ export default function AttendancePage() {
     <AttendanceTracker
       students={students}
       attendance={attendance}
+      selectedDate={selectedDate}
+      onDateChange={setSelectedDate}
       timetable={timetable}
       subjects={subjects}
       faculty={faculty}
