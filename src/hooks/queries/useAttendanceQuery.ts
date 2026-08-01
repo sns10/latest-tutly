@@ -330,62 +330,24 @@ export function useMarkAttendanceMutation(tuitionId: string | null) {
       const normalizedSubjectId = subjectId?.trim() || null;
       const normalizedFacultyId = facultyId?.trim() || null;
 
-      // Build query to check existing
-      let query = supabase
-        .from('student_attendance')
-        .select('id')
-        .eq('student_id', studentId)
-        .eq('date', date);
+      // Single transactional upsert through the same RPC the bulk path uses.
+      // The previous select-then-insert/update flow was racy: two quick taps
+      // (or an offline retry) could both read "no row" and both insert, and the
+      // second insert hit the unique index, threw, and rolled the optimistic
+      // green state back with a "Failed to mark attendance" toast even though
+      // the row existed. ON CONFLICT inside the RPC removes that race.
+      const { error } = await supabase.rpc('bulk_mark_attendance', {
+        _records: [{
+          student_id: studentId,
+          date,
+          status,
+          notes: notes || null,
+          subject_id: normalizedSubjectId,
+          faculty_id: normalizedFacultyId,
+        }],
+      });
 
-      if (normalizedSubjectId) {
-        query = query.eq('subject_id', normalizedSubjectId);
-      } else {
-        query = query.is('subject_id', null);
-      }
-
-      if (normalizedFacultyId) {
-        query = query.eq('faculty_id', normalizedFacultyId);
-      } else {
-        query = query.is('faculty_id', null);
-      }
-
-      // Use limit(1) instead of maybeSingle() — maybeSingle() THROWS on duplicate
-      // rows, which historically broke the whole flow and rolled back the optimistic
-      // green state. limit(1) tolerates accidental duplicates while we still pick a
-      // deterministic existing row to update.
-      const { data: existingRows, error: checkError } = await query
-        .order('created_at', { ascending: true })
-        .limit(1);
-
-      if (checkError) throw checkError;
-
-      const existing = existingRows && existingRows[0];
-
-      if (existing) {
-        const { error } = await supabase
-          .from('student_attendance')
-          .update({
-            status,
-            notes: notes || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing.id);
-
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('student_attendance')
-          .insert({
-            student_id: studentId,
-            date,
-            status,
-            notes: notes || null,
-            subject_id: normalizedSubjectId,
-            faculty_id: normalizedFacultyId,
-          });
-
-        if (error) throw error;
-      }
+      if (error) throw error;
 
       return { studentId, date, status, notes, subjectId: normalizedSubjectId, facultyId: normalizedFacultyId };
     },
