@@ -165,15 +165,42 @@ export function AttendanceTracker({
     const selectedSubjectId = selectedSubject || null;
     const selectedFacultyId = selectedFaculty || null;
 
-    return attendance.find(a => {
+    // A dimension the user left as "All" is treated as "any", not "must be
+    // null" — otherwise a row saved for this subject with a faculty attached
+    // looks unmarked and bulk actions write a duplicate session row.
+    const candidates = attendance.filter(a => {
       if (a.studentId !== studentId || a.date !== selectedDateStr) return false;
       const aSubject = a.subjectId ?? null;
       const aFaculty = a.facultyId ?? null;
-      const subjectMatches = selectedSubjectId ? aSubject === selectedSubjectId : aSubject === null;
-      const facultyMatches = selectedFacultyId ? aFaculty === selectedFacultyId : aFaculty === null;
-      return subjectMatches && facultyMatches;
+      if (selectedSubjectId && aSubject !== selectedSubjectId) return false;
+      if (selectedFacultyId && aFaculty !== selectedFacultyId) return false;
+      if (!selectedSubjectId && !selectedFacultyId) {
+        return aSubject === null && aFaculty === null;
+      }
+      return true;
     });
+
+    if (candidates.length <= 1) return candidates[0];
+
+    // Prefer the row that matches the unselected dimension as null (the exact
+    // session the UI would write), then fall back to the first relaxed match.
+    return (
+      candidates.find(a =>
+        (selectedSubjectId ? true : (a.subjectId ?? null) === null) &&
+        (selectedFacultyId ? true : (a.facultyId ?? null) === null),
+      ) ?? candidates[0]
+    );
   }, [attendance, selectedDateStr, selectedSubject, selectedFaculty]);
+
+  // Session ids to persist for a student: reuse the matched row's ids for any
+  // dimension the user left as "All", so an update lands on the existing row.
+  const getSaveContextForStudent = useCallback((studentId: string) => {
+    const existing = getExactAttendanceForStudent(studentId);
+    return {
+      subjectId: selectedSubject || existing?.subjectId || undefined,
+      facultyId: selectedFaculty || existing?.facultyId || undefined,
+    };
+  }, [getExactAttendanceForStudent, selectedSubject, selectedFaculty]);
 
   // Display lookup: exact session first, then fallback to general same-day
   // attendance only for row rendering. Bulk actions must not use this fallback,
