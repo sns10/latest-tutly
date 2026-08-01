@@ -418,7 +418,8 @@ export function AttendanceTracker({
 
   const handleMarkAttendance = useCallback((studentId: string, status: 'present' | 'absent' | 'late' | 'excused') => {
     const studentName = students.find(s => s.id === studentId)?.name || 'Student';
-    onMarkAttendance(studentId, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
+    const ctx = getSaveContextForStudent(studentId);
+    onMarkAttendance(studentId, selectedDateStr, status, undefined, ctx.subjectId, ctx.facultyId);
     
     const subjectName = selectedSubject ? subjects.find(s => s.id === selectedSubject)?.name : '';
     const context = subjectName ? ` for ${subjectName}` : '';
@@ -430,7 +431,7 @@ export function AttendanceTracker({
     } else {
       toast.success(`${studentName}${context} marked as ${status}`);
     }
-  }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
+  }, [students, onMarkAttendance, selectedDateStr, selectedSubject, subjects, getSaveContextForStudent]);
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
     // Every bulk action uses the same rule: the full class/division roster, and
@@ -452,19 +453,19 @@ export function AttendanceTracker({
         studentId: student.id,
         date: selectedDateStr,
         status,
-        subjectId: selectedSubject || undefined,
-        facultyId: selectedFaculty || undefined,
+        ...getSaveContextForStudent(student.id),
       }));
       toast.info(`Saving ${records.length} student${records.length === 1 ? '' : 's'} as ${status}…`);
       onBulkMarkAttendance(records);
     } else {
       // Fallback to individual calls
       studentsToMark.forEach(student => {
-        onMarkAttendance(student.id, selectedDateStr, status, undefined, selectedSubject || undefined, selectedFaculty || undefined);
+        const ctx = getSaveContextForStudent(student.id);
+        onMarkAttendance(student.id, selectedDateStr, status, undefined, ctx.subjectId, ctx.facultyId);
       });
       toast.success(`${studentsToMark.length} students marked as ${status}`);
     }
-  }, [targetStudents, getExactAttendanceForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty]);
+  }, [targetStudents, getExactAttendanceForStudent, getSaveContextForStudent, onMarkAttendance, onBulkMarkAttendance, selectedDateStr]);
 
   // Copy attendance from a previous class session
   const handleCopyFromPreviousClass = useCallback((sourceSubjectId: string | null, sourceFacultyId: string | null) => {
