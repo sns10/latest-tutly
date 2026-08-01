@@ -202,6 +202,15 @@ export function AttendanceTracker({
     return undefined;
   }, [attendance, selectedDateStr, selectedSubject, selectedFaculty, getExactAttendanceForStudent]);
 
+  // True when the row's displayed status came from the general fallback above
+  // rather than the selected session. The list renders these as a dashed hint
+  // so an unmarked session can never look confirmed.
+  const isFallbackStatus = useCallback((studentId: string) => {
+    if (!selectedSubject && !selectedFaculty) return false;
+    if (getExactAttendanceForStudent(studentId)) return false;
+    return !!getAttendanceForStudent(studentId);
+  }, [selectedSubject, selectedFaculty, getExactAttendanceForStudent, getAttendanceForStudent]);
+
   // Students in the selected attendance target scope. Bulk actions operate on
   // this full class/division set, regardless of search/status filters.
   const targetStudents = useMemo(() => {
@@ -821,6 +830,7 @@ export function AttendanceTracker({
               <VirtualizedStudentList
                 students={filteredStudents}
                 getAttendanceForStudent={getAttendanceForStudent}
+                isFallbackStatus={isFallbackStatus}
                 onMarkAttendance={handleMarkAttendance}
               />
             </CardContent>
