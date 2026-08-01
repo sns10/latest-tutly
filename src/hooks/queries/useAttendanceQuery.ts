@@ -292,7 +292,7 @@ export function useStudentAttendanceQuery(tuitionId: string | null, studentId: s
       while (true) {
         const { data, error } = await supabase
           .from('student_attendance')
-          .select('*, students!inner(tuition_id)')
+          .select(ATTENDANCE_COLUMNS)
           .eq('students.tuition_id', tuitionId)
           .eq('student_id', studentId)
           .order('date', { ascending: false })
