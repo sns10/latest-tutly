@@ -1,9 +1,23 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+const ALLOWED_ORIGINS = (Deno.env.get('ALLOWED_ORIGINS') ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const MIN_PASSWORD_LENGTH = 8;
+
+const buildCorsHeaders = (origin: string | null) => {
+  const headers: Record<string, string> = {
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  };
+
+  if (origin && ALLOWED_ORIGINS.includes(origin)) {
+    headers['Access-Control-Allow-Origin'] = origin;
+    headers['Vary'] = 'Origin';
+  }
+
+  return headers;
 };
 
 interface CreateStudentUserRequest {
@@ -37,8 +51,17 @@ function checkRateLimit(userId: string): boolean {
 }
 
 const handler = async (req: Request): Promise<Response> => {
+  const origin = req.headers.get('Origin');
+  const corsHeaders = buildCorsHeaders(origin);
+
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
+    if (origin && !ALLOWED_ORIGINS.includes(origin)) {
+      return new Response(JSON.stringify({ error: 'Origin not allowed' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
     return new Response(null, { headers: corsHeaders });
   }
 
@@ -72,7 +95,15 @@ const handler = async (req: Request): Promise<Response> => {
     });
 
     // Verify the caller's JWT and role
-    const token = authHeader.replace('Bearer ', '');
+    const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+    if (!bearerMatch?.[1]) {
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication header' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    const token = bearerMatch[1];
     const { data: { user: callerUser }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
     if (authError || !callerUser) {
@@ -137,9 +168,9 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    if (password.length < 6) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       return new Response(
-        JSON.stringify({ error: 'Password must be at least 6 characters' }),
+        JSON.stringify({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }),
         { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
       );
     }

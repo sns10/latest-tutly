@@ -196,8 +196,8 @@ export function CreateTuitionDialog({ open, onOpenChange, onSuccess }: CreateTui
                     type="password"
                     value={formData.adminPassword}
                     onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                    placeholder="Minimum 6 characters (leave empty if user exists)"
-                    minLength={6}
+                    placeholder="Minimum 8 characters (leave empty if user exists)"
+                    minLength={8}
                   />
                   <p className="text-xs text-muted-foreground mt-1">
                     Required only if creating a new user account

@@ -44,8 +44,8 @@ export function AssignStudentEmailDialog({
       return;
     }
 
-    if (password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters");
       return;
     }
 
@@ -134,7 +134,7 @@ export function AssignStudentEmailDialog({
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Create a password (min 6 characters)"
+                placeholder="Create a password (min 8 characters)"
                 className="pl-10 pr-10"
                 disabled={isSubmitting}
               />
