@@ -406,17 +406,16 @@ export function AttendanceTracker({
   }, [students, onMarkAttendance, selectedDateStr, selectedSubject, selectedFaculty, subjects]);
 
   const handleBulkAttendance = useCallback((status: 'present' | 'absent' | 'late' | 'excused') => {
-    // Collect all students in the selected class/division that need marking.
-    // For Mark All Present, convert every exact-session non-present/missing row
-    // to present. Display fallback rows are intentionally ignored here.
+    // Every bulk action uses the same rule: the full class/division roster, and
+    // any student whose exact-session status differs from the target status is
+    // written. Display fallback rows are intentionally ignored here.
     const studentsToMark = targetStudents.filter(student => {
       const existingAttendance = getExactAttendanceForStudent(student.id);
-      if (status === 'present') return existingAttendance?.status !== 'present';
-      return !existingAttendance;
+      return existingAttendance?.status !== status;
     });
     
     if (studentsToMark.length === 0) {
-      toast.info(status === 'present' ? 'All visible students are already present' : 'All students already have attendance marked');
+      toast.info(`All students are already marked ${status}`);
       return;
     }
 
@@ -442,8 +441,9 @@ export function AttendanceTracker({
 
   // Copy attendance from a previous class session
   const handleCopyFromPreviousClass = useCallback((sourceSubjectId: string | null, sourceFacultyId: string | null) => {
-    // Get students who don't have attendance in current session but do have it in source session
-    const studentsToCopy = filteredStudentsBase.filter(student => {
+    // Same roster scope as the bulk actions — search/status filters must not
+    // silently shrink what gets copied.
+    const studentsToCopy = targetStudents.filter(student => {
       // Skip if already has attendance in current session
       const existingAttendance = getExactAttendanceForStudent(student.id);
       if (existingAttendance) return false;
@@ -487,7 +487,7 @@ export function AttendanceTracker({
       return;
     }
     onBulkMarkAttendance(records);
-  }, [filteredStudentsBase, getExactAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance]);
+  }, [targetStudents, getExactAttendanceForStudent, attendance, selectedDateStr, selectedSubject, selectedFaculty, onBulkMarkAttendance]);
 
   const handleSwitchToManual = () => {
     setIsManualMode(true);
