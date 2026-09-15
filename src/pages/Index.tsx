@@ -73,6 +73,7 @@ const ClassesPage = lazy(() => import('./Classes'));
 const StudentsPage = lazy(() => import('./Students'));
 const ReportsPage = lazy(() => import('./Reports'));
 const TestsPage = lazy(() => import('./Tests'));
+const FacultySalaryPage = lazy(() => import('./FacultySalary'));
 
 const RouteLoader = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
@@ -391,6 +392,9 @@ const Index = () => {
       } />
       <Route path="/classes" element={
         <Suspense fallback={<RouteLoader />}><ClassesPage /></Suspense>
+      } />
+      <Route path="/faculty-salary" element={
+        <Suspense fallback={<RouteLoader />}><FacultySalaryPage /></Suspense>
       } />
       <Route path="/students" element={
         <Suspense fallback={<RouteLoader />}><StudentsPage /></Suspense>

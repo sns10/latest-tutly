@@ -1,4 +1,4 @@
-import { BookOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText, ClipboardList } from 'lucide-react';
+import { BookOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText, ClipboardList, Wallet } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -27,6 +27,7 @@ const tuitionAdminItems: MenuItem[] = [
   { title: 'Timetable', url: '/timetable', icon: Clock, featureKey: 'timetable' },
   { title: 'Attendance', url: '/attendance', icon: CalendarDays, featureKey: 'attendance' },
   { title: 'Classes', url: '/classes', icon: Users },
+  { title: 'Salaries', url: '/faculty-salary', icon: Wallet },
   { title: 'Fees', url: '/fees', icon: DollarSign, featureKey: 'fees' },
   { title: 'Reports', url: '/reports', icon: FileText, featureKey: 'reports' },
 ];
