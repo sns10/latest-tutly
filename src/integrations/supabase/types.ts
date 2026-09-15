@@ -260,6 +260,191 @@ export type Database = {
           },
         ]
       }
+      faculty_payments: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          faculty_id: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string | null
+          payment_reference: string | null
+          salary_month: string | null
+          session_id: string | null
+          tuition_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          faculty_id: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          salary_month?: string | null
+          session_id?: string | null
+          tuition_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          faculty_id?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string | null
+          payment_reference?: string | null
+          salary_month?: string | null
+          session_id?: string | null
+          tuition_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_payments_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_payments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "faculty_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_payments_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_rates: {
+        Row: {
+          class: string
+          created_at: string
+          faculty_id: string
+          hourly_rate: number
+          id: string
+          tuition_id: string
+          updated_at: string
+        }
+        Insert: {
+          class: string
+          created_at?: string
+          faculty_id: string
+          hourly_rate?: number
+          id?: string
+          tuition_id: string
+          updated_at?: string
+        }
+        Update: {
+          class?: string
+          created_at?: string
+          faculty_id?: string
+          hourly_rate?: number
+          id?: string
+          tuition_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_rates_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_rates_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      faculty_sessions: {
+        Row: {
+          amount: number
+          class: string
+          created_at: string
+          created_by: string | null
+          faculty_id: string
+          hourly_rate: number
+          hours: number
+          id: string
+          notes: string | null
+          session_date: string
+          subject_id: string | null
+          tuition_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          class: string
+          created_at?: string
+          created_by?: string | null
+          faculty_id: string
+          hourly_rate?: number
+          hours?: number
+          id?: string
+          notes?: string | null
+          session_date?: string
+          subject_id?: string | null
+          tuition_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          class?: string
+          created_at?: string
+          created_by?: string | null
+          faculty_id?: string
+          hourly_rate?: number
+          hours?: number
+          id?: string
+          notes?: string | null
+          session_date?: string
+          subject_id?: string | null
+          tuition_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faculty_sessions_faculty_id_fkey"
+            columns: ["faculty_id"]
+            isOneToOne: false
+            referencedRelation: "faculty"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_sessions_subject_id_fkey"
+            columns: ["subject_id"]
+            isOneToOne: false
+            referencedRelation: "subjects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "faculty_sessions_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       faculty_subjects: {
         Row: {
           created_at: string
@@ -1226,6 +1411,7 @@ export type Database = {
           name: string
           phone: string | null
           portal_email: string | null
+          salary_payout_mode: string
           slug: string | null
           subscription_end_date: string | null
           subscription_start_date: string | null
@@ -1243,6 +1429,7 @@ export type Database = {
           name: string
           phone?: string | null
           portal_email?: string | null
+          salary_payout_mode?: string
           slug?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
@@ -1260,6 +1447,7 @@ export type Database = {
           name?: string
           phone?: string | null
           portal_email?: string | null
+          salary_payout_mode?: string
           slug?: string | null
           subscription_end_date?: string | null
           subscription_start_date?: string | null
