@@ -1,4 +1,4 @@
-import { BookOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText, ClipboardList } from 'lucide-react';
+import { BookOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText, ClipboardList, Wallet } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
