@@ -393,6 +393,9 @@ const Index = () => {
       <Route path="/classes" element={
         <Suspense fallback={<RouteLoader />}><ClassesPage /></Suspense>
       } />
+      <Route path="/faculty-salary" element={
+        <Suspense fallback={<RouteLoader />}><FacultySalaryPage /></Suspense>
+      } />
       <Route path="/students" element={
         <Suspense fallback={<RouteLoader />}><StudentsPage /></Suspense>
       } />
