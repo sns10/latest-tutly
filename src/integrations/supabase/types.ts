@@ -1399,6 +1399,41 @@ export type Database = {
           },
         ]
       }
+      tuition_whatsapp_settings: {
+        Row: {
+          created_at: string
+          display_number: string | null
+          is_enabled: boolean
+          sender_secret_name: string | null
+          tuition_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          display_number?: string | null
+          is_enabled?: boolean
+          sender_secret_name?: string | null
+          tuition_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          display_number?: string | null
+          is_enabled?: boolean
+          sender_secret_name?: string | null
+          tuition_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tuition_whatsapp_settings_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: true
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tuitions: {
         Row: {
           address: string | null
@@ -1525,6 +1560,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "weekly_tests_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          id: string
+          message_id: string | null
+          recipient: string
+          sent_by: string | null
+          status: string
+          student_id: string | null
+          template_name: string
+          tuition_id: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          recipient: string
+          sent_by?: string | null
+          status?: string
+          student_id?: string | null
+          template_name: string
+          tuition_id: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          message_id?: string | null
+          recipient?: string
+          sent_by?: string | null
+          status?: string
+          student_id?: string | null
+          template_name?: string
+          tuition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_logs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_logs_tuition_id_fkey"
             columns: ["tuition_id"]
             isOneToOne: false
             referencedRelation: "tuitions"
