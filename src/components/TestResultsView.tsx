@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Download, BarChart3, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { ReportExporter } from "./ReportExporter";
+import { AutoSendButton } from "./whatsapp/AutoSendButton";
+import { formatWhatsAppDate } from "@/hooks/useWhatsAppAutomation";
 
 interface TestResultsViewProps {
   tests: WeeklyTest[];
@@ -119,6 +121,28 @@ export function TestResultsView({ tests, testResults, students }: TestResultsVie
               size="sm"
             />
           )}
+          {selectedTest !== "All" && (() => {
+            const test = tests.find(t => t.id === selectedTest);
+            if (!test) return null;
+            const items = testResults
+              .filter(r => r.testId === test.id && !r.isAbsent && filteredStudents.some(s => s.id === r.studentId))
+              .map(r => ({
+                student_id: r.studentId,
+                subject: test.subject,
+                date: formatWhatsAppDate(test.date),
+                marks: String(r.marks),
+                total: String(test.maxMarks),
+              }));
+            return (
+              <AutoSendButton
+                template="test_result_v1"
+                size="sm"
+                className="text-xs sm:text-sm"
+                label={`Send results (${items.length})`}
+                items={items}
+              />
+            );
+          })()}
         </div>
       </div>
 

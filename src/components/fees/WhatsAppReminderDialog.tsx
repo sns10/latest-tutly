@@ -16,6 +16,8 @@ import { toast } from 'sonner';
 import { sanitizeString } from '@/lib/validation';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { safelyOpenExternal } from '@/lib/dialogSafety';
+import { AutoSendButton } from '@/components/whatsapp/AutoSendButton';
+import { formatWhatsAppDate } from '@/hooks/useWhatsAppAutomation';
 
 // WhatsApp message limit
 const MAX_MESSAGE_LENGTH = 4096;
@@ -217,6 +219,21 @@ export function WhatsAppReminderDialog({
             <Copy className="h-4 w-4 mr-2" />
             Copy Message
           </Button>
+          {lines.length > 0 && (
+            <AutoSendButton
+              template="fee_reminder_v1"
+              label="Send automatically"
+              className="w-full sm:w-auto"
+              items={[{
+                student_id: student.id,
+                amount: totalUnpaid.toLocaleString('en-IN'),
+                due_date: formatWhatsAppDate(
+                  lines.map(l => l.fee.dueDate).sort()[0]
+                ),
+              }]}
+              onDone={() => onOpenChange(false)}
+            />
+          )}
           <Button onClick={handleSendWhatsApp} className="w-full sm:w-auto bg-green-600 hover:bg-green-700">
             <Send className="h-4 w-4 mr-2" />
             Open WhatsApp

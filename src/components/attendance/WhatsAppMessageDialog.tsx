@@ -6,6 +6,8 @@ import { Copy, Check, MessageCircle, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { Student, StudentAttendance, Subject, Faculty } from '@/types';
 import { safelyOpenExternal } from '@/lib/dialogSafety';
+import { AutoSendButton } from '@/components/whatsapp/AutoSendButton';
+import { formatWhatsAppDate } from '@/hooks/useWhatsAppAutomation';
 
 interface WhatsAppMessageDialogProps {
   open: boolean;
@@ -148,6 +150,19 @@ export function WhatsAppMessageDialog({
               <MessageCircle className="h-4 w-4" />
               Open WhatsApp
             </Button>
+
+            {absentees.length > 0 && (
+              <AutoSendButton
+                template="absence_alert_v1"
+                label={`Alert ${absentees.length} absent student${absentees.length === 1 ? "'s" : "s'"} parents`}
+                className="w-full h-11"
+                items={absentees.map((s) => ({
+                  student_id: s.id,
+                  date: formatWhatsAppDate(selectedDate),
+                  subject: subject?.name || 'scheduled',
+                }))}
+              />
+            )}
           </div>
 
           <p className="text-xs text-muted-foreground text-center shrink-0">
