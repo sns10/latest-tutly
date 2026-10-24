@@ -91,22 +91,38 @@ Deno.serve(async (req) => {
       return json({ error: 'Automated WhatsApp is not enabled for this center' }, 403);
     }
 
-    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const secretName = settings.sender_secret_name || 'WHATSAPP_API_KEY';
-    if (!/^WHATSAPP_API_KEY(_\d+)?$/.test(secretName)) return json({ error: 'Invalid sender configuration' }, 500);
-    const WHATSAPP_API_KEY = Deno.env.get(secretName);
-    if (!LOVABLE_API_KEY || !WHATSAPP_API_KEY) {
-      return json({ error: 'WhatsApp sender is not connected yet' }, 503);
+    // Direct Meta Cloud API (preferred when configured), else Lovable connector gateway
+    const META_TOKEN = Deno.env.get('META_WHATSAPP_TOKEN');
+    const META_PHONE_ID = Deno.env.get('META_WHATSAPP_PHONE_NUMBER_ID');
+    const META_WABA_ID = Deno.env.get('META_WHATSAPP_WABA_ID');
+    let headers: Record<string, string>;
+    let messagesUrl: string;
+    let templatesUrl: string;
+    if (META_TOKEN && META_PHONE_ID && META_WABA_ID) {
+      const base = 'https://graph.facebook.com/v21.0';
+      headers = { Authorization: `Bearer ${META_TOKEN}`, 'Content-Type': 'application/json' };
+      messagesUrl = `${base}/${META_PHONE_ID}/messages`;
+      templatesUrl = `${base}/${META_WABA_ID}/message_templates?name=${template}&fields=name,status,language`;
+    } else {
+      const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+      const secretName = settings.sender_secret_name || 'WHATSAPP_API_KEY';
+      if (!/^WHATSAPP_API_KEY(_\d+)?$/.test(secretName)) return json({ error: 'Invalid sender configuration' }, 500);
+      const WHATSAPP_API_KEY = Deno.env.get(secretName);
+      if (!LOVABLE_API_KEY || !WHATSAPP_API_KEY) {
+        return json({ error: 'WhatsApp sender is not connected yet' }, 503);
+      }
+      headers = {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        'X-Connection-Api-Key': WHATSAPP_API_KEY,
+        'Content-Type': 'application/json',
+      };
+      messagesUrl = `${GATEWAY_URL}/messages`;
+      templatesUrl = `${GATEWAY_URL}/message_templates?name=${template}&fields=name,status,language`;
     }
-    const headers = {
-      Authorization: `Bearer ${LOVABLE_API_KEY}`,
-      'X-Connection-Api-Key': WHATSAPP_API_KEY,
-      'Content-Type': 'application/json',
-    };
 
     // Look up the approved template's language code
     let language = 'en';
-    const tplRes = await fetch(`${GATEWAY_URL}/message_templates?name=${template}&fields=name,status,language`, { headers });
+    const tplRes = await fetch(templatesUrl, { headers });
     const tplText = await tplRes.text();
     if (!tplRes.ok) {
       console.error(`Template lookup failed [${tplRes.status}]: ${tplText}`);
@@ -139,7 +155,7 @@ Deno.serve(async (req) => {
         params = [clean(s.name), clean(m.date), clean(m.subject), centerName];
       }
 
-      const res = await fetch(`${GATEWAY_URL}/messages`, {
+      const res = await fetch(messagesUrl, {
         method: 'POST',
         headers,
         body: JSON.stringify({
