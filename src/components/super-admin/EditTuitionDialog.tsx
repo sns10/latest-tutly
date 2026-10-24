@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,7 +23,10 @@ interface EditTuitionDialogProps {
 }
 
 export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: EditTuitionDialogProps) {
+  const queryClient = useQueryClient();
   const [loading, setLoading] = useState(false);
+  const [waLoading, setWaLoading] = useState(true);
+  const [waError, setWaError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -40,13 +44,21 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
   useEffect(() => {
     if (!open || !tuition?.id) return;
     let cancelled = false;
-    (supabase as any)
+    setWaLoading(true);
+    setWaError(null);
+    setWa({ is_enabled: false, sender_secret_name: '', display_number: '' });
+    supabase
       .from('tuition_whatsapp_settings')
       .select('is_enabled, sender_secret_name, display_number')
       .eq('tuition_id', tuition.id)
       .maybeSingle()
-      .then(({ data }: any) => {
+      .then(({ data, error }) => {
         if (cancelled) return;
+        setWaLoading(false);
+        if (error) {
+          setWaError('Could not load WhatsApp settings. Close and reopen this center to try again.');
+          return;
+        }
         setWa({
           is_enabled: !!data?.is_enabled,
           sender_secret_name: data?.sender_secret_name || '',
@@ -92,6 +104,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (waLoading || waError || loading) return;
     setLoading(true);
 
     try {
@@ -114,7 +127,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
 
       if (error) throw error;
 
-      const { error: waError } = await (supabase as any)
+      const { error: waError } = await supabase
         .from('tuition_whatsapp_settings')
         .upsert({
           tuition_id: tuition.id,
@@ -123,6 +136,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
           display_number: wa.display_number.trim() || null,
         }, { onConflict: 'tuition_id' });
       if (waError) throw waError;
+      await queryClient.invalidateQueries({ queryKey: ['whatsappSettings', tuition.id] });
 
       toast.success('Tuition updated successfully');
       onOpenChange(false);
@@ -261,9 +275,12 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
               <Switch
                 id="wa_enabled"
                 checked={wa.is_enabled}
+                disabled={waLoading || !!waError || loading}
                 onCheckedChange={(checked) => setWa({ ...wa, is_enabled: checked })}
               />
             </div>
+            {waLoading && <p className="text-sm text-muted-foreground" role="status">Loading WhatsApp settings…</p>}
+            {waError && <p className="text-sm text-destructive" role="alert">{waError}</p>}
             {wa.is_enabled && (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
@@ -373,7 +390,7 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || waLoading || !!waError}>
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
               Save Changes
             </Button>
