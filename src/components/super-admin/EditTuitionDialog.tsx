@@ -35,6 +35,26 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
     subscription_end_date: '',
   });
   const [enabledFeatures, setEnabledFeatures] = useState<FeatureKey[]>(ALL_FEATURES.map(f => f.key));
+  const [wa, setWa] = useState({ is_enabled: false, sender_secret_name: '', display_number: '' });
+
+  useEffect(() => {
+    if (!open || !tuition?.id) return;
+    let cancelled = false;
+    (supabase as any)
+      .from('tuition_whatsapp_settings')
+      .select('is_enabled, sender_secret_name, display_number')
+      .eq('tuition_id', tuition.id)
+      .maybeSingle()
+      .then(({ data }: any) => {
+        if (cancelled) return;
+        setWa({
+          is_enabled: !!data?.is_enabled,
+          sender_secret_name: data?.sender_secret_name || '',
+          display_number: data?.display_number || '',
+        });
+      });
+    return () => { cancelled = true; };
+  }, [open, tuition?.id]);
 
   useEffect(() => {
     if (tuition) {
@@ -93,6 +113,16 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
         .eq('id', tuition.id);
 
       if (error) throw error;
+
+      const { error: waError } = await (supabase as any)
+        .from('tuition_whatsapp_settings')
+        .upsert({
+          tuition_id: tuition.id,
+          is_enabled: wa.is_enabled,
+          sender_secret_name: wa.sender_secret_name || null,
+          display_number: wa.display_number.trim() || null,
+        }, { onConflict: 'tuition_id' });
+      if (waError) throw waError;
 
       toast.success('Tuition updated successfully');
       onOpenChange(false);
@@ -217,6 +247,51 @@ export function EditTuitionDialog({ open, onOpenChange, tuition, onSuccess }: Ed
               checked={formData.is_active}
               onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
             />
+          </div>
+
+          <Separator />
+
+          {/* Automated WhatsApp */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between py-1">
+              <div>
+                <Label htmlFor="wa_enabled">Automated WhatsApp</Label>
+                <p className="text-xs text-muted-foreground">Send fee, result and absence messages directly</p>
+              </div>
+              <Switch
+                id="wa_enabled"
+                checked={wa.is_enabled}
+                onCheckedChange={(checked) => setWa({ ...wa, is_enabled: checked })}
+              />
+            </div>
+            {wa.is_enabled && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="wa_sender" className="text-xs">Sender</Label>
+                  <Select
+                    value={wa.sender_secret_name || 'shared'}
+                    onValueChange={(v) => setWa({ ...wa, sender_secret_name: v === 'shared' ? '' : v })}
+                  >
+                    <SelectTrigger id="wa_sender"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="shared">Shared Upskillr number</SelectItem>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => (
+                        <SelectItem key={n} value={`WHATSAPP_API_KEY_${n}`}>Dedicated number #{n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="wa_display" className="text-xs">Display number (optional)</Label>
+                  <Input
+                    id="wa_display"
+                    placeholder="+91 98xxx xxxxx"
+                    value={wa.display_number}
+                    onChange={(e) => setWa({ ...wa, display_number: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
           </div>
 
           <Separator />
