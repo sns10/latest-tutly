@@ -1570,36 +1570,54 @@ export type Database = {
       whatsapp_logs: {
         Row: {
           created_at: string
+          delivered_at: string | null
+          delivery_status: string
+          error_code: string | null
           error_message: string | null
+          failed_at: string | null
           id: string
           message_id: string | null
+          read_at: string | null
           recipient: string
           sent_by: string | null
           status: string
+          status_updated_at: string | null
           student_id: string | null
           template_name: string
           tuition_id: string
         }
         Insert: {
           created_at?: string
+          delivered_at?: string | null
+          delivery_status?: string
+          error_code?: string | null
           error_message?: string | null
+          failed_at?: string | null
           id?: string
           message_id?: string | null
+          read_at?: string | null
           recipient: string
           sent_by?: string | null
           status?: string
+          status_updated_at?: string | null
           student_id?: string | null
           template_name: string
           tuition_id: string
         }
         Update: {
           created_at?: string
+          delivered_at?: string | null
+          delivery_status?: string
+          error_code?: string | null
           error_message?: string | null
+          failed_at?: string | null
           id?: string
           message_id?: string | null
+          read_at?: string | null
           recipient?: string
           sent_by?: string | null
           status?: string
+          status_updated_at?: string | null
           student_id?: string | null
           template_name?: string
           tuition_id?: string
