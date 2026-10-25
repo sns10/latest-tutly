@@ -47,6 +47,7 @@ import {
 import { toast } from 'sonner';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
+import { WhatsAppHistoryDialog } from '@/components/whatsapp/WhatsAppHistoryDialog';
 import { BulkWhatsAppReminderDialog } from './BulkWhatsAppReminderDialog';
 import { useWhatsAppAutomation } from '@/hooks/useWhatsAppAutomation';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
@@ -139,6 +140,7 @@ export function FeesList({
   const [selectedFees, setSelectedFees] = useState<Set<string>>(new Set());
   const [bulkWaOpen, setBulkWaOpen] = useState(false);
   const waAuto = useWhatsAppAutomation();
+  const [waHistoryOpen, setWaHistoryOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedFeeForPayment, setSelectedFeeForPayment] = useState<StudentFee | null>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
@@ -674,6 +676,13 @@ export function FeesList({
               <span className="sm:hidden">Remind</span>
             </Button>
           )}
+          {waAuto.enabled && (
+            <Button onClick={() => setWaHistoryOpen(true)} size="sm" variant="ghost" className="text-xs sm:text-sm">
+              <History className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              <span className="hidden sm:inline">WhatsApp history</span>
+              <span className="sm:hidden">WA log</span>
+            </Button>
+          )}
         </div>
         <div className="flex gap-2">
           {/* Mobile Filter Button */}
@@ -1054,6 +1063,13 @@ export function FeesList({
         studentsById={studentsById}
         totalPaidByFeeId={totalPaidByFeeId}
         onDone={() => setSelectedFees(new Set())}
+      />
+
+      <WhatsAppHistoryDialog
+        open={waHistoryOpen}
+        onOpenChange={(o) => { setWaHistoryOpen(o); if (!o) unlockBody(); }}
+        tuitionId={tuitionId}
+        studentsById={studentsById}
       />
 
       {/* WhatsApp Reminder Dialog */}
