@@ -140,6 +140,7 @@ export function FeesList({
   const [selectedFees, setSelectedFees] = useState<Set<string>>(new Set());
   const [bulkWaOpen, setBulkWaOpen] = useState(false);
   const waAuto = useWhatsAppAutomation();
+  const [waHistoryOpen, setWaHistoryOpen] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedFeeForPayment, setSelectedFeeForPayment] = useState<StudentFee | null>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
@@ -1062,6 +1063,13 @@ export function FeesList({
         studentsById={studentsById}
         totalPaidByFeeId={totalPaidByFeeId}
         onDone={() => setSelectedFees(new Set())}
+      />
+
+      <WhatsAppHistoryDialog
+        open={waHistoryOpen}
+        onOpenChange={(o) => { setWaHistoryOpen(o); if (!o) unlockBody(); }}
+        tuitionId={tuitionId}
+        studentsById={studentsById}
       />
 
       {/* WhatsApp Reminder Dialog */}
