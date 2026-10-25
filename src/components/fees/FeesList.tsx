@@ -48,7 +48,6 @@ import { toast } from 'sonner';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
 import { WhatsAppHistoryDialog } from '@/components/whatsapp/WhatsAppHistoryDialog';
-import { useUserTuition } from '@/hooks/useUserTuition';
 import { BulkWhatsAppReminderDialog } from './BulkWhatsAppReminderDialog';
 import { useWhatsAppAutomation } from '@/hooks/useWhatsAppAutomation';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
