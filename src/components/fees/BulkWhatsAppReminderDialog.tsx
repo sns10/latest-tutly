@@ -3,6 +3,9 @@ import { Student, StudentFee } from '@/types';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Loader2, Zap, AlertTriangle, CheckCircle } from 'lucide-react';
+import { useUserTuition } from '@/hooks/useUserTuition';
+import { useWhatsAppLogs } from '@/hooks/useWhatsAppLogs';
+import { DeliveryStatusBadge } from '@/components/whatsapp/DeliveryStatusBadge';
 import { useWhatsAppAutomation, formatWhatsAppDate, WhatsAppSendResult } from '@/hooks/useWhatsAppAutomation';
 
 interface Props {
@@ -41,17 +44,26 @@ export function BulkWhatsAppReminderDialog({ open, onOpenChange, selectedFees, s
   const { send } = useWhatsAppAutomation();
   const [result, setResult] = useState<WhatsAppSendResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [sentAt, setSentAt] = useState<string | null>(null);
+  const { tuitionId } = useUserTuition();
+  const { data: logs = [] } = useWhatsAppLogs(tuitionId, !!result && open, sentAt ?? undefined);
+  const live = useMemo(() => {
+    const m = new Map<string, { status: string; error: string | null }>();
+    for (const l of logs) if (l.student_id && !m.has(l.student_id)) m.set(l.student_id, { status: l.delivery_status, error: l.error_message });
+    return m;
+  }, [logs]);
   const rows = useMemo(() => buildReminderRows(selectedFees, studentsById, totalPaidByFeeId), [selectedFees, studentsById, totalPaidByFeeId]);
   const sendable = rows.filter((r) => r.phoneOk);
   const total = sendable.reduce((s, r) => s + r.remaining, 0);
 
   const close = (o: boolean) => {
-    if (!o) { setResult(null); setErr(null); if (result) onDone?.(); }
+    if (!o) { setResult(null); setErr(null); setSentAt(null); if (result) onDone?.(); }
     onOpenChange(o);
   };
 
   const handleSend = async () => {
     setErr(null);
+    setSentAt(new Date(Date.now() - 60000).toISOString());
     try {
       const r = await send.mutateAsync({
         template: 'fee_reminder_v1',
@@ -85,11 +97,21 @@ export function BulkWhatsAppReminderDialog({ open, onOpenChange, selectedFees, s
               <span className="flex items-center gap-1 text-primary"><CheckCircle className="h-4 w-4" />{result.sent} sent</span>
               {result.failed > 0 && <span className="flex items-center gap-1 text-destructive"><AlertTriangle className="h-4 w-4" />{result.failed} failed</span>}
             </div>
-            {result.results.filter((r) => !r.ok).map((r) => (
-              <div key={r.student_id} className="text-xs rounded border border-destructive/30 p-2">
-                <span className="font-medium">{nameOf(r.student_id)}</span>: {r.error}
-              </div>
-            ))}
+            {result.results.map((r) => {
+              const l = live.get(r.student_id);
+              const status = !r.ok ? 'failed' : l?.status ?? 'sent';
+              const reason = !r.ok ? r.error : l?.status === 'failed' ? l.error : null;
+              return (
+                <div key={r.student_id} className="text-xs rounded border p-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium truncate">{nameOf(r.student_id)}</span>
+                    <DeliveryStatusBadge status={status} />
+                  </div>
+                  {reason && <p className="text-destructive mt-1">{reason}</p>}
+                </div>
+              );
+            })}
+            <p className="text-xs text-muted-foreground">Statuses update automatically while this is open.</p>
           </div>
         ) : (
           <div className="space-y-1">
