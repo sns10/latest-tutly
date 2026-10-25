@@ -138,7 +138,8 @@ Deno.serve(async (req) => {
     const results: { student_id: string; ok: boolean; error?: string }[] = [];
     const logs: any[] = [];
 
-    for (const m of messages) {
+    for (const [idx, m] of messages.entries()) {
+      if (idx > 0) await new Promise((r) => setTimeout(r, 100));
       const s = byId.get(m.student_id)!;
       const to = normalizePhone(s.father_phone) || normalizePhone(s.mother_phone) || normalizePhone(s.parent_phone);
       if (!to) {

@@ -47,6 +47,8 @@ import {
 import { toast } from 'sonner';
 import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
+import { BulkWhatsAppReminderDialog } from './BulkWhatsAppReminderDialog';
+import { useWhatsAppAutomation } from '@/hooks/useWhatsAppAutomation';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
 import {
   Dialog,
@@ -135,6 +137,8 @@ export function FeesList({
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedFees, setSelectedFees] = useState<Set<string>>(new Set());
+  const [bulkWaOpen, setBulkWaOpen] = useState(false);
+  const waAuto = useWhatsAppAutomation();
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedFeeForPayment, setSelectedFeeForPayment] = useState<StudentFee | null>(null);
   const [whatsappDialogOpen, setWhatsappDialogOpen] = useState(false);
@@ -663,6 +667,13 @@ export function FeesList({
               <span className="sm:hidden">Mark {selectedFees.size} Paid</span>
             </Button>
           )}
+          {selectedFees.size > 0 && waAuto.enabled && (
+            <Button onClick={() => setBulkWaOpen(true)} size="sm" variant="outline" className="text-xs sm:text-sm">
+              <MessageSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+              <span className="hidden sm:inline">Send WhatsApp reminders</span>
+              <span className="sm:hidden">Remind</span>
+            </Button>
+          )}
         </div>
         <div className="flex gap-2">
           {/* Mobile Filter Button */}
@@ -1035,6 +1046,15 @@ export function FeesList({
           tuition={tuition}
         />
       )}
+
+      <BulkWhatsAppReminderDialog
+        open={bulkWaOpen}
+        onOpenChange={(o) => { setBulkWaOpen(o); if (!o) unlockBody(); }}
+        selectedFees={fees.filter(f => selectedFees.has(f.id))}
+        studentsById={studentsById}
+        totalPaidByFeeId={totalPaidByFeeId}
+        onDone={() => setSelectedFees(new Set())}
+      />
 
       {/* WhatsApp Reminder Dialog */}
       {selectedStudentForReminder && (
