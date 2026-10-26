@@ -323,8 +323,9 @@ function Scheduled({ tuitionId, studentsById }: { tuitionId: string | null; stud
 
 function History({ tuitionId, studentsById }: { tuitionId: string | null; studentsById: Map<string, Student> }) {
   const [filter, setFilter] = useState('all');
-  const { data = [], isLoading } = useWhatsAppLogs(tuitionId, true);
-  const rows = filter === 'all' ? data : data.filter((r) => r.delivery_status === filter);
+  const paged = useWhatsAppLogsPaged(tuitionId, filter);
+  const isLoading = paged.isLoading;
+  const rows = useMemo(() => paged.data?.pages.flat() ?? [], [paged.data]);
   return (
     <div className="space-y-2 mt-3">
       <ToggleGroup type="single" value={filter} onValueChange={(v) => v && setFilter(v)} className="justify-start flex-wrap">
@@ -350,6 +351,11 @@ function History({ tuitionId, studentsById }: { tuitionId: string | null; studen
           )}
         </div>
       ))}
+      {paged.hasNextPage && (
+        <Button variant="outline" size="sm" className="w-full" disabled={paged.isFetchingNextPage} onClick={() => paged.fetchNextPage()}>
+          {paged.isFetchingNextPage ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Load more'}
+        </Button>
+      )}
     </div>
   );
 }
