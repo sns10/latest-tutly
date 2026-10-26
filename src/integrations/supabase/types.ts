@@ -1639,6 +1639,65 @@ export type Database = {
           },
         ]
       }
+      whatsapp_scheduled_dispatches: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          dispatched_at: string | null
+          error_message: string | null
+          failed_count: number
+          id: string
+          messages: Json
+          recipient_count: number
+          scheduled_date: string
+          sent_count: number
+          status: string
+          template: string
+          title: string
+          tuition_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          dispatched_at?: string | null
+          error_message?: string | null
+          failed_count?: number
+          id?: string
+          messages?: Json
+          recipient_count?: number
+          scheduled_date: string
+          sent_count?: number
+          status?: string
+          template: string
+          title?: string
+          tuition_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          dispatched_at?: string | null
+          error_message?: string | null
+          failed_count?: number
+          id?: string
+          messages?: Json
+          recipient_count?: number
+          scheduled_date?: string
+          sent_count?: number
+          status?: string
+          template?: string
+          title?: string
+          tuition_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_scheduled_dispatches_tuition_id_fkey"
+            columns: ["tuition_id"]
+            isOneToOne: false
+            referencedRelation: "tuitions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
