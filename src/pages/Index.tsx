@@ -74,6 +74,7 @@ const StudentsPage = lazy(() => import('./Students'));
 const ReportsPage = lazy(() => import('./Reports'));
 const TestsPage = lazy(() => import('./Tests'));
 const FacultySalaryPage = lazy(() => import('./FacultySalary'));
+const WhatsAppHubPage = lazy(() => import('./WhatsAppHub'));
 
 const RouteLoader = () => (
   <div className="min-h-[50vh] flex items-center justify-center">
@@ -392,6 +393,9 @@ const Index = () => {
       } />
       <Route path="/classes" element={
         <Suspense fallback={<RouteLoader />}><ClassesPage /></Suspense>
+      } />
+      <Route path="/whatsapp" element={
+        <Suspense fallback={<RouteLoader />}><WhatsAppHubPage /></Suspense>
       } />
       <Route path="/faculty-salary" element={
         <Suspense fallback={<RouteLoader />}><FacultySalaryPage /></Suspense>

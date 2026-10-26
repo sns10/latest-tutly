@@ -1,4 +1,4 @@
-import { BookOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText, ClipboardList, Wallet } from 'lucide-react';
+import { BookOpen, DollarSign, CalendarDays, Clock, Users, GraduationCap, Shield, FileText, ClipboardList, Wallet, MessageCircle } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   Sidebar,
@@ -12,12 +12,14 @@ import {
 } from '@/components/ui/sidebar';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useTuitionFeatures, FeatureKey } from '@/hooks/useTuitionFeatures';
+import { useWhatsAppAutomation } from '@/hooks/useWhatsAppAutomation';
 
 interface MenuItem {
   title: string;
   url: string;
   icon: any;
   featureKey?: FeatureKey;
+  requiresWhatsApp?: boolean;
 }
 
 const tuitionAdminItems: MenuItem[] = [
@@ -29,6 +31,7 @@ const tuitionAdminItems: MenuItem[] = [
   { title: 'Classes', url: '/classes', icon: Users },
   { title: 'Salaries', url: '/faculty-salary', icon: Wallet },
   { title: 'Fees', url: '/fees', icon: DollarSign, featureKey: 'fees' },
+  { title: 'WhatsApp', url: '/whatsapp', icon: MessageCircle, requiresWhatsApp: true },
   { title: 'Reports', url: '/reports', icon: FileText, featureKey: 'reports' },
 ];
 
@@ -40,7 +43,8 @@ export function AppSidebar() {
   const { open } = useSidebar();
   const location = useLocation();
   const { role, loading: roleLoading } = useUserRole();
-  const { isFeatureEnabled, loading: featuresLoading } = useTuitionFeatures();
+  const { isFeatureEnabled } = useTuitionFeatures();
+  const { enabled: waEnabled } = useWhatsAppAutomation();
 
   const isActive = (path: string) => {
     if (path === '/') return location.pathname === '/';
@@ -54,11 +58,12 @@ export function AppSidebar() {
   }
 
   const baseMenuItems = role === 'super_admin' ? superAdminItems : tuitionAdminItems;
-  
+
   // Filter menu items based on enabled features (only for tuition admins)
-  const menuItems = role === 'super_admin' 
-    ? baseMenuItems 
-    : baseMenuItems.filter(item => !item.featureKey || isFeatureEnabled(item.featureKey));
+  const menuItems = role === 'super_admin'
+    ? baseMenuItems
+    : baseMenuItems.filter(item =>
+        (!item.featureKey || isFeatureEnabled(item.featureKey)) && (!item.requiresWhatsApp || waEnabled));
 
   return (
     <Sidebar collapsible="icon" className="hidden md:flex bg-white border-r border-gray-200">
