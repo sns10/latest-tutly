@@ -15,6 +15,13 @@
       "when": 1792947797028,
       "tag": "0001_whatsapp_delivery_status",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1792997539000,
+      "tag": "0002_whatsapp_scheduled_dispatches",
+      "breakpoints": true
     }
   ]
 }
