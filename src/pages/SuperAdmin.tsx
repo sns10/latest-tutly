@@ -15,6 +15,7 @@ import { TuitionsList } from '@/components/super-admin/TuitionsList';
 import { SuperAdminStats } from '@/components/super-admin/SuperAdminStats';
 import { TuitionAdminManager } from '@/components/super-admin/TuitionAdminManager';
 import { SuperAdminBackups } from '@/components/super-admin/SuperAdminBackups';
+import { PlatformUsage } from '@/components/super-admin/PlatformUsage';
 
 export default function SuperAdmin() {
   const { signOut } = useAuth();
@@ -77,6 +78,9 @@ export default function SuperAdmin() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats Overview */}
         <SuperAdminStats tuitions={tuitions} />
+
+        {/* Per-center usage & WhatsApp analytics */}
+        <PlatformUsage />
 
         {/* Actions Bar */}
         <div className="flex items-center justify-between mb-6">
