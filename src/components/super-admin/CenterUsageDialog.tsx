@@ -45,7 +45,7 @@ export function CenterUsageDialog({ usage, month, rate, onOpenChange }: Props) {
               <p className="text-sm font-medium mb-2">Messages per day</p>
               {s.by_day.length === 0 ? <p className="text-xs text-muted-foreground">No messages this month.</p> : (
                 <div className="h-48">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="99%" height={192} minWidth={200}>
                     <BarChart data={s.by_day.map((d) => ({ ...d, label: d.day.slice(8) }))}>
                       <XAxis dataKey="label" fontSize={10} />
                       <YAxis fontSize={10} allowDecimals={false} width={28} />
