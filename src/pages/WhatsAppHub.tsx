@@ -72,23 +72,11 @@ export default function WhatsAppHubPage() {
 }
 
 function Overview({ tuitionId }: { tuitionId: string | null }) {
-  const monthStart = useMemo(() => format(new Date(), 'yyyy-MM-01'), []);
-  const { data: logs = [], isLoading } = useWhatsAppLogs(tuitionId, true, `${monthStart}T00:00:00+05:30`);
-  const { list } = useWhatsAppSchedules(tuitionId);
-  const c = { total: logs.length, delivered: 0, read: 0, failed: 0 };
-  for (const l of logs) {
-    if (l.delivery_status === 'read') { c.read++; c.delivered++; }
-    else if (l.delivery_status === 'delivered') c.delivered++;
-    else if (l.delivery_status === 'failed') c.failed++;
-  }
-  const rate = c.total ? Math.round((c.delivered / c.total) * 100) : 0;
-  const pending = (list.data ?? []).filter((s) => s.status === 'pending').length;
-  const reasons = new Map<string, number>();
-  for (const l of logs) if (l.delivery_status === 'failed') {
-    const k = l.error_message || 'Unknown reason';
-    reasons.set(k, (reasons.get(k) ?? 0) + 1);
-  }
+  const range = useMemo(() => istMonthRange(format(new Date(), 'yyyy-MM')), []);
+  const { data: s, isLoading, error } = useWhatsAppStats(tuitionId, range.from, range.to);
   if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin" /></div>;
+  if (error || !s) return <p className="text-sm text-destructive py-4">Could not load numbers.</p>;
+  const rate = s.total ? Math.round((s.delivered / s.total) * 100) : 0;
   const stat = (label: string, v: string | number) => (
     <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="text-xl font-semibold">{v}</p></CardContent></Card>
   );
@@ -96,13 +84,13 @@ function Overview({ tuitionId }: { tuitionId: string | null }) {
     <div className="space-y-3 mt-3">
       <p className="text-xs text-muted-foreground">This month</p>
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {stat('Sent', c.total)}{stat('Delivered', c.delivered)}{stat('Read', c.read)}{stat('Failed', c.failed)}{stat('Delivery rate', `${rate}%`)}
+        {stat('Sent', s.total)}{stat('Delivered', s.delivered)}{stat('Read', s.read)}{stat('Failed', s.failed)}{stat('Delivery rate', `${rate}%`)}
       </div>
-      <p className="text-sm">{pending} scheduled batch{pending === 1 ? '' : 'es'} waiting.</p>
-      {reasons.size > 0 && (
+      <p className="text-sm">{s.pending_schedules} scheduled batch{s.pending_schedules === 1 ? '' : 'es'} waiting.</p>
+      {s.failure_reasons.length > 0 && (
         <Card><CardHeader className="p-3 pb-1"><CardTitle className="text-sm">Why messages failed</CardTitle></CardHeader>
           <CardContent className="p-3 pt-0 space-y-1">
-            {[...reasons].map(([r, n]) => <p key={r} className="text-xs"><span className="font-medium">{n}×</span> {r}</p>)}
+            {s.failure_reasons.map((r) => <p key={r.reason} className="text-xs"><span className="font-medium">{r.count}×</span> {r.reason}</p>)}
           </CardContent></Card>
       )}
     </div>
