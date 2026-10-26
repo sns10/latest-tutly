@@ -132,7 +132,7 @@ export function PlatformUsage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-bold">Usage & Analytics</h2>
-          <p className="text-sm text-muted-foreground">Per-center activity and WhatsApp usage. Cost is an estimate at {inr(rate)} per billed message.</p>
+          <p className="text-sm text-muted-foreground">Per-center activity and WhatsApp usage. Cost is an estimate at ₹{rate} per billed message.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Select value={month} onValueChange={setMonth}>
