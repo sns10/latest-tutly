@@ -683,6 +683,15 @@ export function FeesList({
               <span className="sm:hidden">WA log</span>
             </Button>
           )}
+          {waAuto.enabled && (
+            <Button asChild size="sm" variant="ghost" className="text-xs sm:text-sm">
+              <a href="/whatsapp">
+                <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                <span className="hidden sm:inline">Schedule WhatsApp</span>
+                <span className="sm:hidden">Schedule</span>
+              </a>
+            </Button>
+          )}
         </div>
         <div className="flex gap-2">
           {/* Mobile Filter Button */}
