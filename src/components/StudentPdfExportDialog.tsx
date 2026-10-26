@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { DEFAULT_STUDENT_PDF_COLUMNS, STUDENT_PDF_COLUMNS, type StudentPdfColumn } from '@/lib/studentPdf';
+import { createStudentPdf, deliverStudentPdf, DEFAULT_STUDENT_PDF_COLUMNS, STUDENT_PDF_COLUMNS, type StudentPdfColumn } from '@/lib/studentPdf';
 
 interface Props {
   open: boolean;
@@ -32,9 +32,8 @@ export function StudentPdfExportDialog({ open, onOpenChange, students, filteredS
     setError('');
     if (!open || !rows.length || !columns.length) { setPreparing(false); return; }
     setPreparing(true);
-    const timer = setTimeout(async () => {
+    const timer = setTimeout(() => {
       try {
-        const { createStudentPdf } = await import('@/lib/studentPdf');
         const blob = createStudentPdf(rows, columns, centerName, scope === 'all' ? 'All students' : filterLabel);
         if (!cancelled) setPrepared(blob);
       } catch {
@@ -47,7 +46,6 @@ export function StudentPdfExportDialog({ open, onOpenChange, students, filteredS
   const download = async () => {
     if (!prepared) return;
     try {
-      const { deliverStudentPdf } = await import('@/lib/studentPdf');
       await deliverStudentPdf(prepared, `students-${scope}-${new Date().toLocaleDateString('en-CA')}.pdf`);
     } catch { toast.error('Unable to download the student PDF'); }
   };
