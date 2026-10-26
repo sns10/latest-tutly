@@ -37,9 +37,13 @@ import { StudentsPageSkeleton } from '@/components/skeletons/PageSkeletons';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
+import { StudentPdfExportDialog } from '@/components/StudentPdfExportDialog';
+import { useTuitionInfo } from '@/hooks/useTuitionInfo';
 
 export default function StudentsPage() {
   const { tuitionId } = useUserTuition();
+  const { tuition } = useTuitionInfo();
+  const [pdfExportOpen, setPdfExportOpen] = useState(false);
   
   const { data: students = [], isLoading: studentsLoading } = useStudentsQuery(tuitionId);
   const { data: divisions = [] } = useDivisionsQuery(tuitionId);
@@ -239,6 +243,9 @@ export default function StudentsPage() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => setPdfExportOpen(true)}>
+                Export PDF…
+              </DropdownMenuItem>
               {classFilter !== 'All' && (
                 <DropdownMenuItem onClick={() => handleExportStudents(false)}>
                   Export {classFilter} Class
@@ -427,6 +434,14 @@ export default function StudentsPage() {
           }}
         />
       )}
+      <StudentPdfExportDialog
+        open={pdfExportOpen}
+        onOpenChange={setPdfExportOpen}
+        students={students}
+        filteredStudents={sortedStudents}
+        centerName={tuition?.name || 'Tutly'}
+        filterLabel={[classFilter === 'All' ? 'All classes' : classFilter, divisionFilter === 'All' ? 'All divisions' : divisions.find(d => d.id === divisionFilter)?.name || '', searchQuery ? `Search: ${searchQuery}` : ''].filter(Boolean).join(' | ')}
+      />
     </div>
   );
 }
