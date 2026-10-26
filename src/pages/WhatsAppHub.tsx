@@ -5,7 +5,7 @@ import { Loader2, MessageCircle, Send, CalendarClock, Trash2, Ban } from 'lucide
 import { useUserTuition } from '@/hooks/useUserTuition';
 import { useStudentsQuery, useFeesQuery, usePaymentsQuery, useWeeklyTestsQuery, useTestResultsQuery } from '@/hooks/queries';
 import { useWhatsAppAutomation, formatWhatsAppDate, WhatsAppItem, WhatsAppTemplate, WhatsAppSendResult } from '@/hooks/useWhatsAppAutomation';
-import { useWhatsAppLogs } from '@/hooks/useWhatsAppLogs';
+import { useWhatsAppLogsPaged, useWhatsAppStats, istMonthRange } from '@/hooks/useWhatsAppLogs';
 import { useWhatsAppSchedules, SCHEDULE_TIME_LABEL } from '@/hooks/useWhatsAppSchedules';
 import { buildReminderRows } from '@/components/fees/BulkWhatsAppReminderDialog';
 import { DeliveryStatusBadge } from '@/components/whatsapp/DeliveryStatusBadge';
