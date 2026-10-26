@@ -576,6 +576,24 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          key: string
+          updated_at: string
+          value: Json
+        }
+        Insert: {
+          key: string
+          updated_at?: string
+          value: Json
+        }
+        Update: {
+          key?: string
+          updated_at?: string
+          value?: Json
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -1641,6 +1659,7 @@ export type Database = {
       }
       whatsapp_scheduled_dispatches: {
         Row: {
+          claimed_at: string | null
           created_at: string
           created_by: string | null
           dispatched_at: string | null
@@ -1648,6 +1667,7 @@ export type Database = {
           failed_count: number
           id: string
           messages: Json
+          progress_offset: number
           recipient_count: number
           scheduled_date: string
           sent_count: number
@@ -1657,6 +1677,7 @@ export type Database = {
           tuition_id: string
         }
         Insert: {
+          claimed_at?: string | null
           created_at?: string
           created_by?: string | null
           dispatched_at?: string | null
@@ -1664,6 +1685,7 @@ export type Database = {
           failed_count?: number
           id?: string
           messages?: Json
+          progress_offset?: number
           recipient_count?: number
           scheduled_date: string
           sent_count?: number
@@ -1673,6 +1695,7 @@ export type Database = {
           tuition_id: string
         }
         Update: {
+          claimed_at?: string | null
           created_at?: string
           created_by?: string | null
           dispatched_at?: string | null
@@ -1680,6 +1703,7 @@ export type Database = {
           failed_count?: number
           id?: string
           messages?: Json
+          progress_offset?: number
           recipient_count?: number
           scheduled_date?: string
           sent_count?: number
@@ -1734,6 +1758,7 @@ export type Database = {
         }
         Returns: Json
       }
+      get_platform_usage: { Args: { _month: string }; Returns: Json }
       get_tuition_dashboard_stats: {
         Args: {
           _month_end?: string
@@ -1745,6 +1770,10 @@ export type Database = {
       }
       get_user_email: { Args: never; Returns: string }
       get_user_tuition_id: { Args: { _user_id: string }; Returns: string }
+      get_whatsapp_stats: {
+        Args: { _from: string; _to: string; _tuition_id: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
