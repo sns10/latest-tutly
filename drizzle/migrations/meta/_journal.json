@@ -36,6 +36,13 @@
       "when": 1793494617913,
       "tag": "0004_class_outstanding_report",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793495593480,
+      "tag": "0005_bulk_record_fee_payments",
+      "breakpoints": true
     }
   ]
 }

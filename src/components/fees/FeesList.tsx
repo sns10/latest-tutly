@@ -49,6 +49,8 @@ import { RecordPaymentDialog } from './RecordPaymentDialog';
 import { WhatsAppReminderDialog } from './WhatsAppReminderDialog';
 import { WhatsAppHistoryDialog } from '@/components/whatsapp/WhatsAppHistoryDialog';
 import { BulkWhatsAppReminderDialog } from './BulkWhatsAppReminderDialog';
+import { BulkPaymentEntryDialog } from './BulkPaymentEntryDialog';
+import { monthRange } from '@/lib/bulkFees';
 import { useWhatsAppAutomation } from '@/hooks/useWhatsAppAutomation';
 import { PaymentHistoryDialog } from './PaymentHistoryDialog';
 import {
@@ -153,6 +155,8 @@ export function FeesList({
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
+  const [generateFromMonth, setGenerateFromMonth] = useState<string>(getCurrentMonth());
+  const [bulkPayOpen, setBulkPayOpen] = useState(false);
 
   // Receipt state — opened ONLY via explicit user action (row menu / history).
   // We intentionally do NOT auto-open the receipt after a payment is recorded
@@ -252,39 +256,31 @@ export function FeesList({
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   }
 
-  function generateMonthlyFees(targetMonth?: string) {
+  function generateMonthlyFees(targetMonths?: string[]) {
     if (classFees.length === 0 || classFees.every(cf => cf.amount === 0)) {
       toast.error('Please set class fees first');
       return;
     }
 
-    const monthStr = targetMonth || getCurrentMonth();
-    const [yearPart, monthPart] = monthStr.split('-').map(Number);
-    const dueDate = new Date(yearPart, monthPart - 1, 5);
+    const months = targetMonths && targetMonths.length > 0 ? targetMonths : [getCurrentMonth()];
     const feesToCreate: Array<Omit<StudentFee, 'id' | 'createdAt' | 'updatedAt'>> = [];
-    const targetFeeType = `Monthly Fee - ${monthStr}`;
 
-    // Pre-build lookup structures so the loop is O(N) instead of O(students × fees).
-    // Prevents UI freeze on tuitions with hundreds of students × months of history.
-    const existingForMonth = new Set<string>();
-    for (const f of fees) {
-      if (f.feeType === targetFeeType) existingForMonth.add(f.studentId);
-    }
+    // O(N) lookups: existing "studentId|feeType" keys and class amounts.
+    const existing = new Set<string>();
+    for (const f of fees) existing.add(`${f.studentId}|${f.feeType}`);
     const classFeeByClass = new Map<string, number>();
     for (const cf of classFees) classFeeByClass.set(cf.class, cf.amount);
-    const dueDateStr = dueDate.toISOString().split('T')[0];
 
-    for (const student of students) {
-      if (existingForMonth.has(student.id)) continue;
-      const feeAmount = classFeeByClass.get(student.class) || 0;
-      if (feeAmount > 0) {
-        feesToCreate.push({
-          studentId: student.id,
-          feeType: targetFeeType,
-          amount: feeAmount,
-          dueDate: dueDateStr,
-          status: 'unpaid'
-        });
+    for (const monthStr of months) {
+      const [yearPart, monthPart] = monthStr.split('-').map(Number);
+      const dueDateStr = `${yearPart}-${String(monthPart).padStart(2, '0')}-05`;
+      const targetFeeType = `Monthly Fee - ${monthStr}`;
+      for (const student of students) {
+        if (existing.has(`${student.id}|${targetFeeType}`)) continue;
+        const feeAmount = classFeeByClass.get(student.class) || 0;
+        if (feeAmount > 0) {
+          feesToCreate.push({ studentId: student.id, feeType: targetFeeType, amount: feeAmount, dueDate: dueDateStr, status: 'unpaid' });
+        }
       }
     }
 
@@ -292,12 +288,11 @@ export function FeesList({
       if (onAddFeesBatch) {
         onAddFeesBatch(feesToCreate);
       } else {
-        // Fallback to individual adds if batch not available
         feesToCreate.forEach(fee => onAddFee(fee));
-        toast.success(`Generated fees for ${feesToCreate.length} students`);
+        toast.success(`Generated ${feesToCreate.length} fees`);
       }
     } else {
-      toast.info('All students already have fees for the selected month');
+      toast.info('All students already have fees for the selected month(s)');
     }
   }
 
@@ -661,6 +656,11 @@ export function FeesList({
             <Calendar className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
             <span className="hidden sm:inline">Generate Fees</span>
             <span className="sm:hidden">Generate</span>
+          </Button>
+          <Button onClick={() => setBulkPayOpen(true)} size="sm" variant="outline" className="text-xs sm:text-sm">
+            <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+            <span className="hidden sm:inline">Bulk Payment Entry</span>
+            <span className="sm:hidden">Bulk Pay</span>
           </Button>
           {selectedFees.size > 0 && (
             <Button onClick={handleBulkMarkPaid} size="sm" variant="outline" className="text-xs sm:text-sm" disabled={isRecordingPayment}>
@@ -1107,33 +1107,48 @@ export function FeesList({
         showGenerateFees={true}
       />
 
-      {/* Generate Monthly Fees - month picker */}
+      {/* Generate Monthly Fees - month range picker */}
       <Dialog open={generateDialogOpen} onOpenChange={setGenerateDialogOpen}>
         <DialogContent className="w-[calc(100%-2rem)] max-w-md">
           <DialogHeader>
             <DialogTitle>Generate Monthly Fees</DialogTitle>
             <DialogDescription>
-              Pick the month to generate fees for. Existing fees for that month are skipped.
+              Pick one month, or a range to fill missed months at once. Fees that already exist are skipped.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-2">
-            <Select value={generateMonth} onValueChange={setGenerateMonth}>
-              <SelectTrigger className="bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-white">
-                {availableMonths.map((m) => (
-                  <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="py-2 grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">From</p>
+              <Select value={generateFromMonth} onValueChange={setGenerateFromMonth}>
+                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {availableMonths.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">To</p>
+              <Select value={generateMonth} onValueChange={setGenerateMonth}>
+                <SelectTrigger className="bg-white"><SelectValue /></SelectTrigger>
+                <SelectContent className="bg-white">
+                  {availableMonths.map((m) => (
+                    <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="col-span-2 text-xs text-muted-foreground">
+              {monthRange(generateFromMonth, generateMonth).length} month(s) selected
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setGenerateDialogOpen(false)} disabled={isAddingFees}>Cancel</Button>
             <Button
               disabled={isAddingFees}
               onClick={() => {
-                generateMonthlyFees(generateMonth);
+                generateMonthlyFees(monthRange(generateFromMonth, generateMonth));
                 setGenerateDialogOpen(false);
               }}
             >
@@ -1142,6 +1157,16 @@ export function FeesList({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <BulkPaymentEntryDialog
+        open={bulkPayOpen}
+        onOpenChange={(o) => { setBulkPayOpen(o); if (!o) unlockBody(); }}
+        tuitionId={tuitionId}
+        fees={fees}
+        studentsById={studentsById}
+        totalPaidByFeeId={totalPaidByFeeId}
+        classes={uniqueClasses}
+      />
 
       {/* Reset fee confirm — voids all payments and resets to unpaid */}
       <AlertDialog

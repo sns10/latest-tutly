@@ -1747,6 +1747,7 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      bulk_record_fee_payments: { Args: { _records: Json }; Returns: Json }
       edit_fee_payment: {
         Args: {
           p_amount: number
