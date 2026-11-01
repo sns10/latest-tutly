@@ -108,7 +108,7 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
     ws['!cols'] = [{ hidden: true }, { wch: 24 }, { wch: 8 }, { wch: 8 }, { wch: 24 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Payments');
-    XLSX.writeFile(wb, `fee-payments-${cls === 'All' ? 'all' : `class-${cls}`}.xlsx`);
+    XLSX.writeFile(wb, `fee-payments-${cls === 'All' ? 'all' : `class-${cls}`}${month === 'All' ? '' : `-${month}`}.xlsx`);
   };
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,7 +129,7 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
         if (!known.has(id)) { unknown++; continue; }
         next[id] = String(amt); matched++;
       }
-      setCls('All'); setSearch('');
+      setCls('All'); setMonth('All'); setSearch('');
       setAmounts(next);
       toast.success(`Loaded ${matched} payments from file${unknown ? ` (${unknown} rows not recognised)` : ''}. Review and tap Save.`);
     } catch {
@@ -183,7 +183,14 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
               {classes.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input placeholder="Search student" value={search} onChange={e => setSearch(e.target.value)} />
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All months</SelectItem>
+              {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Input className="col-span-2" placeholder="Search student" value={search} onChange={e => setSearch(e.target.value)} />
           <Select value={method} onValueChange={setMethod}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
