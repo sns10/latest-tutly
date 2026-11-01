@@ -53,7 +53,7 @@ export function useAddFeesBatchMutation(tuitionId: string | null) {
       queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
       queryClient.invalidateQueries({ queryKey: ['classFees', tuitionId] });
       if (count && count > 0) {
-        toast.success(`Generated fees for ${count} students`);
+        toast.success(`Generated ${count} fees`);
       } else {
         toast.info('All students already have fees for the selected month');
       }
