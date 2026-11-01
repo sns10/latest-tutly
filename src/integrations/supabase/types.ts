@@ -1758,6 +1758,29 @@ export type Database = {
         }
         Returns: Json
       }
+      get_class_outstanding_report: {
+        Args: {
+          _class: string
+          _division_id: string
+          _from: string
+          _to: string
+          _tuition_id: string
+        }
+        Returns: {
+          class: string
+          division_id: string
+          last_payment_date: string
+          late_fee: number
+          missed_count: number
+          missed_months: string[]
+          name: string
+          outstanding: number
+          paid_total: number
+          phone: string
+          roll_no: number
+          student_id: string
+        }[]
+      }
       get_platform_usage: { Args: { _month: string }; Returns: Json }
       get_tuition_dashboard_stats: {
         Args: {

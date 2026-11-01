@@ -29,6 +29,13 @@
       "when": 1792998393259,
       "tag": "0003_platform_usage_analytics",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793494617913,
+      "tag": "0004_class_outstanding_report",
+      "breakpoints": true
     }
   ]
 }
