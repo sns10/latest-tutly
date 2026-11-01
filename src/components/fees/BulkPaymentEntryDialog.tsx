@@ -30,6 +30,7 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
   const [cls, setCls] = useState<string>('All');
+  const [month, setMonth] = useState<string>('All');
   const [search, setSearch] = useState('');
   const [amounts, setAmounts] = useState<Record<string, string>>({});
   const [method, setMethod] = useState('cash');
@@ -38,13 +39,38 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
 
   useEffect(() => { if (!open) { setAmounts({}); setSearch(''); } }, [open]);
 
+  const monthOptions = useMemo(() => {
+    const out: Array<{ value: string; label: string }> = [];
+    const now = new Date();
+    for (let i = 0; i < 24; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      out.push({
+        value: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`,
+        label: d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' }),
+      });
+    }
+    return out;
+  }, []);
+
   // Only computed while open, from data already loaded on the Fees page — no extra fetch.
   const rows = useMemo<Row[]>(() => {
     if (!open) return [];
     const q = search.trim().toLowerCase();
+    let monthStart = '', monthEnd = '';
+    if (month !== 'All') {
+      const [y, m] = month.split('-').map(Number);
+      monthStart = `${month}-01`;
+      monthEnd = `${month}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+    }
     const out: Row[] = [];
     for (const fee of fees) {
       if (fee.status === 'paid') continue;
+      if (month !== 'All') {
+        // Same rule as the Fees list: month in fee label, or due date within the month.
+        const inMonth = (fee.feeType && fee.feeType.includes(month)) ||
+          (fee.dueDate >= monthStart && fee.dueDate <= monthEnd);
+        if (!inMonth) continue;
+      }
       const student = studentsById.get(fee.studentId);
       if (cls !== 'All' && student?.class !== cls) continue;
       if (q && !(student?.name || '').toLowerCase().includes(q)) continue;
@@ -54,7 +80,7 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
     }
     return out.sort((a, b) =>
       (a.student?.name || '').localeCompare(b.student?.name || '') || a.fee.dueDate.localeCompare(b.fee.dueDate));
-  }, [open, fees, studentsById, totalPaidByFeeId, cls, search]);
+  }, [open, fees, studentsById, totalPaidByFeeId, cls, month, search]);
 
   const entered = rows.map(r => ({ feeId: r.fee.id, remaining: r.remaining, amount: Number(amounts[r.fee.id] || 0) }));
   const { valid, invalid } = validateBulkPayments(entered);
@@ -82,7 +108,7 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
     ws['!cols'] = [{ hidden: true }, { wch: 24 }, { wch: 8 }, { wch: 8 }, { wch: 24 }, { wch: 12 }, { wch: 14 }, { wch: 14 }];
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Payments');
-    XLSX.writeFile(wb, `fee-payments-${cls === 'All' ? 'all' : `class-${cls}`}.xlsx`);
+    XLSX.writeFile(wb, `fee-payments-${cls === 'All' ? 'all' : `class-${cls}`}${month === 'All' ? '' : `-${month}`}.xlsx`);
   };
 
   const onUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -103,7 +129,7 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
         if (!known.has(id)) { unknown++; continue; }
         next[id] = String(amt); matched++;
       }
-      setCls('All'); setSearch('');
+      setCls('All'); setMonth('All'); setSearch('');
       setAmounts(next);
       toast.success(`Loaded ${matched} payments from file${unknown ? ` (${unknown} rows not recognised)` : ''}. Review and tap Save.`);
     } catch {
@@ -157,7 +183,14 @@ export function BulkPaymentEntryDialog({ open, onOpenChange, tuitionId, fees, st
               {classes.map(c => <SelectItem key={c} value={c}>Class {c}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input placeholder="Search student" value={search} onChange={e => setSearch(e.target.value)} />
+          <Select value={month} onValueChange={setMonth}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="All">All months</SelectItem>
+              {monthOptions.map(m => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Input className="col-span-2" placeholder="Search student" value={search} onChange={e => setSearch(e.target.value)} />
           <Select value={method} onValueChange={setMethod}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
