@@ -25,30 +25,29 @@ export function useAddFeesBatchMutation(tuitionId: string | null) {
       // are rare. The DB has a PARTIAL unique index on (student_id, fee_type)
       // WHERE fee_type LIKE 'Monthly Fee - %' as a safety net — but Postgres
       // rejects ON CONFLICT against a partial index, so we can't use upsert.
-      const { data, error } = await supabase
-        .from('student_fees')
-        .insert(feeRecords)
-        .select('id');
+      // Insert in chunks of 500 so multi-month backfills stay fast and reliable.
+      let total = 0;
+      for (let i = 0; i < feeRecords.length; i += 500) {
+        const part = feeRecords.slice(i, i + 500);
+        const { data, error } = await supabase
+          .from('student_fees')
+          .insert(part)
+          .select('id');
 
-      if (error && (error as any).code === '23505') {
-        // A duplicate slipped through (stale cache). Fall back to per-row
-        // inserts and skip the offending rows so the rest still get created.
-        let inserted = 0;
-        for (const row of feeRecords) {
-          const { error: rowErr } = await supabase
-            .from('student_fees')
-            .insert(row);
-          if (!rowErr) {
-            inserted += 1;
-          } else if ((rowErr as any).code !== '23505') {
-            throw rowErr;
+        if (error && (error as any).code === '23505') {
+          // A duplicate slipped through (stale cache). Fall back to per-row
+          // inserts and skip the offending rows so the rest still get created.
+          for (const row of part) {
+            const { error: rowErr } = await supabase.from('student_fees').insert(row);
+            if (!rowErr) total += 1;
+            else if ((rowErr as any).code !== '23505') throw rowErr;
           }
+          continue;
         }
-        return inserted;
+        if (error) throw error;
+        total += data?.length ?? 0;
       }
-
-      if (error) throw error;
-      return data?.length ?? 0;
+      return total;
     },
     onSuccess: (count) => {
       queryClient.invalidateQueries({ queryKey: ['fees', tuitionId] });
