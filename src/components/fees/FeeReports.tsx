@@ -22,6 +22,7 @@ import {
   Calendar
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { OutstandingFeeReport } from './OutstandingFeeReport';
 
 interface FeeReportsProps {
   students: Student[];
@@ -29,7 +30,7 @@ interface FeeReportsProps {
   classFees: ClassFee[];
 }
 
-type ReportType = 'monthly' | 'classwise' | 'defaulters' | 'collection';
+type ReportType = 'monthly' | 'classwise' | 'defaulters' | 'collection' | 'outstanding';
 
 export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
   const [selectedReport, setSelectedReport] = useState<ReportType>('monthly');
@@ -258,6 +259,15 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
                 <span className="sm:hidden">Def</span>
               </Button>
               <Button
+                variant={selectedReport === 'outstanding' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedReport('outstanding')}
+                className="text-xs sm:text-sm"
+              >
+                <AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1.5 sm:mr-2" />
+                Outstanding
+              </Button>
+              <Button
                 variant={selectedReport === 'collection' ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => setSelectedReport('collection')}
@@ -283,6 +293,8 @@ export function FeeReports({ students, fees, classFees }: FeeReportsProps) {
           </div>
         </CardContent>
       </Card>
+
+      {selectedReport === 'outstanding' && <OutstandingFeeReport students={students} />}
 
       {/* Monthly Report */}
       {selectedReport === 'monthly' && (
